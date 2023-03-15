@@ -10,6 +10,17 @@
 		F2EA990529BFA3A800227027 /* QAVinci.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F2EA98FC29BFA3A800227027 /* QAVinci.framework */; };
 		F2EA990A29BFA3A800227027 /* QAVinciTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA990929BFA3A800227027 /* QAVinciTests.swift */; };
 		F2EA990B29BFA3A800227027 /* QAVinci.h in Headers */ = {isa = PBXBuildFile; fileRef = F2EA98FF29BFA3A800227027 /* QAVinci.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		F2EA991629BFA3DE00227027 /* OpenAIKit in Frameworks */ = {isa = PBXBuildFile; productRef = F2EA991529BFA3DE00227027 /* OpenAIKit */; };
+		F2EA991829BFA3E900227027 /* Prompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA991729BFA3E900227027 /* Prompts.swift */; };
+		F2EA991A29BFA43F00227027 /* Instruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA991929BFA43F00227027 /* Instruction.swift */; };
+		F2EA991D29BFA46300227027 /* XCUIElement+Decodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA991C29BFA46300227027 /* XCUIElement+Decodable.swift */; };
+		F2EA992029BFA47B00227027 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F2EA991F29BFA47B00227027 /* XCTest.framework */; };
+		F2EA992129BFA47B00227027 /* XCTest.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F2EA991F29BFA47B00227027 /* XCTest.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		F2EA992429BFA4A700227027 /* Runner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992329BFA4A700227027 /* Runner.swift */; };
+		F2EA992629BFA5D500227027 /* XCTestCase+Automation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992529BFA5D500227027 /* XCTestCase+Automation.swift */; };
+		F2EA992829BFA7FA00227027 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992729BFA7FA00227027 /* Environment.swift */; };
+		F2EA992A29BFA85300227027 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992929BFA85300227027 /* Config.swift */; };
+		F2EA992C29BFAA7600227027 /* XCUIApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992B29BFAA7600227027 /* XCUIApplication.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -22,11 +33,34 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		F2EA992229BFA47B00227027 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				F2EA992129BFA47B00227027 /* XCTest.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		F2EA98FC29BFA3A800227027 /* QAVinci.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QAVinci.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2EA98FF29BFA3A800227027 /* QAVinci.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QAVinci.h; sourceTree = "<group>"; };
 		F2EA990429BFA3A800227027 /* QAVinciTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QAVinciTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2EA990929BFA3A800227027 /* QAVinciTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QAVinciTests.swift; sourceTree = "<group>"; };
+		F2EA991729BFA3E900227027 /* Prompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prompts.swift; sourceTree = "<group>"; };
+		F2EA991929BFA43F00227027 /* Instruction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Instruction.swift; sourceTree = "<group>"; };
+		F2EA991C29BFA46300227027 /* XCUIElement+Decodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XCUIElement+Decodable.swift"; sourceTree = "<group>"; };
+		F2EA991F29BFA47B00227027 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		F2EA992329BFA4A700227027 /* Runner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Runner.swift; sourceTree = "<group>"; };
+		F2EA992529BFA5D500227027 /* XCTestCase+Automation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XCTestCase+Automation.swift"; sourceTree = "<group>"; };
+		F2EA992729BFA7FA00227027 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
+		F2EA992929BFA85300227027 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		F2EA992B29BFAA7600227027 /* XCUIApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCUIApplication.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -34,6 +68,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F2EA991629BFA3DE00227027 /* OpenAIKit in Frameworks */,
+				F2EA992029BFA47B00227027 /* XCTest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -54,6 +90,7 @@
 				F2EA98FE29BFA3A800227027 /* QAVinci */,
 				F2EA990829BFA3A800227027 /* QAVinciTests */,
 				F2EA98FD29BFA3A800227027 /* Products */,
+				F2EA991E29BFA47B00227027 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -70,6 +107,12 @@
 			isa = PBXGroup;
 			children = (
 				F2EA98FF29BFA3A800227027 /* QAVinci.h */,
+				F2EA991729BFA3E900227027 /* Prompts.swift */,
+				F2EA991929BFA43F00227027 /* Instruction.swift */,
+				F2EA992329BFA4A700227027 /* Runner.swift */,
+				F2EA992729BFA7FA00227027 /* Environment.swift */,
+				F2EA992929BFA85300227027 /* Config.swift */,
+				F2EA991B29BFA45300227027 /* Extensions */,
 			);
 			path = QAVinci;
 			sourceTree = "<group>";
@@ -80,6 +123,24 @@
 				F2EA990929BFA3A800227027 /* QAVinciTests.swift */,
 			);
 			path = QAVinciTests;
+			sourceTree = "<group>";
+		};
+		F2EA991B29BFA45300227027 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				F2EA991C29BFA46300227027 /* XCUIElement+Decodable.swift */,
+				F2EA992529BFA5D500227027 /* XCTestCase+Automation.swift */,
+				F2EA992B29BFAA7600227027 /* XCUIApplication.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		F2EA991E29BFA47B00227027 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F2EA991F29BFA47B00227027 /* XCTest.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -104,12 +165,16 @@
 				F2EA98F829BFA3A800227027 /* Sources */,
 				F2EA98F929BFA3A800227027 /* Frameworks */,
 				F2EA98FA29BFA3A800227027 /* Resources */,
+				F2EA992229BFA47B00227027 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = QAVinci;
+			packageProductDependencies = (
+				F2EA991529BFA3DE00227027 /* OpenAIKit */,
+			);
 			productName = QAVinci;
 			productReference = F2EA98FC29BFA3A800227027 /* QAVinci.framework */;
 			productType = "com.apple.product-type.framework";
@@ -144,6 +209,7 @@
 				TargetAttributes = {
 					F2EA98FB29BFA3A800227027 = {
 						CreatedOnToolsVersion = 14.2;
+						LastSwiftMigration = 1420;
 					};
 					F2EA990329BFA3A800227027 = {
 						CreatedOnToolsVersion = 14.2;
@@ -159,6 +225,9 @@
 				Base,
 			);
 			mainGroup = F2EA98F229BFA3A800227027;
+			packageReferences = (
+				F2EA991429BFA3DE00227027 /* XCRemoteSwiftPackageReference "openai-kit" */,
+			);
 			productRefGroup = F2EA98FD29BFA3A800227027 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -191,6 +260,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F2EA991829BFA3E900227027 /* Prompts.swift in Sources */,
+				F2EA992829BFA7FA00227027 /* Environment.swift in Sources */,
+				F2EA992429BFA4A700227027 /* Runner.swift in Sources */,
+				F2EA992A29BFA85300227027 /* Config.swift in Sources */,
+				F2EA992629BFA5D500227027 /* XCTestCase+Automation.swift in Sources */,
+				F2EA992C29BFAA7600227027 /* XCUIApplication.swift in Sources */,
+				F2EA991A29BFA43F00227027 /* Instruction.swift in Sources */,
+				F2EA991D29BFA46300227027 /* XCUIElement+Decodable.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,6 +408,7 @@
 		F2EA990F29BFA3A800227027 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
@@ -357,6 +435,7 @@
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -365,6 +444,7 @@
 		F2EA991029BFA3A800227027 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
@@ -399,6 +479,7 @@
 		F2EA991229BFA3A800227027 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -418,6 +499,7 @@
 		F2EA991329BFA3A800227027 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -465,6 +547,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F2EA991429BFA3DE00227027 /* XCRemoteSwiftPackageReference "openai-kit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/dylanshine/openai-kit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F2EA991529BFA3DE00227027 /* OpenAIKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F2EA991429BFA3DE00227027 /* XCRemoteSwiftPackageReference "openai-kit" */;
+			productName = OpenAIKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F2EA98F329BFA3A800227027 /* Project object */;
 }
