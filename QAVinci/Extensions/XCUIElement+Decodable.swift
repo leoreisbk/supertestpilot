@@ -133,4 +133,8 @@ extension XCUIElement {
 
         return waitForExistence(timeout: timeout)
     }
+    
+    func firstMatch(of type: XCUIElement.ElementType, label: String) -> XCUIElement {
+        descendants(matching: type).matching(identifier: label).firstMatch
+    }
 }

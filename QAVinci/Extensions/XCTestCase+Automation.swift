@@ -19,7 +19,7 @@ public extension XCTestCase {
         let exp = expectation(description: objective)
 
         Task {
-            let result = try await self.automate(config: config, objective: objective)
+            let result = await self.automate(config: config, objective: objective)
 
             XCTAssertEqual(result, expectedResult)
             exp.fulfill()
@@ -29,15 +29,34 @@ public extension XCTestCase {
     }
 
     @MainActor @discardableResult
-    func automate(config: Config = .init(), objective: String) async throws -> String? {
+    func automate(config: Config = .init(), objective: String) async -> String? {
         let runner = Runner(config: config)
+        defer {
+            Task {
+                try await runner.httpClient.shutdown()
+            }
+        }
+
+        do {
+            let result = try await nonThrowingAutomation(runner: runner, objective: objective)
+            try await runner.httpClient.shutdown()
+            return result
+        } catch let err {
+            dump(err)
+            XCTFail(err.localizedDescription)
+        }
+
+        return nil
+    }
+
+    @MainActor @discardableResult
+    private func nonThrowingAutomation(runner: Runner, objective: String) async throws -> String? {
         let jsonDecoder = JSONDecoder()
         let app = XCUIApplication()
         app.launch()
 
         print("\nStrategizing how to split the objective in tasks...")
         let steps = try await runner.getCompletionSetup(objective: objective)
-//        let steps = try await runner.getChatSetup(objective: objective)
         print("Done! Dividing work in these steps: ")
         steps.enumerated().forEach { idx, step in
             print("\(idx + 1). \(step)")
@@ -48,7 +67,6 @@ public extension XCTestCase {
 
             print("\nExecuting step: '\(curStep)'")
 
-//            let jsonCommand = try await runner.getChatResponse(ui: uiDump, objective: cur Step)
             let jsonCommand = try await runner.getCompletionResponse(for: uiDump, objective: curStep)
             guard let jsonCommand = jsonCommand else {
                 return nil
@@ -56,11 +74,9 @@ public extension XCTestCase {
 
             // Execute the response
             let instruction = try jsonDecoder.decode(Instruction.self, from: Data(jsonCommand.utf8))
-//            let instruction = curStep
 
             switch instruction {
             case .stop(answer: let answer):
-                try await runner.httpClient.shutdown()
                 return answer
 
             case let .type(type: type, label: label, text: text):
@@ -70,7 +86,6 @@ public extension XCTestCase {
                 match.typeText(text)
 
             case let .tap(type: type, label: label):
-//                let match = app.descendants(matching: type)[label]
                 let match = try await getElement(from: runner, app: app, ui: uiDump, type: type, label: label)
                 match.waitForExistenceIfNecessary(timeout: 10)
                 match.tap()
@@ -90,16 +105,19 @@ public extension XCTestCase {
             }
         }
 
-        try await runner.httpClient.shutdown()
         return nil
     }
 
     private func getElement(from runner: Runner, app: XCUIElement, ui: String, type: XCUIElement.ElementType, label: String) async throws -> XCUIElement {
-        let label = try await runner.getRelevantLabel(ui: ui, type: type.description, label: label)
+        let match = app.firstMatch(of: type, label: label)
+        guard !match.exists else {
+            return match
+        }
 
-        return app
-            .descendants(matching: type)
-            .matching(identifier: label)
-            .firstMatch
+        let ui = try ui.replacing(Regex("^(?!\(type.description)).*\n").anchorsMatchLineEndings(), with: "")
+        let line = try await runner.searchEmbeddings(input: ui, query: label, n: 1).first ?? ""
+        let newLabel = line.firstMatch(of: /label: '(.*?)'($|,)/)!
+
+        return app.firstMatch(of: type, label: String(newLabel.output.1))
     }
 }

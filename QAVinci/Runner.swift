@@ -60,23 +60,23 @@ extension Runner {
         return try JSONDecoder().decode([String].self, from: Data(response.choices[0].text.utf8))
     }
 
-    func getRelevantLabel(ui: String, type: String, label: String) async throws -> String {
-        var request = URLRequest(url: URL(string: "http://127.0.0.1:8082")!)
-        request.httpMethod = "POST"
-        request.httpBody = try? JSONSerialization.data(withJSONObject: [
-            "type": type,
-            "label": label,
-            "document": ui,
-        ])
-        request.setValue(config.apiKey, forHTTPHeaderField: "Authorization")
+    func searchEmbeddings(input: String, query: String, n: Int = 1) async throws -> [String] {
+        let texts = input
+            .split(separator: "\n")
+            .map(String.init)
+            .filter { !$0.isEmpty }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        let code = (response as? HTTPURLResponse)?.statusCode ?? -1
-        guard 200..<300 ~= code, let line = String(data: data, encoding: .utf8) else {
-            throw URLError(.badServerResponse)
-        }
+        let response = try await aiClient.embeddings.create(input: texts + [query])
 
-        let match = line.firstMatch(of: /label: '(.*?)'($|,)/)!
-        return String(match.output.1)
+        return Embedding.search(
+            on: response.data
+                .dropLast(1)
+                .enumerated()
+                .map { idx, elem in
+                    (elem, texts[idx])
+                },
+            query: response.data.last!,
+            n: n
+        )
     }
 }
