@@ -39,7 +39,7 @@
     {
       "identity" : "openai-kit",
       "kind" : "remoteSourceControl",
-      "location" : "http://github.com/fjcaetano/openai-kit",
+      "location" : "https://github.com/fjcaetano/openai-kit",
       "state" : {
         "branch" : "fix/embeddings",
         "revision" : "abb677270abb93b554590238cef8e44b4fb3a9ef"

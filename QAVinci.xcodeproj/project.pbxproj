@@ -8,11 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		F237EB6F29C4C73400A6A730 /* OpenAIKit in Frameworks */ = {isa = PBXBuildFile; productRef = F237EB6E29C4C73400A6A730 /* OpenAIKit */; };
+		F237EBED29C4CF6C00A6A730 /* RunCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = F237EBEC29C4CF6C00A6A730 /* RunCommand.swift */; };
 		F23FA5DC29C2620C00F70144 /* Embeddings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23FA5DB29C2620C00F70144 /* Embeddings.swift */; };
-		F23FA5E729C2661600F70144 /* OpenAIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F23FA5E629C2661600F70144 /* OpenAIKit.framework */; };
-		F23FA5E829C2661600F70144 /* OpenAIKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F23FA5E629C2661600F70144 /* OpenAIKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		F2EA990529BFA3A800227027 /* QAVinci.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F2EA98FC29BFA3A800227027 /* QAVinci.framework */; };
-		F2EA990A29BFA3A800227027 /* QAVinciTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA990929BFA3A800227027 /* QAVinciTests.swift */; };
+		F278494C29C4D6C400A2EBD7 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278494B29C4D6C400A2EBD7 /* Constants.swift */; };
+		F290E17629C3B0DB0065FC37 /* XcodeGenKit in Frameworks */ = {isa = PBXBuildFile; productRef = F290E17529C3B0DB0065FC37 /* XcodeGenKit */; };
+		F290E17829C3B16D0065FC37 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F290E17729C3B16D0065FC37 /* main.swift */; };
+		F290E17A29C3B1910065FC37 /* TestProjectGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F290E17929C3B1910065FC37 /* TestProjectGenerator.swift */; };
+		F2B8718029C39C6900A17087 /* TestFileBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B8717F29C39C6900A17087 /* TestFileBuilder.swift */; };
+		F2B8718629C39CEF00A17087 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = F2B8718529C39CEF00A17087 /* ArgumentParser */; };
 		F2EA990B29BFA3A800227027 /* QAVinci.h in Headers */ = {isa = PBXBuildFile; fileRef = F2EA98FF29BFA3A800227027 /* QAVinci.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		F2EA991829BFA3E900227027 /* Prompts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA991729BFA3E900227027 /* Prompts.swift */; };
 		F2EA991A29BFA43F00227027 /* Instruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA991929BFA43F00227027 /* Instruction.swift */; };
@@ -27,6 +30,15 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		F2B8717B29C39C6900A17087 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		F2EA992229BFA47B00227027 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -41,9 +53,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F237EBEC29C4CF6C00A6A730 /* RunCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunCommand.swift; sourceTree = "<group>"; };
 		F23FA5DB29C2620C00F70144 /* Embeddings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Embeddings.swift; sourceTree = "<group>"; };
 		F23FA5E629C2661600F70144 /* OpenAIKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OpenAIKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		F2EA98FC29BFA3A800227027 /* QAVinci.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QAVinci.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F278494B29C4D6C400A2EBD7 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		F290E17729C3B16D0065FC37 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		F290E17929C3B1910065FC37 /* TestProjectGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestProjectGenerator.swift; sourceTree = "<group>"; };
+		F2B8717D29C39C6900A17087 /* qavinci */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = qavinci; sourceTree = BUILT_PRODUCTS_DIR; };
+		F2B8717F29C39C6900A17087 /* TestFileBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFileBuilder.swift; sourceTree = "<group>"; };
+		F2EA98FC29BFA3A800227027 /* QAVinciKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QAVinciKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2EA98FF29BFA3A800227027 /* QAVinci.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QAVinci.h; sourceTree = "<group>"; };
 		F2EA991729BFA3E900227027 /* Prompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prompts.swift; sourceTree = "<group>"; };
 		F2EA991929BFA43F00227027 /* Instruction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Instruction.swift; sourceTree = "<group>"; };
@@ -57,12 +75,12 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		F2EA98F929BFA3A800227027 /* Frameworks */ = {
+		F2B8717A29C39C6900A17087 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F2EA992029BFA47B00227027 /* XCTest.framework in Frameworks */,
-				F23FA5E729C2661600F70144 /* OpenAIKit.framework in Frameworks */,
+				F290E17629C3B0DB0065FC37 /* XcodeGenKit in Frameworks */,
+				F2B8718629C39CEF00A17087 /* ArgumentParser in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,11 +96,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		F2B8717E29C39C6900A17087 /* qavinci */ = {
+			isa = PBXGroup;
+			children = (
+				F2B8717F29C39C6900A17087 /* TestFileBuilder.swift */,
+				F290E17729C3B16D0065FC37 /* main.swift */,
+				F290E17929C3B1910065FC37 /* TestProjectGenerator.swift */,
+				F237EBEC29C4CF6C00A6A730 /* RunCommand.swift */,
+				F278494B29C4D6C400A2EBD7 /* Constants.swift */,
+			);
+			path = qavinci;
+			sourceTree = "<group>";
+		};
 		F2EA98F229BFA3A800227027 = {
 			isa = PBXGroup;
 			children = (
 				F2EA98FE29BFA3A800227027 /* QAVinciKit */,
-				F2EA990829BFA3A800227027 /* QAVinciTests */,
+				F2B8717E29C39C6900A17087 /* qavinci */,
 				F2EA98FD29BFA3A800227027 /* Products */,
 				F2EA991E29BFA47B00227027 /* Frameworks */,
 			);
@@ -92,12 +122,12 @@
 			isa = PBXGroup;
 			children = (
 				F2EA98FC29BFA3A800227027 /* QAVinciKit.framework */,
-				F2EA990429BFA3A800227027 /* QAVinciTests.xctest */,
+				F2B8717D29C39C6900A17087 /* qavinci */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		F2EA98FE29BFA3A800227027 /* QAVinci */ = {
+		F2EA98FE29BFA3A800227027 /* QAVinciKit */ = {
 			isa = PBXGroup;
 			children = (
 				F2EA98FF29BFA3A800227027 /* QAVinci.h */,
@@ -145,26 +175,27 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		F2EA98FB29BFA3A800227027 /* QAVinci */ = {
+		F2B8717C29C39C6900A17087 /* qavinci */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F2EA990E29BFA3A800227027 /* Build configuration list for PBXNativeTarget "QAVinci" */;
+			buildConfigurationList = F2B8718129C39C6900A17087 /* Build configuration list for PBXNativeTarget "qavinci" */;
 			buildPhases = (
-				F2EA98F729BFA3A800227027 /* Headers */,
-				F2EA98F829BFA3A800227027 /* Sources */,
-				F2EA98F929BFA3A800227027 /* Frameworks */,
-				F2EA98FA29BFA3A800227027 /* Resources */,
-				F2EA992229BFA47B00227027 /* Embed Frameworks */,
+				F278494D29C4EF0700A2EBD7 /* ShellScript */,
+				F2B8717929C39C6900A17087 /* Sources */,
+				F2B8717A29C39C6900A17087 /* Frameworks */,
+				F2B8717B29C39C6900A17087 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = QAVinci;
+			name = qavinci;
 			packageProductDependencies = (
+				F2B8718529C39CEF00A17087 /* ArgumentParser */,
+				F290E17529C3B0DB0065FC37 /* XcodeGenKit */,
 			);
-			productName = QAVinci;
-			productReference = F2EA98FC29BFA3A800227027 /* QAVinci.framework */;
-			productType = "com.apple.product-type.framework";
+			productName = qavinci;
+			productReference = F2B8717D29C39C6900A17087 /* qavinci */;
+			productType = "com.apple.product-type.tool";
 		};
 		F2EA98FB29BFA3A800227027 /* QAVinciKit */ = {
 			isa = PBXNativeTarget;
@@ -217,6 +248,8 @@
 			);
 			mainGroup = F2EA98F229BFA3A800227027;
 			packageReferences = (
+				F2B8718429C39CEF00A17087 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
+				F290E17429C3B0DB0065FC37 /* XCRemoteSwiftPackageReference "XcodeGen" */,
 				F237EB6D29C4C73400A6A730 /* XCRemoteSwiftPackageReference "openai-kit" */,
 			);
 			productRefGroup = F2EA98FD29BFA3A800227027 /* Products */;
@@ -224,7 +257,7 @@
 			projectRoot = "";
 			targets = (
 				F2EA98FB29BFA3A800227027 /* QAVinciKit */,
-				F2EA990329BFA3A800227027 /* QAVinciTests */,
+				F2B8717C29C39C6900A17087 /* qavinci */,
 			);
 		};
 /* End PBXProject section */
@@ -237,16 +270,41 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F2EA990229BFA3A800227027 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		F278494D29C4EF0700A2EBD7 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nexport\n";
 		};
-/* End PBXResourcesBuildPhase section */
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		F2B8717929C39C6900A17087 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F278494C29C4D6C400A2EBD7 /* Constants.swift in Sources */,
+				F290E17829C3B16D0065FC37 /* main.swift in Sources */,
+				F2B8718029C39C6900A17087 /* TestFileBuilder.swift in Sources */,
+				F290E17A29C3B1910065FC37 /* TestProjectGenerator.swift in Sources */,
+				F237EBED29C4CF6C00A6A730 /* RunCommand.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F2EA98F829BFA3A800227027 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -266,10 +324,28 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		F2B8718229C39C6900A17087 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				MACOSX_DEPLOYMENT_TARGET = 13.1;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
 		};
-/* End PBXTargetDependency section */
-
-/* Begin XCBuildConfiguration section */
+		F2B8718329C39C6900A17087 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				MACOSX_DEPLOYMENT_TARGET = 13.1;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		F2EA990C29BFA3A800227027 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -459,6 +535,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		F2B8718129C39C6900A17087 /* Build configuration list for PBXNativeTarget "qavinci" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F2B8718229C39C6900A17087 /* Debug */,
+				F2B8718329C39C6900A17087 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		F2EA98F629BFA3A800227027 /* Build configuration list for PBXProject "QAVinci" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -478,6 +563,7 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		F237EB6D29C4C73400A6A730 /* XCRemoteSwiftPackageReference "openai-kit" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -487,6 +573,22 @@
 				kind = branch;
 			};
 		};
+		F290E17429C3B0DB0065FC37 /* XCRemoteSwiftPackageReference "XcodeGen" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/yonaskolb/XcodeGen";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		F2B8718429C39CEF00A17087 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -494,6 +596,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F237EB6D29C4C73400A6A730 /* XCRemoteSwiftPackageReference "openai-kit" */;
 			productName = OpenAIKit;
+		};
+		F290E17529C3B0DB0065FC37 /* XcodeGenKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F290E17429C3B0DB0065FC37 /* XCRemoteSwiftPackageReference "XcodeGen" */;
+			productName = XcodeGenKit;
+		};
+		F2B8718529C39CEF00A17087 /* ArgumentParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F2B8718429C39CEF00A17087 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
+			productName = ArgumentParser;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
