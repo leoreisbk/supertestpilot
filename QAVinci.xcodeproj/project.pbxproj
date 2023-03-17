@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F237EB6F29C4C73400A6A730 /* OpenAIKit in Frameworks */ = {isa = PBXBuildFile; productRef = F237EB6E29C4C73400A6A730 /* OpenAIKit */; };
 		F23FA5DC29C2620C00F70144 /* Embeddings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23FA5DB29C2620C00F70144 /* Embeddings.swift */; };
 		F23FA5E729C2661600F70144 /* OpenAIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F23FA5E629C2661600F70144 /* OpenAIKit.framework */; };
 		F23FA5E829C2661600F70144 /* OpenAIKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F23FA5E629C2661600F70144 /* OpenAIKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -25,16 +26,6 @@
 		F2EA992C29BFAA7600227027 /* XCUIApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992B29BFAA7600227027 /* XCUIApplication.swift */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		F2EA990629BFA3A800227027 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = F2EA98F329BFA3A800227027 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F2EA98FB29BFA3A800227027;
-			remoteInfo = QAVinci;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXCopyFilesBuildPhase section */
 		F2EA992229BFA47B00227027 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -43,7 +34,6 @@
 			dstSubfolderSpec = 10;
 			files = (
 				F2EA992129BFA47B00227027 /* XCTest.framework in Embed Frameworks */,
-				F23FA5E829C2661600F70144 /* OpenAIKit.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -55,8 +45,6 @@
 		F23FA5E629C2661600F70144 /* OpenAIKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OpenAIKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2EA98FC29BFA3A800227027 /* QAVinci.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QAVinci.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2EA98FF29BFA3A800227027 /* QAVinci.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QAVinci.h; sourceTree = "<group>"; };
-		F2EA990429BFA3A800227027 /* QAVinciTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QAVinciTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F2EA990929BFA3A800227027 /* QAVinciTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QAVinciTests.swift; sourceTree = "<group>"; };
 		F2EA991729BFA3E900227027 /* Prompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prompts.swift; sourceTree = "<group>"; };
 		F2EA991929BFA43F00227027 /* Instruction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Instruction.swift; sourceTree = "<group>"; };
 		F2EA991C29BFA46300227027 /* XCUIElement+Decodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XCUIElement+Decodable.swift"; sourceTree = "<group>"; };
@@ -78,11 +66,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F2EA990129BFA3A800227027 /* Frameworks */ = {
+		F2EA98F929BFA3A800227027 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F2EA990529BFA3A800227027 /* QAVinci.framework in Frameworks */,
+				F2EA992029BFA47B00227027 /* XCTest.framework in Frameworks */,
+				F237EB6F29C4C73400A6A730 /* OpenAIKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,7 +81,7 @@
 		F2EA98F229BFA3A800227027 = {
 			isa = PBXGroup;
 			children = (
-				F2EA98FE29BFA3A800227027 /* QAVinci */,
+				F2EA98FE29BFA3A800227027 /* QAVinciKit */,
 				F2EA990829BFA3A800227027 /* QAVinciTests */,
 				F2EA98FD29BFA3A800227027 /* Products */,
 				F2EA991E29BFA47B00227027 /* Frameworks */,
@@ -102,7 +91,7 @@
 		F2EA98FD29BFA3A800227027 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F2EA98FC29BFA3A800227027 /* QAVinci.framework */,
+				F2EA98FC29BFA3A800227027 /* QAVinciKit.framework */,
 				F2EA990429BFA3A800227027 /* QAVinciTests.xctest */,
 			);
 			name = Products;
@@ -120,15 +109,7 @@
 				F23FA5DB29C2620C00F70144 /* Embeddings.swift */,
 				F2EA991B29BFA45300227027 /* Extensions */,
 			);
-			path = QAVinci;
-			sourceTree = "<group>";
-		};
-		F2EA990829BFA3A800227027 /* QAVinciTests */ = {
-			isa = PBXGroup;
-			children = (
-				F2EA990929BFA3A800227027 /* QAVinciTests.swift */,
-			);
-			path = QAVinciTests;
+			path = QAVinciKit;
 			sourceTree = "<group>";
 		};
 		F2EA991B29BFA45300227027 /* Extensions */ = {
@@ -185,23 +166,27 @@
 			productReference = F2EA98FC29BFA3A800227027 /* QAVinci.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		F2EA990329BFA3A800227027 /* QAVinciTests */ = {
+		F2EA98FB29BFA3A800227027 /* QAVinciKit */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F2EA991129BFA3A800227027 /* Build configuration list for PBXNativeTarget "QAVinciTests" */;
+			buildConfigurationList = F2EA990E29BFA3A800227027 /* Build configuration list for PBXNativeTarget "QAVinciKit" */;
 			buildPhases = (
-				F2EA990029BFA3A800227027 /* Sources */,
-				F2EA990129BFA3A800227027 /* Frameworks */,
-				F2EA990229BFA3A800227027 /* Resources */,
+				F2EA98F729BFA3A800227027 /* Headers */,
+				F2EA98F829BFA3A800227027 /* Sources */,
+				F2EA98F929BFA3A800227027 /* Frameworks */,
+				F2EA98FA29BFA3A800227027 /* Resources */,
+				F2EA992229BFA47B00227027 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				F2EA990729BFA3A800227027 /* PBXTargetDependency */,
 			);
-			name = QAVinciTests;
-			productName = QAVinciTests;
-			productReference = F2EA990429BFA3A800227027 /* QAVinciTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
+			name = QAVinciKit;
+			packageProductDependencies = (
+				F237EB6E29C4C73400A6A730 /* OpenAIKit */,
+			);
+			productName = QAVinci;
+			productReference = F2EA98FC29BFA3A800227027 /* QAVinciKit.framework */;
+			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
 
@@ -213,12 +198,12 @@
 				LastSwiftUpdateCheck = 1420;
 				LastUpgradeCheck = 1420;
 				TargetAttributes = {
+					F2B8717C29C39C6900A17087 = {
+						CreatedOnToolsVersion = 14.2;
+					};
 					F2EA98FB29BFA3A800227027 = {
 						CreatedOnToolsVersion = 14.2;
 						LastSwiftMigration = 1420;
-					};
-					F2EA990329BFA3A800227027 = {
-						CreatedOnToolsVersion = 14.2;
 					};
 				};
 			};
@@ -232,12 +217,13 @@
 			);
 			mainGroup = F2EA98F229BFA3A800227027;
 			packageReferences = (
+				F237EB6D29C4C73400A6A730 /* XCRemoteSwiftPackageReference "openai-kit" */,
 			);
 			productRefGroup = F2EA98FD29BFA3A800227027 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F2EA98FB29BFA3A800227027 /* QAVinci */,
+				F2EA98FB29BFA3A800227027 /* QAVinciKit */,
 				F2EA990329BFA3A800227027 /* QAVinciTests */,
 			);
 		};
@@ -277,21 +263,9 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F2EA990029BFA3A800227027 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				F2EA990A29BFA3A800227027 /* QAVinciTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		F2EA990729BFA3A800227027 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F2EA98FB29BFA3A800227027 /* QAVinci */;
-			targetProxy = F2EA990629BFA3A800227027 /* PBXContainerItemProxy */;
+/* Begin XCBuildConfiguration section */
 		};
 /* End PBXTargetDependency section */
 
@@ -482,46 +456,6 @@
 			};
 			name = Release;
 		};
-		F2EA991229BFA3A800227027 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
-				MACOSX_DEPLOYMENT_TARGET = 13.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.work.QAVinciTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		F2EA991329BFA3A800227027 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
-				MACOSX_DEPLOYMENT_TARGET = 13.1;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.work.QAVinciTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -534,7 +468,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F2EA990E29BFA3A800227027 /* Build configuration list for PBXNativeTarget "QAVinci" */ = {
+		F2EA990E29BFA3A800227027 /* Build configuration list for PBXNativeTarget "QAVinciKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F2EA990F29BFA3A800227027 /* Debug */,
@@ -543,16 +477,25 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F2EA991129BFA3A800227027 /* Build configuration list for PBXNativeTarget "QAVinciTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F2EA991229BFA3A800227027 /* Debug */,
-				F2EA991329BFA3A800227027 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
+/* Begin XCRemoteSwiftPackageReference section */
+		F237EB6D29C4C73400A6A730 /* XCRemoteSwiftPackageReference "openai-kit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/fjcaetano/openai-kit";
+			requirement = {
+				branch = fix/embeddings;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F237EB6E29C4C73400A6A730 /* OpenAIKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F237EB6D29C4C73400A6A730 /* XCRemoteSwiftPackageReference "openai-kit" */;
+			productName = OpenAIKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F2EA98F329BFA3A800227027 /* Project object */;
 }
