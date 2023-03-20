@@ -12,6 +12,7 @@
 		F23FA5DC29C2620C00F70144 /* Embeddings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23FA5DB29C2620C00F70144 /* Embeddings.swift */; };
 		F278494C29C4D6C400A2EBD7 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278494B29C4D6C400A2EBD7 /* Constants.swift */; };
 		F278494F29C8BB2D00A2EBD7 /* ProcessPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278494E29C8BB2D00A2EBD7 /* ProcessPool.swift */; };
+		F278495029C8CB1600A2EBD7 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992729BFA7FA00227027 /* Environment.swift */; };
 		F290E17629C3B0DB0065FC37 /* XcodeGenKit in Frameworks */ = {isa = PBXBuildFile; productRef = F290E17529C3B0DB0065FC37 /* XcodeGenKit */; };
 		F290E17829C3B16D0065FC37 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F290E17729C3B16D0065FC37 /* main.swift */; };
 		F290E17A29C3B1910065FC37 /* TestProjectGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F290E17929C3B1910065FC37 /* TestProjectGenerator.swift */; };
@@ -303,6 +304,7 @@
 				F278494C29C4D6C400A2EBD7 /* Constants.swift in Sources */,
 				F290E17829C3B16D0065FC37 /* main.swift in Sources */,
 				F2B8718029C39C6900A17087 /* TestFileBuilder.swift in Sources */,
+				F278495029C8CB1600A2EBD7 /* Environment.swift in Sources */,
 				F278494F29C8BB2D00A2EBD7 /* ProcessPool.swift in Sources */,
 				F290E17A29C3B1910065FC37 /* TestProjectGenerator.swift in Sources */,
 				F237EBED29C4CF6C00A6A730 /* RunCommand.swift in Sources */,

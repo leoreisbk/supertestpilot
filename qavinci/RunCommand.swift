@@ -35,7 +35,7 @@ struct Runner {
     private func runTests(uuid: String) throws {
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/xcodebuild")
-        process.standardError = FileHandle.nullDevice
+       process.standardError = FileHandle.nullDevice
         process.arguments = [
             "-quiet",
             "-project", testProjectPath,

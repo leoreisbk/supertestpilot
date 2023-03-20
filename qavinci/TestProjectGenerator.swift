@@ -21,7 +21,7 @@ struct TestProjectGenerator {
         project.defaultProjectPath.string
     }
 
-    init(testedProjectPath: URL, testsPath: URL) throws {
+    init(testedProjectPath: URL, testsPath: URL, openAIKey: String) throws {
         let projectPath = testedProjectPath.path(percentEncoded: false)
         self.testsPath = testsPath.appending(component: Constants.testProjectDir).path(percentEncoded: false)
 
@@ -62,12 +62,7 @@ struct TestProjectGenerator {
                     test: Scheme.Test(
                         targets: [Scheme.Test.TestTarget(stringLiteral: Constants.testProjectName)],
                         environmentVariables: [
-                            // TODO
-                            XCScheme.EnvironmentVariable(
-                                variable: "OPEN_AI_KEY",
-                                value: "foobar",
-                                enabled: true
-                            ),
+                            XCScheme.EnvironmentVariable(variable: "OPEN_AI_KEY", value: openAIKey, enabled: true),
                         ]
                     )
                 ),
