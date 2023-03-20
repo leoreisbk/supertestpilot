@@ -45,13 +45,7 @@ struct Runner {
             "test"
         ]
 
-        // Killing the underlying xcodebuild process isn't working :/
-        let signal = DispatchSource.makeSignalSource(signal: SIGINT)
-        signal.setEventHandler {
-            process.interrupt()
-        }
-
-        try process.run()
+        try ProcessPool.shared.run(process: process)
         process.waitUntilExit()
     }
 
@@ -60,7 +54,7 @@ struct Runner {
         process.executableURL = URL(filePath: "/usr/bin/open")
         process.arguments = ["-a", "Simulator", "--args", "-CurrentDeviceUDID", uuid]
 
-        try process.run()
+        try ProcessPool.shared.run(process: process)
     }
 
     private func findDeviceUUID(name: String) throws -> String? {
@@ -70,7 +64,7 @@ struct Runner {
         process.standardOutput = output
         process.arguments = ["list", "devices", name, "-j"]
 
-        try process.run()
+        try ProcessPool.shared.run(process: process)
         process.waitUntilExit()
 
         guard let data = try output.fileHandleForReading.readToEnd() else {
@@ -93,7 +87,7 @@ struct Runner {
         process.standardOutput = output
         process.arguments = ["--print-path"]
 
-        try process.run()
+        try ProcessPool.shared.run(process: process)
         process.waitUntilExit()
 
         guard let path = try output.fileHandleForReading.readToEnd()

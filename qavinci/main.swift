@@ -54,26 +54,19 @@ struct QAVinciCommand: ParsableCommand {
         let path = project.path(percentEncoded: false)
         if !path.hasSuffix(".xcodeproj") {
             let projects = try FileManager.default.contentsOfDirectory(atPath: path).filter { $0.hasSuffix(".xcodeproj") }
-            if projects.count == 0 { throw Self.ErrorCase.projectNotFound }
-            if projects.count > 1 { throw Self.ErrorCase.foundMultipleProjects }
+            if projects.count == 0 { throw ValidationError("Couldn't find any .xcodeproj") }
+            if projects.count > 1 { throw ValidationError("Found multiple .xcodeproj files") }
 
             project = URL(filePath: path.appendingPathComponent(projects[0]))
         }
     }
 }
 
-extension QAVinciCommand {
-    enum ErrorCase: Error, CustomStringConvertible {
-        case projectNotFound, foundMultipleProjects
-
-        var description: String {
-            switch self {
-            case .projectNotFound: return "Couldn't find any .xcodeproj"
-            case .foundMultipleProjects: return "Found multiple .xcodeproj files"
-            }
-        }
-    }
+signal(SIGINT, SIG_IGN)
+let sig = DispatchSource.makeSignalSource(signal: SIGINT)
+sig.setEventHandler {
+    ProcessPool.shared.terminateRunningProcesses()
 }
 
-//QAVinciCommand.main(["/Users/flaviocaetano/projects/Fruta Test", "-p", "/Users/flaviocaetano/Downloads/FrutaBuildingAFeatureRichAppWithSwiftUI"])
+sig.resume()
 QAVinciCommand.main()

@@ -27,7 +27,7 @@ struct TestProjectGenerator {
 
         let existingProject = try XcodeProj(pathString: projectPath)
         guard let scheme = existingProject.sharedData?.schemes.first?.name else {
-            throw ErrorCases.missingScheme
+            throw ValidationError("Couldn't find any schemes available in the given project")
         }
 
         self.project = try Project(
@@ -85,11 +85,5 @@ struct TestProjectGenerator {
         try FileWriter(project: project).writePlists()
         let xcodeProj = try ProjectGenerator(project: project).generateXcodeProject(userName: "$USER")
         try xcodeProj.write(path: project.defaultProjectPath)
-    }
-}
-
-extension TestProjectGenerator {
-    enum ErrorCases: Error {
-        case missingScheme
     }
 }

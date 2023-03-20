@@ -23,7 +23,7 @@ struct TestFileBuilder {
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
-            throw ErrorCase.noTestFiles
+            throw ValidationError("Couldn't find any .\(Constants.testFileExt) files in the given directory")
         }
 
         let files = try enumerator
@@ -39,7 +39,7 @@ struct TestFileBuilder {
             }
 
         guard !tests.isEmpty else {
-            throw ErrorCase.noTestFiles
+            throw ValidationError("Couldn't find any .\(Constants.testFileExt) files in the given directory")
         }
 
         let testFile = """
@@ -89,15 +89,5 @@ extension String {
 
     var deletingLastPathComponent: String {
         (self as NSString).deletingLastPathComponent
-    }
-}
-
-extension TestFileBuilder {
-    enum ErrorCase: Error, CustomStringConvertible {
-        case noTestFiles
-
-        var description: String {
-            "Couldn't find any .\(Constants.testFileExt) files in the given directory"
-        }
     }
 }
