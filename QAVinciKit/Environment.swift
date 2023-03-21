@@ -11,4 +11,8 @@ enum Environment {
     static var apiKey: String? {
         ProcessInfo.processInfo.environment["OPEN_AI_KEY"]
     }
+
+    static var logFile: String? {
+        ProcessInfo.processInfo.environment["LOG_FILE"]
+    }
 }

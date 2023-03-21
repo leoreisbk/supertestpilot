@@ -8,14 +8,19 @@
 
 /* Begin PBXBuildFile section */
 		F237EB6F29C4C73400A6A730 /* OpenAIKit in Frameworks */ = {isa = PBXBuildFile; productRef = F237EB6E29C4C73400A6A730 /* OpenAIKit */; };
-		F237EBED29C4CF6C00A6A730 /* RunCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = F237EBEC29C4CF6C00A6A730 /* RunCommand.swift */; };
+		F237EBED29C4CF6C00A6A730 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F237EBEC29C4CF6C00A6A730 /* TestRunner.swift */; };
 		F23FA5DC29C2620C00F70144 /* Embeddings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23FA5DB29C2620C00F70144 /* Embeddings.swift */; };
 		F278494C29C4D6C400A2EBD7 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278494B29C4D6C400A2EBD7 /* Constants.swift */; };
 		F278494F29C8BB2D00A2EBD7 /* ProcessPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F278494E29C8BB2D00A2EBD7 /* ProcessPool.swift */; };
 		F278495029C8CB1600A2EBD7 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2EA992729BFA7FA00227027 /* Environment.swift */; };
+		F2784B5729C8E31F00A2EBD7 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2784B5629C8E31F00A2EBD7 /* Logging.swift */; };
 		F290E17629C3B0DB0065FC37 /* XcodeGenKit in Frameworks */ = {isa = PBXBuildFile; productRef = F290E17529C3B0DB0065FC37 /* XcodeGenKit */; };
 		F290E17829C3B16D0065FC37 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F290E17729C3B16D0065FC37 /* main.swift */; };
 		F290E17A29C3B1910065FC37 /* TestProjectGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F290E17929C3B1910065FC37 /* TestProjectGenerator.swift */; };
+		F2AE9DA629C9084B004337F9 /* Logging in Frameworks */ = {isa = PBXBuildFile; productRef = F2AE9DA529C9084B004337F9 /* Logging */; };
+		F2AE9DA829C9FFC8004337F9 /* LogFileMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE9DA729C9FFC8004337F9 /* LogFileMonitor.swift */; };
+		F2AE9DAB29CA01C9004337F9 /* LoggingFormatAndPipe in Frameworks */ = {isa = PBXBuildFile; productRef = F2AE9DAA29CA01C9004337F9 /* LoggingFormatAndPipe */; };
+		F2AE9DAD29CA0919004337F9 /* QAVinciCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE9DAC29CA0919004337F9 /* QAVinciCommand.swift */; };
 		F2B8718029C39C6900A17087 /* TestFileBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B8717F29C39C6900A17087 /* TestFileBuilder.swift */; };
 		F2B8718629C39CEF00A17087 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = F2B8718529C39CEF00A17087 /* ArgumentParser */; };
 		F2EA990B29BFA3A800227027 /* QAVinci.h in Headers */ = {isa = PBXBuildFile; fileRef = F2EA98FF29BFA3A800227027 /* QAVinci.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -55,13 +60,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		F237EBEC29C4CF6C00A6A730 /* RunCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunCommand.swift; sourceTree = "<group>"; };
+		F237EBEC29C4CF6C00A6A730 /* TestRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
 		F23FA5DB29C2620C00F70144 /* Embeddings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Embeddings.swift; sourceTree = "<group>"; };
 		F23FA5E629C2661600F70144 /* OpenAIKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OpenAIKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F278494B29C4D6C400A2EBD7 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		F278494E29C8BB2D00A2EBD7 /* ProcessPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessPool.swift; sourceTree = "<group>"; };
+		F2784B5629C8E31F00A2EBD7 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
 		F290E17729C3B16D0065FC37 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		F290E17929C3B1910065FC37 /* TestProjectGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestProjectGenerator.swift; sourceTree = "<group>"; };
+		F2AE9DA729C9FFC8004337F9 /* LogFileMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogFileMonitor.swift; sourceTree = "<group>"; };
+		F2AE9DAC29CA0919004337F9 /* QAVinciCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QAVinciCommand.swift; sourceTree = "<group>"; };
 		F2B8717D29C39C6900A17087 /* qavinci */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = qavinci; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2B8717F29C39C6900A17087 /* TestFileBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFileBuilder.swift; sourceTree = "<group>"; };
 		F2EA98FC29BFA3A800227027 /* QAVinciKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = QAVinciKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,6 +90,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F2AE9DA629C9084B004337F9 /* Logging in Frameworks */,
+				F2AE9DAB29CA01C9004337F9 /* LoggingFormatAndPipe in Frameworks */,
 				F290E17629C3B0DB0065FC37 /* XcodeGenKit in Frameworks */,
 				F2B8718629C39CEF00A17087 /* ArgumentParser in Frameworks */,
 			);
@@ -105,9 +115,11 @@
 				F2B8717F29C39C6900A17087 /* TestFileBuilder.swift */,
 				F290E17729C3B16D0065FC37 /* main.swift */,
 				F290E17929C3B1910065FC37 /* TestProjectGenerator.swift */,
-				F237EBEC29C4CF6C00A6A730 /* RunCommand.swift */,
+				F237EBEC29C4CF6C00A6A730 /* TestRunner.swift */,
 				F278494B29C4D6C400A2EBD7 /* Constants.swift */,
 				F278494E29C8BB2D00A2EBD7 /* ProcessPool.swift */,
+				F2AE9DA729C9FFC8004337F9 /* LogFileMonitor.swift */,
+				F2AE9DAC29CA0919004337F9 /* QAVinciCommand.swift */,
 			);
 			path = qavinci;
 			sourceTree = "<group>";
@@ -141,6 +153,7 @@
 				F2EA992729BFA7FA00227027 /* Environment.swift */,
 				F2EA992929BFA85300227027 /* Config.swift */,
 				F23FA5DB29C2620C00F70144 /* Embeddings.swift */,
+				F2784B5629C8E31F00A2EBD7 /* Logging.swift */,
 				F2EA991B29BFA45300227027 /* Extensions */,
 			);
 			path = QAVinciKit;
@@ -196,6 +209,8 @@
 			packageProductDependencies = (
 				F2B8718529C39CEF00A17087 /* ArgumentParser */,
 				F290E17529C3B0DB0065FC37 /* XcodeGenKit */,
+				F2AE9DA529C9084B004337F9 /* Logging */,
+				F2AE9DAA29CA01C9004337F9 /* LoggingFormatAndPipe */,
 			);
 			productName = qavinci;
 			productReference = F2B8717D29C39C6900A17087 /* qavinci */;
@@ -255,6 +270,8 @@
 				F2B8718429C39CEF00A17087 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
 				F290E17429C3B0DB0065FC37 /* XCRemoteSwiftPackageReference "XcodeGen" */,
 				F237EB6D29C4C73400A6A730 /* XCRemoteSwiftPackageReference "openai-kit" */,
+				F2AE9DA429C9084B004337F9 /* XCRemoteSwiftPackageReference "swift-log" */,
+				F2AE9DA929CA01C9004337F9 /* XCRemoteSwiftPackageReference "swift-log-format-and-pipe" */,
 			);
 			productRefGroup = F2EA98FD29BFA3A800227027 /* Products */;
 			projectDirPath = "";
@@ -302,12 +319,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				F278494C29C4D6C400A2EBD7 /* Constants.swift in Sources */,
+				F2AE9DA829C9FFC8004337F9 /* LogFileMonitor.swift in Sources */,
 				F290E17829C3B16D0065FC37 /* main.swift in Sources */,
 				F2B8718029C39C6900A17087 /* TestFileBuilder.swift in Sources */,
+				F2AE9DAD29CA0919004337F9 /* QAVinciCommand.swift in Sources */,
 				F278495029C8CB1600A2EBD7 /* Environment.swift in Sources */,
 				F278494F29C8BB2D00A2EBD7 /* ProcessPool.swift in Sources */,
 				F290E17A29C3B1910065FC37 /* TestProjectGenerator.swift in Sources */,
-				F237EBED29C4CF6C00A6A730 /* RunCommand.swift in Sources */,
+				F237EBED29C4CF6C00A6A730 /* TestRunner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -316,6 +335,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F2EA991829BFA3E900227027 /* Prompts.swift in Sources */,
+				F2784B5729C8E31F00A2EBD7 /* Logging.swift in Sources */,
 				F2EA992829BFA7FA00227027 /* Environment.swift in Sources */,
 				F2EA992429BFA4A700227027 /* Runner.swift in Sources */,
 				F23FA5DC29C2620C00F70144 /* Embeddings.swift in Sources */,
@@ -587,6 +607,22 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		F2AE9DA429C9084B004337F9 /* XCRemoteSwiftPackageReference "swift-log" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-log";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		F2AE9DA929CA01C9004337F9 /* XCRemoteSwiftPackageReference "swift-log-format-and-pipe" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Adorkable/swift-log-format-and-pipe";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.1;
+			};
+		};
 		F2B8718429C39CEF00A17087 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
@@ -607,6 +643,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F290E17429C3B0DB0065FC37 /* XCRemoteSwiftPackageReference "XcodeGen" */;
 			productName = XcodeGenKit;
+		};
+		F2AE9DA529C9084B004337F9 /* Logging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F2AE9DA429C9084B004337F9 /* XCRemoteSwiftPackageReference "swift-log" */;
+			productName = Logging;
+		};
+		F2AE9DAA29CA01C9004337F9 /* LoggingFormatAndPipe */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F2AE9DA929CA01C9004337F9 /* XCRemoteSwiftPackageReference "swift-log-format-and-pipe" */;
+			productName = LoggingFormatAndPipe;
 		};
 		F2B8718529C39CEF00A17087 /* ArgumentParser */ = {
 			isa = XCSwiftPackageProductDependency;

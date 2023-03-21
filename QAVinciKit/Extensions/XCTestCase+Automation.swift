@@ -19,7 +19,7 @@ public extension XCTestCase {
         let exp = expectation(description: objective)
 
         Task {
-            let result = await self.automate(config: config, objective: objective)
+            let result = try await self.automate(config: config, objective: objective)
 
             XCTAssertEqual(result, expectedResult)
             exp.fulfill()
@@ -29,7 +29,7 @@ public extension XCTestCase {
     }
 
     @MainActor @discardableResult
-    func automate(config: Config = .init(), objective: String) async -> String? {
+    func automate(config: Config = .init(), objective: String) async throws -> String? {
         let runner = Runner(config: config)
         defer {
             Task {
@@ -42,11 +42,9 @@ public extension XCTestCase {
             try await runner.httpClient.shutdown()
             return result
         } catch let err {
-            dump(err)
-            XCTFail(err.localizedDescription)
+            Logging.info(err.localizedDescription)
+            throw err
         }
-
-        return nil
     }
 
     @MainActor @discardableResult
@@ -55,17 +53,19 @@ public extension XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        print("\nStrategizing how to split the objective in tasks...")
+        Logging.info("Strategizing how to split the objective in tasks...")
         let steps = try await runner.getCompletionSetup(objective: objective)
-        print("Done! Dividing work in these steps: ")
+        Logging.info("Done! Dividing work in these steps:")
         steps.enumerated().forEach { idx, step in
-            print("\(idx + 1). \(step)")
+            Logging.info("\(idx + 1). \(step)")
         }
+
+        Logging.info("")
 
         for curStep in steps {
             let uiDump = app.simpleUI
 
-            print("\nExecuting step: '\(curStep)'")
+            Logging.info("Executing step: '\(curStep)'")
 
             let jsonCommand = try await runner.getCompletionResponse(for: uiDump, objective: curStep)
             guard let jsonCommand = jsonCommand else {

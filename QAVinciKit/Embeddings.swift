@@ -18,8 +18,6 @@ extension Embedding {
             // descending
             .sorted { $0.0 > $1.0 }
 
-        print(result)
-
         return Array(result
             .prefix(upTo: n))
     }

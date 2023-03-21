@@ -11,7 +11,9 @@ import XcodeGenKit
 import ProjectSpec
 import PathKit
 import XcodeProj
+import Logging
 
+private let logger = Logger(label: #file.lastPathComponent)
 struct TestProjectGenerator {
     let testsPath: String
 
@@ -21,9 +23,10 @@ struct TestProjectGenerator {
         project.defaultProjectPath.string
     }
 
-    init(testedProjectPath: URL, testsPath: URL, openAIKey: String) throws {
+    init(testedProjectPath: URL, testsPath: URL, openAIKey: String, logFile: String) throws {
         let projectPath = testedProjectPath.path(percentEncoded: false)
         self.testsPath = testsPath.appending(component: Constants.testProjectDir).path(percentEncoded: false)
+        logger.debug("Initializing project on \(self.testsPath)")
 
         let existingProject = try XcodeProj(pathString: projectPath)
         guard let scheme = existingProject.sharedData?.schemes.first?.name else {
@@ -50,7 +53,7 @@ struct TestProjectGenerator {
                         Dependency(type: .target, reference: "Host/\(scheme)"),
                         Dependency(type: .target, reference: "QAVinci/QAVinciKit"),
                     ],
-                    info: Plist(path: self.testsPath.appendingPathComponent("Info.plist"))
+                    info: Plist(path: "Info.plist")
                 ),
             ],
             schemes: [
@@ -62,7 +65,8 @@ struct TestProjectGenerator {
                     test: Scheme.Test(
                         targets: [Scheme.Test.TestTarget(stringLiteral: Constants.testProjectName)],
                         environmentVariables: [
-                            XCScheme.EnvironmentVariable(variable: "OPEN_AI_KEY", value: openAIKey, enabled: true),
+                            .init(variable: "OPEN_AI_KEY", value: openAIKey, enabled: true),
+                            .init(variable: "LOG_FILE", value: logFile, enabled: true),
                         ]
                     )
                 ),
@@ -77,6 +81,7 @@ struct TestProjectGenerator {
     func generate() throws {
         try? FileManager.default.createDirectory(atPath: testsPath, withIntermediateDirectories: true)
 
+        logger.debug("Writing .xcodeproj to \(project.defaultProjectPath)")
         try FileWriter(project: project).writePlists()
         let xcodeProj = try ProjectGenerator(project: project).generateXcodeProject(userName: "$USER")
         try xcodeProj.write(path: project.defaultProjectPath)

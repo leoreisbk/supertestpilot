@@ -15,4 +15,11 @@ enum Constants {
     func getTestProjectURL(forProject project: String) -> URL {
         FileManager.default.temporaryDirectory.appending(component: project.deletingPathExtension)
     }
+
+    static let logFilePath: String = {
+        FileManager.default.temporaryDirectory
+            .appending(component: Constants.testFileExt)
+            .appending(component: "\(ISO8601DateFormatter().string(from: Date())).log")
+            .path(percentEncoded: false)
+    }()
 }

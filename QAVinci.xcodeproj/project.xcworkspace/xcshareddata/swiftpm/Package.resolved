@@ -109,6 +109,15 @@
       }
     },
     {
+      "identity" : "swift-log-format-and-pipe",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Adorkable/swift-log-format-and-pipe",
+      "state" : {
+        "revision" : "bd29badb9e6b18122ec10b84eed534db83cad279",
+        "version" : "0.1.1"
+      }
+    },
+    {
       "identity" : "swift-nio",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
