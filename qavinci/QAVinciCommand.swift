@@ -14,16 +14,19 @@ struct QAVinciCommand: ParsableCommand {
     static var configuration = CommandConfiguration(commandName: "qavinci")
 
     @Argument(
-        help: "The path to the folder containing the .\(Constants.testFileExt) test files. Defaults to the current directory",
+        help: """
+        The path to the folder containing the .\(Constants.testFileExt) test files. Can be a specific test case to be \
+        executed. Defaults to the current directory
+        """,
         completion: .directory,
-        transform: { URL(filePath: $0) }
+        transform: { WorkDir(path: $0) }
     )
-    var testsPath = URL(filePath: FileManager.default.currentDirectoryPath)
+    var testsPath = WorkDir(path: FileManager.default.currentDirectoryPath)
 
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
-        help: ArgumentHelp("The path to the .xcodeproj to be tested"),
+        help: "The path to the .xcodeproj to be tested",
         completion: .directory,
         transform: { URL(filePath: $0) }
     )
@@ -32,7 +35,7 @@ struct QAVinciCommand: ParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
-        help: ArgumentHelp("The OpenAI API Key to be used. Can be set as env var OPEN_AI_KEY")
+        help: "The OpenAI API Key to be used. Can be set as env var OPEN_AI_KEY"
     )
     var openAIKey: String!
 
@@ -51,12 +54,12 @@ struct QAVinciCommand: ParsableCommand {
         FileManager.default.createFile(atPath: Constants.logFilePath, contents: nil)
 
         // Regenerate the test file
-        try TestFileBuilder(path: testsPath).buildTestFile()
+        try TestFileBuilder(workDir: testsPath, fileName: "Test.swift").buildTestFile()
 
         // Create the project if it doesn't exist
         let testProject = try TestProjectGenerator(
             testedProjectPath: project,
-            testsPath: testsPath,
+            testsPath: testsPath.dirPath,
             openAIKey: openAIKey,
             logFile: Constants.logFilePath
         )
@@ -71,6 +74,9 @@ struct QAVinciCommand: ParsableCommand {
     }
 
     mutating func validate() throws {
+        logger.debug("Tests path: \(testsPath.dirPath)")
+        logger.debug("Test case: \(testsPath.testCase ?? "[all]")")
+
         // Checking if tested project is a dir or the .xcodeproj file
         let path = project.path(percentEncoded: false)
         if !path.hasSuffix(".xcodeproj") {
@@ -87,5 +93,23 @@ struct QAVinciCommand: ParsableCommand {
             throw ValidationError("Missing OpenAI API Key")
         }
         logger.debug("OpenAI API Key: \(openAIKey!)")
+    }
+}
+
+extension QAVinciCommand {
+    struct WorkDir: Decodable {
+        let dirPath: URL
+        let testCase: String?
+
+        init(path: String) {
+            let url = URL(filePath: path).absoluteURL
+            if (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == false {
+                dirPath = url.deletingLastPathComponent()
+                testCase = url.lastPathComponent
+            } else {
+                dirPath = url
+                testCase = nil
+            }
+        }
     }
 }

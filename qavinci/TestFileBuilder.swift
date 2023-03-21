@@ -11,29 +11,28 @@ import Logging
 
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestFileBuilder {
-    let path: URL
+    let workDir: QAVinciCommand.WorkDir
     let fileName: String
-
-    init(path: URL, fileName: String = "Test.swift") {
-        self.path = path
-        self.fileName = fileName
-    }
 
     func buildTestFile() throws {
         guard let enumerator = FileManager.default.enumerator(
-            at: path,
+            at: workDir.dirPath,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
             throw ValidationError("Couldn't find any .\(Constants.testFileExt) files in the given directory")
         }
 
-        let files = try enumerator
+        var files = try enumerator
             .compactMap { $0 as? URL }
             .filter {
                 try $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true
                 && $0.pathExtension == Constants.testFileExt
             }
+
+        if let testCase = workDir.testCase {
+            files = files.filter { $0.path(percentEncoded: false).hasSuffix(testCase) }
+        }
 
         logger.info("""
 
@@ -65,7 +64,7 @@ struct TestFileBuilder {
         }
         """
 
-        let testPath = path.appending(component: "\(Constants.testProjectDir)/\(fileName)")
+        let testPath = workDir.dirPath.appending(component: "\(Constants.testProjectDir)/\(fileName)")
         logger.debug("Writing test cases to \(testPath)")
         try? FileManager.default.createDirectory(at: testPath.deletingLastPathComponent(), withIntermediateDirectories: true)
         try testFile.write(to: testPath, atomically: true, encoding: .utf8)

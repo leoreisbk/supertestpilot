@@ -41,7 +41,6 @@ struct TestRunner {
         logger.debug("Found device \(uuid)")
 
         if launchSimulator {
-            logger.debug("Launching iOS Simulator")
             try launchSimulator(uuid: uuid)
         }
 
@@ -70,7 +69,7 @@ struct TestRunner {
         let xcodeExitCode = ExitCode(process.terminationStatus)
         if xcodeExitCode.isSuccess == false {
             logger.error("""
-            
+
             Testing failed due to unexpected issue. Check the build logs on:
             \(xcodeLogFileURL.path(percentEncoded: false))
             """)
@@ -80,6 +79,7 @@ struct TestRunner {
     }
 
     private func launchSimulator(uuid: String) throws {
+        logger.debug("Launching iOS Simulator")
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/open")
         process.arguments = ["-a", "Simulator", "--args", "-CurrentDeviceUDID", uuid]
