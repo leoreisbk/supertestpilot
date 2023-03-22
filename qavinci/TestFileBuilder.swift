@@ -11,12 +11,12 @@ import Logging
 
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestFileBuilder {
-    let workDir: QAVinciCommand.WorkDir
-    let fileName: String
+    let testsDir: QAVinciCommand.WorkDir
+    let targetDir: URL
 
     func buildTestFile() throws {
         guard let enumerator = FileManager.default.enumerator(
-            at: workDir.dirPath,
+            at: testsDir.dirPath,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
@@ -30,7 +30,7 @@ struct TestFileBuilder {
                 && $0.pathExtension == Constants.testFileExt
             }
 
-        if let testCase = workDir.testCase {
+        if let testCase = testsDir.testCase {
             files = files.filter { $0.path(percentEncoded: false).hasSuffix(testCase) }
         }
 
@@ -64,9 +64,8 @@ struct TestFileBuilder {
         }
         """
 
-        let testPath = workDir.dirPath.appending(component: "\(Constants.testProjectDir)/\(fileName)")
+        let testPath = targetDir.appendingPathComponent("Tests.swift")
         logger.debug("Writing test cases to \(testPath)")
-        try? FileManager.default.createDirectory(at: testPath.deletingLastPathComponent(), withIntermediateDirectories: true)
         try testFile.write(to: testPath, atomically: true, encoding: .utf8)
     }
 

@@ -15,18 +15,15 @@ import Logging
 
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestProjectGenerator {
-    let testsPath: String
-
     let project: Project
 
     var testProjectPath: String {
         project.defaultProjectPath.string
     }
 
-    init(testedProjectPath: URL, testsPath: URL, openAIKey: String, logFile: String) throws {
+    init(testedProjectPath: URL, targetDir: URL, openAIKey: String, logFile: String) throws {
         let projectPath = testedProjectPath.path(percentEncoded: false)
-        self.testsPath = testsPath.appending(component: Constants.testProjectDir).path(percentEncoded: false)
-        logger.debug("Initializing project on \(self.testsPath)")
+        logger.debug("Initializing project on \(targetDir)")
 
         let existingProject = try XcodeProj(pathString: projectPath)
         guard let scheme = existingProject.sharedData?.schemes.first?.name else {
@@ -34,7 +31,7 @@ struct TestProjectGenerator {
         }
 
         self.project = try Project(
-            basePath: Path(self.testsPath),
+            basePath: Path(targetDir.path(percentEncoded: false)),
             name: Constants.testProjectName,
             targets: [
                 Target(
@@ -44,7 +41,7 @@ struct TestProjectGenerator {
                     settings: Settings(dictionary: ["TEST_TARGET_NAME": scheme]),
                     sources: [
                         TargetSource(
-                            path: self.testsPath,
+                            path: targetDir.path(percentEncoded: false),
                             includes: ["*.swift"],
                             createIntermediateGroups: true
                         ),
@@ -79,8 +76,6 @@ struct TestProjectGenerator {
     }
 
     func generate() throws {
-        try? FileManager.default.createDirectory(atPath: testsPath, withIntermediateDirectories: true)
-
         logger.debug("Writing .xcodeproj to \(project.defaultProjectPath)")
         try FileWriter(project: project).writePlists()
         let xcodeProj = try ProjectGenerator(project: project).generateXcodeProject(userName: "$USER")

@@ -30,7 +30,7 @@ struct QAVinciCommand: ParsableCommand {
         completion: .directory,
         transform: { URL(filePath: $0) }
     )
-    var project = URL(filePath: ".")
+    var project: URL!
 
     @Option(
         name: .shortAndLong,
@@ -49,17 +49,26 @@ struct QAVinciCommand: ParsableCommand {
     var verbose = false
 
     func run() throws {
+        let fm = FileManager.default
+
+        // Setting up logging
         logger.debug("Log File: \(Constants.logFilePath)")
-        try FileManager.default.createDirectory(atPath: Constants.logFilePath.deletingLastPathComponent, withIntermediateDirectories: true)
-        FileManager.default.createFile(atPath: Constants.logFilePath, contents: nil)
+        try fm.createDirectory(atPath: Constants.logFilePath.deletingLastPathComponent, withIntermediateDirectories: true)
+        fm.createFile(atPath: Constants.logFilePath, contents: nil)
+
+        // Creating target directory
+        let targetDir = Constants.tempDir.appending(component: project.lastPathComponent.deletingPathExtension)
+        logger.debug("Creating project on: \(targetDir.path(percentEncoded: false))")
+        try? fm.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
         // Regenerate the test file
-        try TestFileBuilder(workDir: testsPath, fileName: "Test.swift").buildTestFile()
+        try TestFileBuilder(testsDir: testsPath, targetDir: targetDir)
+            .buildTestFile()
 
         // Create the project if it doesn't exist
         let testProject = try TestProjectGenerator(
             testedProjectPath: project,
-            testsPath: testsPath.dirPath,
+            targetDir: targetDir,
             openAIKey: openAIKey,
             logFile: Constants.logFilePath
         )
@@ -74,11 +83,11 @@ struct QAVinciCommand: ParsableCommand {
     }
 
     mutating func validate() throws {
-        logger.debug("Tests path: \(testsPath.dirPath)")
+        logger.debug("Tests path: \(testsPath.dirPath.path(percentEncoded: false))")
         logger.debug("Test case: \(testsPath.testCase ?? "[all]")")
 
         // Checking if tested project is a dir or the .xcodeproj file
-        let path = project.path(percentEncoded: false)
+        let path = (project ?? testsPath.dirPath).path(percentEncoded: false)
         if !path.hasSuffix(".xcodeproj") {
             let projects = try FileManager.default.contentsOfDirectory(atPath: path).filter { $0.hasSuffix(".xcodeproj") }
             if projects.count == 0 { throw ValidationError("Couldn't find any .xcodeproj") }

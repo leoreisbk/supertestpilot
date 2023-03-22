@@ -18,10 +18,8 @@ struct TestRunner {
     private let deviceName = "iPhone 14 Pro"
 
     private var xcodeLogFileURL: URL = {
-        FileManager.default
-            .temporaryDirectory
-            .appending(component: Constants.testFileExt)
-            .appending(component: "xcodebuild.log")
+        Constants.tempDir
+            .appending(component: "xcodebuild-\(ISO8601DateFormatter().string(from: Date())).log")
     }()
 
     init(testProjectPath: String, launchSimulator: Bool) throws {
@@ -130,6 +128,7 @@ struct TestRunner {
     }
 
     private func makeXcodeFileHandle() throws -> FileHandle {
+        logger.debug("xcodebuild logfile: \(xcodeLogFileURL.path(percentEncoded: false))")
         FileManager.default.createFile(atPath: xcodeLogFileURL.path(percentEncoded: false), contents: nil)
         return try FileHandle(forWritingTo: xcodeLogFileURL)
     }
