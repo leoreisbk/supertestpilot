@@ -11,7 +11,7 @@ import LoggingFormatAndPipe
 
 // MARK: - Logging config
 // This needs to be called before any loggers are created :/
-private let isVerbose = Set(ProcessInfo.processInfo.arguments).intersection(["-v", "--verbose"]).isEmpty == false
+private let isVerbose = (try? QAVinciCommand.parse(Array(ProcessInfo.processInfo.arguments[1...])))?.verbose ?? false
 LoggingSystem.bootstrap { msg in
     var res = LoggingFormatAndPipe.Handler(
         formatter: BasicFormatter(isVerbose ? [.timestamp, .level, .message] : [.message]),
