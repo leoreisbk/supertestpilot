@@ -84,6 +84,6 @@ enum Prompts {
 
 private extension String {
     func removeComments() -> String {
-        replacing(/\/\/.*/, with: "")
+        replacing(#/\/\/.*/#, with: "")
     }
 }

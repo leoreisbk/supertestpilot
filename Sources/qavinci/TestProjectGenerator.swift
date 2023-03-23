@@ -48,7 +48,7 @@ struct TestProjectGenerator {
                     ],
                     dependencies: [
                         Dependency(type: .target, reference: "Host/\(scheme)"),
-                        Dependency(type: .target, reference: "QAVinci/QAVinciKit"),
+                        Dependency(type: .package(product: "QAVinciKit"), reference: "QAVinciKit"),
                     ],
                     info: Plist(path: "Info.plist")
                 ),
@@ -68,9 +68,11 @@ struct TestProjectGenerator {
                     )
                 ),
             ],
+            packages: [
+                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("feat/spm")), // TODO: rename repo & use HTTPS endpoint instead of SSH
+            ],
             projectReferences: [
                 ProjectReference(name: "Host", path: projectPath),
-                ProjectReference(name: "QAVinci", path: "/Users/flaviocaetano/projects/QAVinci/QAVinci.xcodeproj"), // TODO: use package instead
             ]
         )
     }

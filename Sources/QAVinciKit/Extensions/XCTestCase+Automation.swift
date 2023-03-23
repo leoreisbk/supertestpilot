@@ -116,7 +116,7 @@ public extension XCTestCase {
 
         let ui = try ui.replacing(Regex("^(?!\(type.description)).*\n").anchorsMatchLineEndings(), with: "")
         let line = try await runner.searchEmbeddings(input: ui, query: label, n: 1).first ?? ""
-        let newLabel = line.firstMatch(of: /label: '(.*?)'($|,)/)!
+        let newLabel = line.firstMatch(of: #/label: '(.*?)'($|,)/#)!
 
         return app.firstMatch(of: type, label: String(newLabel.output.1))
     }

@@ -39,10 +39,10 @@
     {
       "identity" : "openai-kit",
       "kind" : "remoteSourceControl",
-      "location" : "http://github.com/fjcaetano/openai-kit",
+      "location" : "https://github.com/fjcaetano/openai-kit",
       "state" : {
-        "branch" : "fix/embeddings",
-        "revision" : "abb677270abb93b554590238cef8e44b4fb3a9ef"
+        "branch" : "main",
+        "revision" : "e40c8615d5e169339b7346d98197374d05491e53"
       }
     },
     {
@@ -75,7 +75,7 @@
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-argument-parser.git",
+      "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
         "revision" : "fee6933f37fde9a5e12a1e4aeaa93fe60116ff2a",
         "version" : "1.2.2"
@@ -122,8 +122,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "45167b8006448c79dda4b7bd604e07a034c15c49",
-        "version" : "2.48.0"
+        "revision" : "9b2848d76f5caad08b97e71a04345aa5bdb23a06",
+        "version" : "2.49.0"
       }
     },
     {
@@ -131,8 +131,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio-extras.git",
       "state" : {
-        "revision" : "d75ed708d00353acf173ca23018b6bd46f949464",
-        "version" : "1.17.0"
+        "revision" : "cc1e5275079380c859417dbea8588531f1a90ec3",
+        "version" : "1.18.0"
       }
     },
     {

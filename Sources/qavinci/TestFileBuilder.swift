@@ -103,7 +103,7 @@ extension String {
     }
 
     var sentence: String {
-        replacing(/([a-z])([A-Z])/, with: { "\($0.output.1) \($0.output.2)"})
+        replacing(#/([a-z])([A-Z])/#, with: { "\($0.output.1) \($0.output.2)"})
             .capitalized
     }
 
