@@ -25,32 +25,32 @@ class Runner {
 }
 
 extension Runner {
-    func getCompletionResponse(for ui: String, objective: String) async throws -> String? {
-        let response = try await aiClient.completions.create(
-            model: Model.GPT3.textDavinci003,
-            prompts: [
-                Prompts.system(objective: objective) +
-                """
-
+    func getCompletionResponse(for ui: String, last: String?, objective: String) async throws -> String? {
+        let response = try await aiClient.chats.create(
+            model: Model.GPT4.gpt4_0314,
+            messages: [
+                .system(content: Prompts.system(objective: objective)),
+                .user(content: """
+                LAST: \(last ?? "null")
                 UI:
                 \(ui)
                 ---
                 YOU:
-                """
+                """),
             ],
-            maxTokens: config.maxTokens,
             temperature: config.temperature,
-            n: 1
+            n: 1,
+            maxTokens: config.maxTokens
         )
 
-        return response.choices[0].text
+        return response.choices[0].message.content
     }
 
-    func getCompletionSetup(objective: String) async throws -> [String] {
+    func splitIntoSteps(objective: String) async throws -> [String] {
         let response = try await aiClient.completions.create(
             model: Model.GPT3.textDavinci003,
             prompts: [
-                Prompts.steps(objective: objective)
+                Prompts.stepsCompletion(objective: objective)
             ],
             maxTokens: config.maxTokens,
             temperature: config.temperature,
@@ -78,5 +78,15 @@ extension Runner {
             query: response.data.last!,
             n: n
         )
+    }
+}
+
+private extension Chat.Message {
+    var content: String {
+        switch self {
+        case let .user(content: result): return result
+        case let .system(content: result): return result
+        case let .assistant(content: result): return result
+        }
     }
 }

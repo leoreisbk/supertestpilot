@@ -31,4 +31,7 @@ sig.setEventHandler {
 sig.resume()
 
 // MARK: - MAIN
+#if DEBUG
+print(ProcessInfo.processInfo.arguments[0])
+#endif
 QAVinciCommand.main()

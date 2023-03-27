@@ -8,9 +8,9 @@
 import Foundation
 import XCTest
 
-extension XCUIApplication {
-    var simpleUI: String {
-        var simplifiedUI = debugDescription
+extension String {
+    func simplifyUI() -> String {
+        var simplifiedUI = self
             // Removing all elements without relevant info; also removes all hex mem addresses and frames
             .replacing(#/(\n\s*.*\}\}$|, 0x.*\}\})/#.anchorsMatchLineEndings(), with: "")
             .replacing(#/^\s\s+/#.anchorsMatchLineEndings(), with: "")
@@ -22,6 +22,14 @@ extension XCUIApplication {
         if let range = simplifiedUI.range(of: "\nPath to element") {
             simplifiedUI = String(simplifiedUI[...range.lowerBound])
         }
+
+        // Remove duplicated lines. Consider this logic as a fallback if the request fails due to token limit
+//        simplifiedUI = simplifiedUI
+//            .split(separator: "\n")
+//            .reduce([]) { result, line in
+//                result.contains(line) ? result : result + [line]
+//            }
+//            .joined(separator: "\n")
 
         return simplifiedUI
     }

@@ -14,8 +14,8 @@ enum Prompts {
         Analyze the UI content and respond with the command which you believe will help achieve your objective
         You should only yield one command
         The UI is highly simplified
-        Yield the "stop" command if you think you've fulfilled your objective
         Navigating means tapping an element
+        You're also being given the last command you executed in order to assess if you've finished your objective
 
         You can issue only these commands:
         {"cmd": "tap", "type": "E", "label": "X"} - Tap on the UI element of type "E" with label "X". This command can only be issued with UI elements where `"type": "Button"`
@@ -25,10 +25,12 @@ enum Prompts {
         {"cmd": "scrollUp"} - Scrolls up in the current page
         {"cmd": "goBack"} - Go Back, regardless of the element
         {"cmd": "wait", "seconds": X} - Wait or sleep for X seconds. X is a Double
+        {"cmd": "done"} - You think you've fulfilled your objective and there's nothing more to do
 
         EXAMPLE:
         ===
         OBJECTIVE: Page should be named Sales
+        LAST: {"cmd": "tap", "type": "Button", "label": "Sales"}
         UI:
         NavigationBar, identifier: 'Sales'
         StaticText, label: 'Sale'
@@ -40,6 +42,7 @@ enum Prompts {
         EXAMPLE:
         ===
         OBJECTIVE: Go to Profile
+        LAST: null
         UI:
         TabBar, label: 'Tab Bar'
         Button, label: 'Profile Tab'
@@ -52,6 +55,7 @@ enum Prompts {
 
         EXAMPLE:
         OBJECTIVE: User statement should be 0
+        LAST: {"cmd": "tap", "type": "Button", "label": "Profile Tab"}
         UI:
         StaticText, label: 'useremail@domain.co'
         Other, label: 'Statement', value: 750,762

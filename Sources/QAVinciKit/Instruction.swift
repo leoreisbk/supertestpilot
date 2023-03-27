@@ -20,6 +20,7 @@ enum Instruction: Decodable {
     case scrollUp
     case goBack
     case wait(seconds: TimeInterval)
+    case done
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -56,12 +57,38 @@ enum Instruction: Decodable {
         case .wait:
             let seconds = try container.decode(TimeInterval.self, forKey: .seconds)
             self = .wait(seconds: seconds)
+
+        case .done:
+            self = .done
         }
     }
 }
 
 private extension Instruction {
     enum Command: String, Decodable {
-        case tap, type, stop, scrollDown, scrollUp, goBack, wait
+        case tap, type, assert, scrollDown, scrollUp, goBack, wait, done
+    }
+}
+
+extension Instruction: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case let .assert(answer: answer, expected: expectation):
+            return "Asserting expected value (\(expectation)) equals to discovered value (\(answer ?? "N/A"))"
+
+        case let .tap(type: type, label: label):
+            return "Tapping element - \(type) - (\(label))"
+
+        case let .wait(seconds: seconds):
+            return "Waiting for \(seconds) seconds"
+
+        case let .type(type: type, label: label, text: text):
+            return "Typing (\(text)) into element - \(type) - (\(label))"
+
+        case .done: return "Objective fulfilled"
+        case .goBack: return "Going back"
+        case .scrollDown: return "Scrolling down"
+        case .scrollUp: return "Scrolling up"
+        }
     }
 }

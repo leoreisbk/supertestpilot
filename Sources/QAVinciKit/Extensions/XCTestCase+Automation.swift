@@ -9,27 +9,8 @@ import Foundation
 import XCTest
 
 public extension XCTestCase {
-    func automateExpectation(
-        config: Config = .init(),
-        objective: String,
-        expectedResult: String,
-        expectationDescription: String? = nil,
-        timeout: TimeInterval = 600 // 10min
-    ) {
-        let exp = expectation(description: objective)
-
-        Task {
-            let result = try await self.automate(config: config, objective: objective)
-
-            XCTAssertEqual(result, expectedResult)
-            exp.fulfill()
-        }
-
-        waitForExpectations(timeout: timeout)
-    }
-
-    @MainActor @discardableResult
-    func automate(config: Config = .init(), objective: String) async throws -> String? {
+    @MainActor
+    func automate(config: Config = .init(), objective: String) async throws {
         let runner = Runner(config: config)
         defer {
             Task {
@@ -38,86 +19,80 @@ public extension XCTestCase {
         }
 
         do {
-            let result = try await nonThrowingAutomation(runner: runner, objective: objective)
-            try await runner.httpClient.shutdown()
-            return result
+            let app = XCUIApplication()
+            app.launch()
+            var lastCommand: String?
+            let jsonDecoder = JSONDecoder()
+
+            for _ in 0..<config.maxSteps {
+                let jsonCommand = try await runner.getCompletionResponse(
+                    for: app.debugDescription.simplifyUI(),
+                    last: lastCommand,
+                    objective: objective
+                )
+                guard let jsonCommand = jsonCommand else {
+                    XCTFail("OpenAI returned empty response")
+                    return
+                }
+
+                // Parse the response
+                lastCommand = jsonCommand
+                let instruction = try jsonDecoder.decode(Instruction.self, from: Data(jsonCommand.utf8))
+                Logging.info(instruction.description)
+
+                // Execute the instruction
+                switch instruction {
+                case let .assert(answer: answer, expected: expected):
+                    XCTAssertEqual(answer, expected, instruction.description)
+
+                case let .type(type: type, label: label, text: text):
+                    let match = try await getElement(from: runner, app: app, type: type, label: label)
+                    match.waitForExistenceIfNecessary(timeout: 10)
+                    match.tap()
+                    match.typeText(text)
+
+                case let .tap(type: type, label: label):
+                    let match = try await getElement(from: runner, app: app, type: type, label: label)
+                    match.waitForExistenceIfNecessary(timeout: 10)
+                    match.tap()
+
+                case .scrollDown:
+                    app.swipeDown(velocity: .slow)
+
+                case .scrollUp:
+                    app.swipeUp(velocity: .slow)
+
+                case .goBack:
+                    let match = app.navigationBars.buttons.element(boundBy: .zero)
+                    match.tap()
+
+                case let .wait(seconds):
+                    try await Task.sleep(for: .seconds(seconds))
+
+                case .done:
+                    return
+                }
+            }
+
+            throw "Maximum number of steps exceeded (\(config.maxSteps))"
         } catch let err {
             Logging.info(err.localizedDescription)
             throw err
         }
     }
 
-    @MainActor @discardableResult
-    private func nonThrowingAutomation(runner: Runner, objective: String) async throws -> String? {
-        let jsonDecoder = JSONDecoder()
-        let app = XCUIApplication()
-        app.launch()
-
-        Logging.info("Strategizing how to split the objective in tasks...")
-        let steps = try await runner.getCompletionSetup(objective: objective)
-        Logging.info("Done! Dividing work in these steps:")
-        steps.enumerated().forEach { idx, step in
-            Logging.info("\(idx + 1). \(step)")
-        }
-
-        Logging.info("")
-
-        for curStep in steps {
-            let uiDump = app.simpleUI
-
-            Logging.info("Executing step: '\(curStep)'")
-
-            let jsonCommand = try await runner.getCompletionResponse(for: uiDump, objective: curStep)
-            guard let jsonCommand = jsonCommand else {
-                return nil
-            }
-
-            // Execute the response
-            let instruction = try jsonDecoder.decode(Instruction.self, from: Data(jsonCommand.utf8))
-
-            switch instruction {
-            case .stop(answer: let answer):
-                return answer
-
-            case let .type(type: type, label: label, text: text):
-                let match = app.descendants(matching: type)[label]
-                match.waitForExistenceIfNecessary(timeout: 10)
-                match.tap()
-                match.typeText(text)
-
-            case let .tap(type: type, label: label):
-                let match = try await getElement(from: runner, app: app, ui: uiDump, type: type, label: label)
-                match.waitForExistenceIfNecessary(timeout: 10)
-                match.tap()
-
-            case .scrollDown:
-                app.swipeDown(velocity: .slow)
-
-            case .scrollUp:
-                app.swipeUp(velocity: .slow)
-
-            case .goBack:
-                let match = app.navigationBars.buttons.element(boundBy: .zero)
-                match.tap()
-
-            case let .wait(seconds):
-                try await Task.sleep(for: .seconds(seconds))
-            }
-        }
-
-        return nil
-    }
-
-    private func getElement(from runner: Runner, app: XCUIElement, ui: String, type: XCUIElement.ElementType, label: String) async throws -> XCUIElement {
+    private func getElement(from runner: Runner, app: XCUIElement, type: XCUIElement.ElementType, label: String) async throws -> XCUIElement {
         let match = app.firstMatch(of: type, label: label)
         guard !match.exists else {
             return match
         }
 
-        let ui = try ui.replacing(Regex("^(?!\(type.description)).*\n").anchorsMatchLineEndings(), with: "")
+        let ui = try app.debugDescription.simplifyUI().replacing(Regex("^(?!\(type.description)).*\n").anchorsMatchLineEndings(), with: "")
         let line = try await runner.searchEmbeddings(input: ui, query: label, n: 1).first ?? ""
         let newLabel = line.firstMatch(of: #/label: '(.*?)'($|,)/#)!
 
         return app.firstMatch(of: type, label: String(newLabel.output.1))
     }
 }
+
+extension String: Error {}
