@@ -10,12 +10,12 @@ import XCTest
 
 enum Instruction: Decodable {
     enum CodingKeys: String, CodingKey {
-        case cmd, type, label, text, answer, seconds
+        case cmd, type, label, text, answer, seconds, expected
     }
 
     case tap(type: XCUIElement.ElementType, label: String)
     case type(type: XCUIElement.ElementType, label: String, text: String)
-    case stop(answer: String?)
+    case assert(answer: String?, expected: String)
     case scrollDown
     case scrollUp
     case goBack
@@ -38,10 +38,11 @@ enum Instruction: Decodable {
 
             self = .type(type: type, label: label, text: text)
 
-        case .stop:
+        case .assert:
             let answer = try? container.decode(String.self, forKey: .answer)
+            let expected = try container.decode(String.self, forKey: .expected)
 
-            self = .stop(answer: answer)
+            self = .assert(answer: answer, expected: expected)
 
         case .scrollDown:
             self = .scrollDown

@@ -18,9 +18,9 @@ enum Prompts {
         Navigating means tapping an element
 
         You can issue only these commands:
-        {"cmd": "tap", "type": "E", "label": "X"} - Tap on the UI element of type "E" with label "X". This command cannot be issued with UI elements where `"type": "Other"`
+        {"cmd": "tap", "type": "E", "label": "X"} - Tap on the UI element of type "E" with label "X". This command can only be issued with UI elements where `"type": "Button"`
         {"cmd": "type", "type": "E", "label": "X", "text": "TEXT"}  - Type the specified text into the UI element of type "E" with label X
-        {"cmd": "stop", "answer": "ANSWER"} - You've fulfilled your objective or don't know how to proceed. If your objective was a question, then provide the answer you found, otherwise, leave the answer empty.
+        {"cmd": "assert", "answer": "ANSWER", "expected": "EXPECTED"} - You've been asked to compare or check a value with what you see. ANSWER should be what you found and EXPECTED the value that was given in the objective. Leave the ANSWER null if you can't find it.
         {"cmd": "scrollDown"} - Scrolls down in the current page
         {"cmd": "scrollUp"} - Scrolls up in the current page
         {"cmd": "goBack"} - Go Back, regardless of the element
@@ -28,13 +28,13 @@ enum Prompts {
 
         EXAMPLE:
         ===
-        OBJECTIVE: What's the name of the current page?
+        OBJECTIVE: Page should be named Sales
         UI:
         NavigationBar, identifier: 'Sales'
         StaticText, label: 'Sale'
         ---
         YOU:
-        {"cmd": "stop", "answer": "Sales"}
+        {"cmd": "assert", "answer": "Sales", "expected": "Sales"}
         ===
 
         EXAMPLE:
@@ -51,14 +51,14 @@ enum Prompts {
         ===
 
         EXAMPLE:
-        OBJECTIVE: Find the user's statement
+        OBJECTIVE: User statement should be 0
         UI:
         StaticText, label: 'useremail@domain.co'
         Other, label: 'Statement', value: 750,762
         StaticText, label: '1 Infinite Loop'
         ---
         YOU:
-        {"cmd": "stop", "answer": "750,762"}
+        {"cmd": "assert", "answer": "750,762", "expected": "0"}
         ===
 
         Your objective is listed below.
@@ -68,17 +68,28 @@ enum Prompts {
         .removeComments()
     }
 
-    static func steps(objective: String) -> String {
+    static func stepsCompletion(objective: String) -> String {
+        """
+        \(stepsSystem)
+
+        \(stepsUser(objective: objective))
+        STEPS:
+        """
+    }
+
+    static var stepsSystem: String {
         """
         As a mobile app agent, you have an objective and a simplified UI description
         Divide the following objective into a JSON array of strings containing each step to be executed
         Reply with only the JSON array
-        Be as granular as possible in the steps division
-
-        OBJECTIVE: `\(objective)`
-        STEPS:
+        Be as granular as possible in the steps division, but assume the app is already open and ready to be used
+        If you think the objective shouldn't be split into steps, return an array with a single object being the objective as-is
         """
         .removeComments()
+    }
+
+    static func stepsUser(objective: String) -> String {
+        "OBJECTIVE: \(objective)"
     }
 }
 
