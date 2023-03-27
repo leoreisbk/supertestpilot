@@ -16,7 +16,7 @@ struct QAVinciCommand: ParsableCommand {
     @Argument(
         help: """
         The path to the folder containing the .\(Constants.testFileExt) test files. Can be a specific test case to be \
-        executed. Defaults to the current directory
+        executed (default: .)
         """,
         completion: .directory,
         transform: { WorkDir(path: $0) }
@@ -26,7 +26,7 @@ struct QAVinciCommand: ParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
-        help: "The path to the .xcodeproj to be tested",
+        help: "The path to the .xcodeproj to be tested (default: ./*.xcodeproj)",
         completion: .directory,
         transform: { URL(filePath: $0) }
     )
@@ -44,6 +44,9 @@ struct QAVinciCommand: ParsableCommand {
         help: "The scheme being tested"
     )
     var scheme: String?
+
+    @Option(name: .long, help: "The max number of steps that should be executed")
+    var maxSteps: UInt8 = 10
 
     @Flag(name: .shortAndLong, help: "Launches the iOS simulator")
     var launchSim = false
@@ -69,7 +72,7 @@ struct QAVinciCommand: ParsableCommand {
 
         // Regenerate the test file
         try TestFileBuilder(testsDir: testsPath, targetDir: targetDir)
-            .buildTestFile()
+            .buildTestFile(maxSteps: maxSteps)
 
         // Create the project if it doesn't exist
         let testProject = try TestProjectGenerator(
@@ -85,7 +88,8 @@ struct QAVinciCommand: ParsableCommand {
         try LogFileMonitor.shared.monitor(logFile: Constants.logFilePath)
 
         if !skipRun {
-            try TestRunner(testProjectPath: testProject.testProjectPath, launchSimulator: launchSim).run(verbose: false)
+            try TestRunner(testProjectPath: testProject.testProjectPath, launchSimulator: launchSim)
+                .run(verbose: false)
         }
     }
 

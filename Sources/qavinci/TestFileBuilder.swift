@@ -14,7 +14,7 @@ struct TestFileBuilder {
     let testsDir: QAVinciCommand.WorkDir
     let targetDir: URL
 
-    func buildTestFile() throws {
+    func buildTestFile(maxSteps: UInt8) throws {
         guard let enumerator = FileManager.default.enumerator(
             at: testsDir.dirPath,
             includingPropertiesForKeys: [.isRegularFileKey],
@@ -48,7 +48,11 @@ struct TestFileBuilder {
 
         let tests = try files
             .map { url in
-                try makeTestCase(title: url.deletingPathExtension().lastPathComponent, objective: String(contentsOf: url))
+                try makeTestCase(
+                    title: url.deletingPathExtension().lastPathComponent,
+                    objective: String(contentsOf: url),
+                    maxSteps: maxSteps
+                )
             }
 
         guard !tests.isEmpty else {
@@ -69,11 +73,12 @@ struct TestFileBuilder {
         try testFile.write(to: testPath, atomically: true, encoding: .utf8)
     }
 
-    private func makeTestCase(title: String, objective: String) -> String {
+    private func makeTestCase(title: String, objective: String, maxSteps: UInt8) -> String {
         """
             func test\(title.capitalizedSentence)() async throws {
                 Logging.info("\\nStarting test: '\(title.capitalizedSentence.sentence)'")
                 try await automate(
+                    config: Config(maxSteps: \(maxSteps)),
                     objective: \"""
                     \(objective.replacing("\n", with: ". "))
                     \"""
