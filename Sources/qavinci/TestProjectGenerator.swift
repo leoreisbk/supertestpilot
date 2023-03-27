@@ -21,14 +21,18 @@ struct TestProjectGenerator {
         project.defaultProjectPath.string
     }
 
-    init(testedProjectPath: URL, targetDir: URL, openAIKey: String, logFile: String) throws {
+    init(
+        testedProjectPath: URL,
+        targetDir: URL,
+        scheme: String?,
+        openAIKey: String,
+        logFile: String
+    ) throws {
         let projectPath = testedProjectPath.path(percentEncoded: false)
         logger.debug("Initializing project on \(targetDir)")
 
         let existingProject = try XcodeProj(pathString: projectPath)
-        guard let scheme = existingProject.sharedData?.schemes.first?.name else {
-            throw ValidationError("Couldn't find any schemes available in the given project")
-        }
+        let scheme = try existingProject.getRunnableScheme(named: scheme)
 
         self.project = try Project(
             basePath: Path(targetDir.path(percentEncoded: false)),
@@ -82,5 +86,33 @@ struct TestProjectGenerator {
         try FileWriter(project: project).writePlists()
         let xcodeProj = try ProjectGenerator(project: project).generateXcodeProject(userName: "$USER")
         try xcodeProj.write(path: project.defaultProjectPath)
+    }
+}
+
+private extension XcodeProj {
+    func getRunnableScheme(named scheme: String?) throws -> String {
+        let schemeNames = sharedData?.schemes
+            .filter { $0.launchAction?.runnable != nil }
+            .map { $0.name }
+
+        logger.debug("Schemes found in the given project: \(schemeNames?.description ?? "None")")
+
+        if let scheme = scheme {
+            guard schemeNames?.contains(scheme) == true else {
+                throw ValidationError("Scheme '\(scheme)' was not found in the project")
+            }
+
+            return scheme
+        }
+
+        guard schemeNames?.isEmpty == false else {
+            throw ValidationError("Couldn't find any schemes available in the given project")
+        }
+
+        guard schemeNames?.count == 1 else {
+            throw ValidationError("Project has multiple runnable schemes. Please specify with the --scheme option")
+        }
+
+        return schemeNames![0]
     }
 }

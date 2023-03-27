@@ -75,7 +75,7 @@ struct TestFileBuilder {
                 Logging.info("\\nStarting test: '\(title.capitalizedSentence.sentence)'")
                 try await automate(
                     objective: \"""
-                    \(objective)
+                    \(objective.replacing("\n", with: ". "))
                     \"""
                 )
                 Logging.info("✅ Done!")

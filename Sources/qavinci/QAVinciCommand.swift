@@ -39,6 +39,12 @@ struct QAVinciCommand: ParsableCommand {
     )
     var openAIKey: String!
 
+    @Option(
+        name: .long,
+        help: "The scheme being tested"
+    )
+    var scheme: String?
+
     @Flag(name: .shortAndLong, help: "Launches the iOS simulator")
     var launchSim = false
 
@@ -69,6 +75,7 @@ struct QAVinciCommand: ParsableCommand {
         let testProject = try TestProjectGenerator(
             testedProjectPath: project,
             targetDir: targetDir,
+            scheme: scheme,
             openAIKey: openAIKey,
             logFile: Constants.logFilePath
         )
@@ -93,7 +100,7 @@ struct QAVinciCommand: ParsableCommand {
             if projects.count == 0 { throw ValidationError("Couldn't find any .xcodeproj") }
             if projects.count > 1 { throw ValidationError("Found multiple .xcodeproj files") }
 
-            project = URL(filePath: path.appendingPathComponent(projects[0]))
+            project = URL(filePath: path.appendingPathComponent(projects[0])).absoluteURL
         }
 
         // Check for OpenAI Key
