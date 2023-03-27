@@ -13,11 +13,11 @@ You can install `qavinci` using Homebrew:
 # Usage
 Write your test cases in plain natural language. The CLI scans the given directory for files using the `.qavinci` extension, then run each as an individual test case.
 
-Best results have been observed by giving a step-by-step instruction of how to achieve the final objective for the given test case. `qavinci` will try to split the test case into steps and then execute each individual step.
+There are no rules for writing tests. Below are examples using a step-by-step approach where the test describes which elements must be interacted with, and another example that has just an objective, which GPT will try to figure out how to achieve
 
 ### Examples for [Apple's Fruta app](https://developer.apple.com/documentation/swiftui/fruta_building_a_feature-rich_app_with_swiftui):
 ```
-# buyWithApplePay.qavinci
+# searchAndBuy.qavinci
 Search for 'Tropical Blue' and navigate to that item. Add it to favorites.
 Buy with Apple Pay from the Favorites tab
 ```
@@ -26,6 +26,10 @@ Buy with Apple Pay from the Favorites tab
 Scroll up, go to Sailor Man. then add it to Favorites. Go back to the Menu and then into "That's a Smore!".
 Add that to favorites. Go to the Favorites tab and then back to the root.
 Go to Sailor Man and remove it from favorites
+```
+```
+# buyWithApplePay.qavinci
+Buy my favorite beverage
 ```
 
 Then just run `qavinci` providing the path to the test files and tested project, and your OpenAI key:
