@@ -1,14 +1,17 @@
-qavinci - Automated E2E tests using GPT
+qavinci
 ===
 
-Automated end-to-end tests for mobile tests using GPT.
+Automated end-to-end tests for mobile apps using GPT.
 
 https://user-images.githubusercontent.com/1066295/227050296-9e616a41-ef9e-411c-8c14-03b396d2d0df.mp4
 
 # Installation
 You can install `qavinci` using Homebrew:
 
-// TODO
+```sh
+$ brew tap workco/qavinci-poc
+$ brew install qavinci
+```
 
 # Usage
 Write your test cases in plain natural language. The CLI scans the given directory for files using the `.qavinci` extension, then run each as an individual test case.
