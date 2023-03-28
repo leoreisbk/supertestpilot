@@ -42,11 +42,13 @@ struct TestRunner {
             try launchSimulator(uuid: uuid)
         }
 
-        logger.info("Starting tests on \(deviceName)")
-        try runTests(uuid: uuid, verbose: verbose)
+        logger.info("Preparing tests... (this may take a few minutes)")
+        try runTests(uuid: uuid, verbose: verbose, action: "build-for-testing")
+        logger.info("Running tests on \(deviceName)")
+        try runTests(uuid: uuid, verbose: verbose, action: "test-without-building")
     }
 
-    private func runTests(uuid: String, verbose: Bool) throws {
+    private func runTests(uuid: String, verbose: Bool, action: String) throws {
         let fileHandle = verbose ? FileHandle.standardOutput : try makeXcodeFileHandle()
 
         let process = Process()
@@ -58,14 +60,14 @@ struct TestRunner {
             "-scheme", Constants.testProjectName,
             "-sdk", "iphonesimulator",
             "-destination", "platform=iOS Simulator,id=\(uuid)",
-            "test"
+            action
         ]
 
         try ProcessPool.shared.run(process: process)
         process.waitUntilExit()
 
         let xcodeExitCode = ExitCode(process.terminationStatus)
-        if xcodeExitCode.isSuccess == false {
+        if xcodeExitCode.isSuccess == false && process.terminationStatus != SIGTERM  {
             logger.error("""
 
             Testing failed due to unexpected issue. Check the build logs on:
