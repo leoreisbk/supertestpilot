@@ -36,7 +36,7 @@ struct TestFileBuilder {
 
         logger.info("""
 
-        Found \(files.count) test files:
+        Found \(files.count) test file\(files.count == 1 ? "" : "s"):
         \(
             files.enumerated().map { idx, url in
                 "\(idx + 1). \(url.lastPathComponent.deletingPathExtension.sentence)"
@@ -75,15 +75,20 @@ struct TestFileBuilder {
 
     private func makeTestCase(title: String, objective: String, maxSteps: UInt8) -> String {
         """
-            func test\(title.capitalizedSentence)() async throws {
-                Logging.info("\\nStarting test: '\(title.capitalizedSentence.sentence)'")
-                try await automate(
-                    config: Config(maxSteps: \(maxSteps)),
-                    objective: \"""
-                    \(objective.replacing("\n", with: ". "))
-                    \"""
-                )
-                Logging.info("✅ Done!")
+            func test\(title.capitalizedSentence)() async {
+                do {
+                    Logging.info("\\nStarting test: '\(title.capitalizedSentence.sentence)'")
+                    try await automate(
+                        config: Config(maxSteps: \(maxSteps)),
+                        objective: \"""
+                        \(objective.replacing("\n", with: ". "))
+                        \"""
+                    )
+                    Logging.info("✅ Done!")
+                } catch let err {
+                    Logging.info("❌ Test failed!")
+                    Logging.info(err.localizedDescription)
+                }
             }
         """
     }
