@@ -42,16 +42,16 @@ public extension XCTestCase {
 
                 // Execute the instruction
                 switch instruction {
-                case let .assert(answer: answer, expected: expected):
+                case let .assert(answer: answer, expected: expected, reason: _):
                     XCTAssertEqual(answer, expected, instruction.description)
 
-                case let .type(type: type, label: label, text: text):
+                case let .type(type: type, label: label, text: text, reason: _):
                     let match = try await getElement(from: runner, app: app, type: type, label: label)
                     match.waitForExistenceIfNecessary(timeout: 10)
                     match.tap()
                     match.typeText(text)
 
-                case let .tap(type: type, label: label):
+                case let .tap(type: type, label: label, reason: _):
                     let match = try await getElement(from: runner, app: app, type: type, label: label)
                     match.waitForExistenceIfNecessary(timeout: 10)
                     match.tap()
@@ -66,7 +66,7 @@ public extension XCTestCase {
                     let match = app.navigationBars.buttons.element(boundBy: .zero)
                     match.tap()
 
-                case let .wait(seconds):
+                case let .wait(seconds, reason: _):
                     try await Task.sleep(for: .seconds(seconds))
 
                 case .done:

@@ -16,27 +16,29 @@ enum Prompts {
         The UI is highly simplified
         Navigating means tapping an element
         You're also being given the last command you executed in order to assess if you've finished your objective
+        You should always provide a very short string with the reason for why you emitted that command
+        Don't try to interact with elements you can't see
 
         You can issue only these commands:
-        {"cmd": "tap", "type": "E", "label": "X"} - Tap on the UI element of type "E" with label "X". This command can only be issued with UI elements where `"type": "Button"`
-        {"cmd": "type", "type": "E", "label": "X", "text": "TEXT"}  - Type the specified text into the UI element of type "E" with label X
-        {"cmd": "assert", "answer": "ANSWER", "expected": "EXPECTED"} - You've been asked to compare or check a value with what you see. ANSWER should be what you found and EXPECTED the value that was given in the objective. Leave the ANSWER null if you can't find it.
-        {"cmd": "scrollDown"} - Scrolls down in the current page
-        {"cmd": "scrollUp"} - Scrolls up in the current page
-        {"cmd": "goBack"} - Go Back, regardless of the element
-        {"cmd": "wait", "seconds": X} - Wait or sleep for X seconds. X is a Double
-        {"cmd": "done"} - You think you've fulfilled your objective and there's nothing more to do
+        {"cmd": "tap", "type": "E", "label": "X", "reason": "REASON"} - Tap on the UI element of type "E" with label "X". This command can only be issued with UI elements where `"type": "Button"`
+        {"cmd": "type", "type": "E", "label": "X", "text": "TEXT", "reason": "REASON"}  - Type the specified text into the UI element of type "E" with label X
+        {"cmd": "assert", "answer": "ANSWER", "expected": "EXPECTED", "reason": "REASON"} - You've been asked to compare or check a value with what you see. ANSWER should be what you found and EXPECTED the value that was given in the objective. Leave the ANSWER null if you can't find it.
+        {"cmd": "scrollDown", "reason": "REASON"} - Scrolls down in the current page
+        {"cmd": "scrollUp", "reason": "REASON"} - Scrolls up in the current page
+        {"cmd": "goBack", "reason": "REASON"} - Go Back, regardless of the element
+        {"cmd": "wait", "seconds": X, "reason": "REASON"} - Wait or sleep for X seconds. X is a Double
+        {"cmd": "done", "reason": "REASON"} - You think you've fulfilled your objective and there's nothing more to do
 
         EXAMPLE:
         ===
         OBJECTIVE: Page should be named Sales
-        LAST: {"cmd": "tap", "type": "Button", "label": "Sales"}
+        LAST: {"cmd": "tap", "type": "Button", "label": "Sales", "reason": "Instructed by the objective"}
         UI:
         NavigationBar, identifier: 'Sales'
         StaticText, label: 'Sale'
         ---
         YOU:
-        {"cmd": "assert", "answer": "Sales", "expected": "Sales"}
+        {"cmd": "assert", "answer": "Sales", "expected": "Sales", "reason": "Value found on the NavigationBar"}
         ===
 
         EXAMPLE:
@@ -50,19 +52,19 @@ enum Prompts {
         Button, label: 'Sales', Selected
         ---
         YOU:
-        {"cmd": "tap", "type": "Button", "label": "Profile Tab"}
+        {"cmd": "tap", "type": "Button", "label": "Profile Tab", "reason": "There's a tab named Profile Tab"}
         ===
 
         EXAMPLE:
         OBJECTIVE: User statement should be 0
-        LAST: {"cmd": "tap", "type": "Button", "label": "Profile Tab"}
+        LAST: {"cmd": "tap", "type": "Button", "label": "Profile Tab", "reason": "There's a tab named Profile Tab"}
         UI:
         StaticText, label: 'useremail@domain.co'
         Other, label: 'Statement', value: 750,762
         StaticText, label: '1 Infinite Loop'
         ---
         YOU:
-        {"cmd": "assert", "answer": "750,762", "expected": "0"}
+        {"cmd": "assert", "answer": "750,762", "expected": "0", "reason": "Value found on an element labeled 'Statement'"}
         ===
 
         Your objective is listed below.
