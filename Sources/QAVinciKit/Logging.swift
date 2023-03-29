@@ -13,6 +13,7 @@ public class Logging {
     private var writer: Writer
 
     private init() {
+        #if targetEnvironment(simulator)
         do {
             guard let filePath = Environment.logFile else {
                 throw ErrorCode.noEnvVar
@@ -30,6 +31,9 @@ public class Logging {
         } catch _ {
             fatalError("Couldn't create logger")
         }
+        #else
+        self.writer = Writer(fileHandle: .nullDevice)
+        #endif
     }
 
     public static func info(_ msg: String) {
