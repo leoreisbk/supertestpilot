@@ -23,22 +23,64 @@ struct TestProjectGenerator {
     }
 
     init(
-        testedProjectPath: URL,
         targetDir: URL,
-        scheme: String?,
         openAIKey: String,
         logFile: String
     ) throws {
-        let projectPath = testedProjectPath.path(percentEncoded: false)
         logger.debug("Initializing project on \(targetDir)")
 
-        let existingProject = try XcodeProj(pathString: projectPath)
-        let scheme = try existingProject.getRunnableScheme(named: scheme)
+        let swiftFile = """
+        import SwiftUI
+
+        @main
+        struct DummyApp: App {
+            var body: some Scene {
+                WindowGroup {
+                    Text("")
+                }
+            }
+        }
+        """
+
+        try? FileManager.default.createDirectory(at: targetDir.appendingPathComponent("DummyApp/"), withIntermediateDirectories: true)
+        let codePath = targetDir.appendingPathComponent("DummyApp/DummyApp.swift")
+        do {
+            try swiftFile.write(to: codePath, atomically: true, encoding: .utf8)
+        } catch {
+            print(error)
+        }
 
         self.project = try Project(
             basePath: Path(targetDir.path(percentEncoded: false)),
             name: Constants.testProjectName,
             targets: [
+                Target(
+                    name: "DummyApp",
+                    type: .application,
+                    platform: .iOS,
+                    settings: Settings(
+                        dictionary: [
+                            "PRODUCT_BUNDLE_IDENTIFIER": "co.work.qavinci.DummyApp",
+                            "DEVELOPMENT_TEAM": "KYVD9R48"
+                        ]
+                    ),
+                    sources: [
+                        TargetSource(
+                            path: targetDir.path(percentEncoded: false),
+                            includes: ["DummyApp/DummyApp.swift"],
+                            createIntermediateGroups: true
+                        ),
+                    ],
+                    info: .init(
+                        path: "Info.plist"//,
+//                        attributes: [
+//                            "CFBundleDisplayName": "DummyApp",
+//                            "CFBundlePackageType": "$(PRODUCT_BUNDLE_PACKAGE_TYPE)",
+//                            "CFBundleExecutable": "$(EXECUTABLE_NAME)",
+//                            "LSRequiresIPhoneOS": "YES"
+//                        ]
+                    )
+                ),
                 Target(
                     name: Constants.testProjectName,
                     type: .uiTestBundle,
@@ -52,7 +94,7 @@ struct TestProjectGenerator {
                         ),
                     ],
                     dependencies: [
-                        Dependency(type: .target, reference: "Host/\(scheme)"),
+                        Dependency(type: .target, reference: "DummyApp"),
                         Dependency(type: .package(product: "QAVinciKit"), reference: "QAVinciKit"),
                     ],
                     info: Plist(path: "Info.plist")
@@ -62,7 +104,7 @@ struct TestProjectGenerator {
                 Scheme(
                     name: Constants.testProjectName,
                     build: Scheme.Build(targets: [
-                        Scheme.BuildTarget(target: TestableTargetReference("Host/\(scheme)"), buildTypes: [.testing]),
+                        Scheme.BuildTarget(target: TestableTargetReference("DummyApp"), buildTypes: [.testing]),
                     ]),
                     test: Scheme.Test(
                         targets: [Scheme.Test.TestTarget(stringLiteral: Constants.testProjectName)],
@@ -74,10 +116,8 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("chore/run-on-device")), // TODO: rename repo & use HTTPS endpoint instead of SSH
-            ],
-            projectReferences: [
-                ProjectReference(name: "Host", path: projectPath),
+//                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("chore/run-on-device")), // TODO: rename repo & use HTTPS endpoint instead of SSH
+                "QAVinciKit": .local(path: "/Users/fernandosousa/Developer/qavinci-poc", group: nil),
             ]
         )
     }

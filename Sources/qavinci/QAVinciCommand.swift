@@ -66,7 +66,7 @@ struct QAVinciCommand: ParsableCommand {
         fm.createFile(atPath: Constants.logFilePath, contents: nil)
 
         // Creating target directory
-        let targetDir = Constants.tempDir.appending(component: project.lastPathComponent.deletingPathExtension)
+        let targetDir = Constants.tempDir
         logger.debug("Creating project on: \(targetDir.path(percentEncoded: false))")
         try? fm.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
@@ -76,9 +76,7 @@ struct QAVinciCommand: ParsableCommand {
 
         // Create the project if it doesn't exist
         let testProject = try TestProjectGenerator(
-            testedProjectPath: project,
             targetDir: targetDir,
-            scheme: scheme,
             openAIKey: openAIKey,
             logFile: Constants.logFilePath
         )
