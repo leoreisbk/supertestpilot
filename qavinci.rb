@@ -1,7 +1,7 @@
 class Qavinci < Formula
   desc "Automated end-to-end tests for mobile apps using GPT."
   homepage "https://github.com/workco/qavinci-poc"
-  url "git@github.com:workco/qavinci-poc.git", :using => :git # TODO: use HTTPS when going public
+  url "git@github.com:workco/qavinci-poc.git", :using => :git, :branch => "main" # TODO: use HTTPS when going public
   version "0.1.0"
 
   depends_on xcode: ["13.0", :build]
