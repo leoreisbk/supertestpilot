@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/fjcaetano/openai-kit",
       "state" : {
-        "branch" : "feat/gpt-4",
-        "revision" : "2136d9c97745bf7aaa31154821bb6b4c5e968bdc"
+        "branch" : "main",
+        "revision" : "e40c8615d5e169339b7346d98197374d05491e53"
       }
     },
     {

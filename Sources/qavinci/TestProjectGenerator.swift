@@ -73,7 +73,7 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("feat/spm")), // TODO: rename repo & use HTTPS endpoint instead of SSH
+                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("main")), // TODO: rename repo & use HTTPS endpoint instead of SSH
             ],
             projectReferences: [
                 ProjectReference(name: "Host", path: projectPath),
