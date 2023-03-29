@@ -10,7 +10,7 @@ import XCTest
 
 public extension XCTestCase {
     @MainActor
-    func automate(config: Config = .init(), objective: String) async throws {
+    func automate(config: Config = .init(), objective: String, bundleId: String? = nil) async throws {
         let runner = Runner(config: config)
         defer {
             Task {
@@ -18,7 +18,13 @@ public extension XCTestCase {
             }
         }
 
-        let app = XCUIApplication()
+        let app: XCUIApplication
+        if let bundleId = bundleId {
+            app = XCUIApplication(bundleIdentifier: bundleId)
+        } else {
+            app = XCUIApplication()
+        }
+
         app.launch()
         var lastCommand: String?
         let jsonDecoder = JSONDecoder()
