@@ -12,6 +12,7 @@ import ProjectSpec
 import PathKit
 import XcodeProj
 import Logging
+import Version
 
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestProjectGenerator {
@@ -42,7 +43,7 @@ struct TestProjectGenerator {
                     name: Constants.testProjectName,
                     type: .uiTestBundle,
                     platform: .iOS,
-                    settings: Settings(dictionary: ["TEST_TARGET_NAME": scheme]),
+                    deploymentTarget: Version("15.0"),
                     sources: [
                         TargetSource(
                             path: targetDir.path(percentEncoded: false),

@@ -6,7 +6,7 @@ let package = Package(
     name: "QAVinci",
     platforms: [
         .macOS(.v13),
-        .iOS(.v16),
+        .iOS(.v15),
     ],
     products: [
         .library(name: "QAVinciKit", targets: ["QAVinciKit"]),

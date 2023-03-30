@@ -101,6 +101,9 @@ enum Prompts {
 
 private extension String {
     func removeComments() -> String {
-        replacing(#/\/\/.*/#, with: "")
+        (
+            try? NSRegularExpression(pattern: "\\/\\/.*", options: [])
+                .stringByReplacingMatches(in: self, options: [], range: NSMakeRange(0, count), withTemplate: "")
+        ) ?? self
     }
 }

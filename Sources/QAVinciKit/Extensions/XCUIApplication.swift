@@ -10,27 +10,35 @@ import XCTest
 
 extension String {
     func simplifyUI() -> String {
-        var simplifiedUI = self
-            // Removing all elements without relevant info; also removes all hex mem addresses and frames
-            .replacing(#/(\n\s*.*\}\}$|, 0x.*\}\})/#.anchorsMatchLineEndings(), with: "")
-            .replacing(#/^\s\s+/#.anchorsMatchLineEndings(), with: "")
+        // Removing all elements without relevant info; also removes all hex mem addresses and frames
+        var simplifiedUI = (
+            try? NSRegularExpression(pattern: "(\\n\\s*.*\\}\\}$|, 0x.*\\}\\})", options: .anchorsMatchLines)
+                .stringByReplacingMatches(in: self, options: [], range: NSMakeRange(0, count), withTemplate: "")
+        ) ?? self
 
-        if let range = simplifiedUI.ranges(of: #/→Application.*?$/#.anchorsMatchLineEndings()).first {
-            simplifiedUI = String(simplifiedUI[range.upperBound...])
+        simplifiedUI = (
+            try? NSRegularExpression(pattern: "^\\s\\s+", options: .anchorsMatchLines)
+                .stringByReplacingMatches(
+                    in: simplifiedUI,
+                    options: [],
+                    range: NSMakeRange(0, simplifiedUI.count),
+                    withTemplate: ""
+                )
+        ) ?? simplifiedUI
+
+        // Removing "header"
+        if let range = try? NSRegularExpression(pattern: "→Application.*?$", options: .anchorsMatchLines)
+            .firstMatch(in: simplifiedUI, options: [], range: NSMakeRange(0, simplifiedUI.count))?
+            .range
+        {
+            simplifiedUI = String(simplifiedUI[String.Index(utf16Offset: range.location + range.length, in: simplifiedUI)...])
         }
 
+        // Removing "footer"
         if let range = simplifiedUI.range(of: "\nPath to element") {
             simplifiedUI = String(simplifiedUI[...range.lowerBound])
         }
-
-        // Remove duplicated lines. Consider this logic as a fallback if the request fails due to token limit
-//        simplifiedUI = simplifiedUI
-//            .split(separator: "\n")
-//            .reduce([]) { result, line in
-//                result.contains(line) ? result : result + [line]
-//            }
-//            .joined(separator: "\n")
-
+        
         return simplifiedUI
     }
 }

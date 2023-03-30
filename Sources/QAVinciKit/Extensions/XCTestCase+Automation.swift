@@ -66,7 +66,7 @@ public extension XCTestCase {
                 match.tap()
 
             case let .wait(seconds, reason: _):
-                try await Task.sleep(for: .seconds(seconds))
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1e9))
 
             case .done:
                 return
@@ -82,11 +82,15 @@ public extension XCTestCase {
             return match
         }
 
-        let ui = try app.debugDescription.simplifyUI().replacing(Regex("^(?!\(type.description)).*\n").anchorsMatchLineEndings(), with: "")
+        let uiDump = app.debugDescription.simplifyUI()
+        let ui = try NSRegularExpression(pattern: "^(?!\(type.description)).*\\n", options: .anchorsMatchLines)
+            .stringByReplacingMatches(in: uiDump, options: [], range: NSMakeRange(0, uiDump.count), withTemplate: "")
         let line = try await runner.searchEmbeddings(input: ui, query: label, n: 1).first ?? ""
-        let newLabel = line.firstMatch(of: #/label: '(.*?)'($|,)/#)!
+        let labelMatch = try NSRegularExpression(pattern: "label: '(?<label>.*?)'($|,)", options: [])
+            .firstMatch(in: line, options: [], range: NSMakeRange(0, line.count))
+        let range = labelMatch!.range(withName: "label")
 
-        return app.firstMatch(of: type, label: String(newLabel.output.1))
+        return app.firstMatch(of: type, label: (line as NSString).substring(with: range))
     }
 }
 
