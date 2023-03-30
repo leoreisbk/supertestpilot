@@ -55,10 +55,10 @@ public extension XCTestCase {
                 match.waitForExistenceIfNecessary(timeout: 10)
                 match.tap()
 
-            case .scrollDown:
+            case .scrollUp:
                 app.swipeDown(velocity: .slow)
 
-            case .scrollUp:
+            case .scrollDown:
                 app.swipeUp(velocity: .slow)
 
             case .goBack:
