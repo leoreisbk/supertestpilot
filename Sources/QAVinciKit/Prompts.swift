@@ -16,11 +16,12 @@ enum Prompts {
         The UI is highly simplified
         Navigating means tapping an element
         You're also being given the last command you executed in order to assess if you've finished your objective
-        You should always provide a very short string with the reason for why you emitted that command
+        Provide a very short string in the "reason" attr with what you're trying to achieve
         Don't try to interact with elements you can't see
+        If your command needs a type and a label, use only values on the same line
 
         You can issue only these commands:
-        {"cmd": "tap", "type": "E", "label": "X", "reason": "REASON"} - Tap on the UI element of type "E" with label "X". This command can only be issued with UI elements where `"type": "Button"`
+        {"cmd": "tap", "type": "E", "label": "X", "reason": "REASON"} - Tap on the UI element of type "E" with label "X".
         {"cmd": "type", "type": "E", "label": "X", "text": "TEXT", "reason": "REASON"}  - Type the specified text into the UI element of type "E" with label X
         {"cmd": "assert", "answer": "ANSWER", "expected": "EXPECTED", "reason": "REASON"} - You've been asked to compare or check a value with what you see. ANSWER should be what you found and EXPECTED the value that was given in the objective. Leave the ANSWER null if you can't find it.
         {"cmd": "scrollDown", "reason": "REASON"} - Scrolls down in the current page
@@ -52,12 +53,12 @@ enum Prompts {
         Button, label: 'Sales', Selected
         ---
         YOU:
-        {"cmd": "tap", "type": "Button", "label": "Profile Tab", "reason": "There's a tab named Profile Tab"}
+        {"cmd": "tap", "type": "Button", "label": "Profile Tab", "reason": "Going to the Profile tab"}
         ===
 
         EXAMPLE:
         OBJECTIVE: User statement should be 0
-        LAST: {"cmd": "tap", "type": "Button", "label": "Profile Tab", "reason": "There's a tab named Profile Tab"}
+        LAST: {"cmd": "tap", "type": "Button", "label": "Profile Tab", "reason": "Going to the Profile tab"}
         UI:
         StaticText, label: 'useremail@domain.co'
         Other, label: 'Statement', value: 750,762
