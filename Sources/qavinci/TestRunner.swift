@@ -15,33 +15,26 @@ struct TestRunner {
     let launchSimulator: Bool
 
     private let xcodePath: URL
-    private let deviceName = "iPhone 14 Pro"
+    private let destination: Device
 
     private var xcodeLogFileURL: URL = {
         Constants.tempDir
             .appending(component: "xcodebuild-\(ISO8601DateFormatter().string(from: Date())).log")
     }()
 
-    init(testProjectPath: String, launchSimulator: Bool) throws {
+    init(testProjectPath: String, launchSimulator: Bool, destination: Device) throws {
         self.testProjectPath = testProjectPath
         self.launchSimulator = launchSimulator
-        self.xcodePath = try Self.getXcodePath()
+        self.destination = destination
+        self.xcodePath = try Xcode.getXcodePath()
     }
 
     func run(verbose: Bool) throws {
-        // TODO: find highest device
-        logger.debug("Finding UUID of \(deviceName)")
-        guard let uuid = try findDeviceUUID(name: deviceName) else {
-            logger.debug("UUID not found. Aborting")
-            throw ErrorCase.deviceNotFound
-        }
-
-        logger.debug("Found device \(uuid)")
-
         if launchSimulator {
-            try launchSimulator(uuid: uuid)
+            try launchSimulator(uuid: destination.udid)
         }
 
+<<<<<<< HEAD
         logger.info("Preparing tests... (this may take a few minutes)")
         try runTests(uuid: uuid, verbose: verbose, action: "build-for-testing")
         logger.info("Running tests on \(deviceName)")
@@ -49,8 +42,22 @@ struct TestRunner {
     }
 
     private func runTests(uuid: String, verbose: Bool, action: String) throws {
+=======
+        logger.info("Starting tests on \(destination.name)")
+        try runTests(verbose: verbose)
+    }
+
+    private func runTests(verbose: Bool) throws {
+>>>>>>> 0c95d52 (chore: List destination options and select which device or simulator)
         let fileHandle = verbose ? FileHandle.standardOutput : try makeXcodeFileHandle()
 
+        let platform: String
+        if destination.isSimulator {
+            platform = "platform=iOS Simulator,id=\(destination.udid)"
+        } else {
+            platform = "platform=iOS,id=\(destination.udid)"
+        }
+        
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/xcodebuild")
         process.standardError = fileHandle
@@ -58,9 +65,14 @@ struct TestRunner {
         process.arguments = [
             "-project", testProjectPath,
             "-scheme", Constants.testProjectName,
+<<<<<<< HEAD
             "-sdk", "iphonesimulator",
             "-destination", "platform=iOS Simulator,id=\(uuid)",
             action
+=======
+            "-destination", platform,
+            "test"
+>>>>>>> 0c95d52 (chore: List destination options and select which device or simulator)
         ]
 
         try ProcessPool.shared.run(process: process)
@@ -87,48 +99,6 @@ struct TestRunner {
         try ProcessPool.shared.run(process: process)
     }
 
-    private func findDeviceUUID(name: String) throws -> String? {
-        let output = Pipe()
-        let process = Process()
-        process.executableURL = xcodePath.appending(component: "usr/bin/simctl")
-        process.standardOutput = output
-        process.arguments = ["list", "devices", name, "-j"]
-
-        try ProcessPool.shared.run(process: process)
-        process.waitUntilExit()
-
-        guard let data = try output.fileHandleForReading.readToEnd() else {
-            return nil
-        }
-
-        let simulators = try JSONDecoder().decode(Simulators.self, from: data)
-        return simulators.devices
-            .sorted { $1.key < $0.key }
-            .compactMap { $0.value }
-            .flatMap { $0 }
-            .first(where: { ($0 as Device).name == name })?
-            .udid
-    }
-
-    private static func getXcodePath() throws -> URL {
-        let output = Pipe()
-        let process = Process()
-        process.executableURL = URL(filePath: "/usr/bin/xcode-select")
-        process.standardOutput = output
-        process.arguments = ["--print-path"]
-
-        try ProcessPool.shared.run(process: process)
-        process.waitUntilExit()
-
-        guard let path = try output.fileHandleForReading.readToEnd()
-            .flatMap({ String(data: $0, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) })
-        else {
-            throw ErrorCase.xcodeNotFound
-        }
-
-        return URL(filePath: path)
-    }
-
     private func makeXcodeFileHandle() throws -> FileHandle {
         logger.debug("xcodebuild logfile: \(xcodeLogFileURL.path(percentEncoded: false))")
         FileManager.default.createFile(atPath: xcodeLogFileURL.path(percentEncoded: false), contents: nil)
@@ -136,17 +106,6 @@ struct TestRunner {
     }
 }
 
-private extension TestRunner {
-    struct Simulators: Decodable {
-        let devices: [String: [Device]]
-    }
-
-    struct Device: Decodable {
-        let udid: String
-        let name: String
-    }
-
-    enum ErrorCase: Error {
-        case xcodeNotFound, deviceNotFound
-    }
+enum ErrorCase: Error {
+    case xcodeNotFound, deviceNotFound
 }

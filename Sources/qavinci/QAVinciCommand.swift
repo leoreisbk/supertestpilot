@@ -26,11 +26,9 @@ struct QAVinciCommand: ParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
-        help: "The path to the .xcodeproj to be tested (default: ./*.xcodeproj)",
-        completion: .directory,
-        transform: { URL(filePath: $0) }
+        help: "The app's bundle id to be tested"
     )
-    var project: URL!
+    var bundleId: String!
 
     @Option(
         name: .shortAndLong,
@@ -38,12 +36,6 @@ struct QAVinciCommand: ParsableCommand {
         help: "The OpenAI API Key to be used. Can be set as env var OPEN_AI_KEY"
     )
     var openAIKey: String!
-
-    @Option(
-        name: .long,
-        help: "The scheme being tested"
-    )
-    var scheme: String?
 
     @Option(name: .long, help: "The max number of steps that should be executed")
     var maxSteps: UInt8 = 10
@@ -71,8 +63,12 @@ struct QAVinciCommand: ParsableCommand {
         try? fm.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
         // Regenerate the test file
-        try TestFileBuilder(testsDir: testsPath, targetDir: targetDir)
-            .buildTestFile(maxSteps: maxSteps)
+        try TestFileBuilder(
+            testsDir: testsPath,
+            targetDir: targetDir,
+            bundleId: bundleId
+        )
+        .buildTestFile(maxSteps: maxSteps)
 
         // Create the project if it doesn't exist
         let testProject = try TestProjectGenerator(
@@ -84,26 +80,33 @@ struct QAVinciCommand: ParsableCommand {
 
         // Monitors the output of the tests and redirect to stdout
         try LogFileMonitor.shared.monitor(logFile: Constants.logFilePath)
+        
+        let devices = try TestDestination.getDevices()
+        
+        devices
+            .enumerated()
+            .forEach { print("\($0.offset): \($0.element.name) \($0.element.osVersion) \($0.element.udid)") }
+        
+        guard let readLineValue = readLine(), let selectedDestinationIndex = Int(readLineValue) else {
+            return
+        }
+        
+        let destination = devices[selectedDestinationIndex]
+        print("Selected destination: \(destination.name) \(destination.udid)")
 
         if !skipRun {
-            try TestRunner(testProjectPath: testProject.testProjectPath, launchSimulator: launchSim)
-                .run(verbose: false)
+            try TestRunner(
+                testProjectPath: testProject.testProjectPath,
+                launchSimulator: launchSim,
+                destination: destination
+            )
+            .run(verbose: false)
         }
     }
 
     mutating func validate() throws {
         logger.debug("Tests path: \(testsPath.dirPath.path(percentEncoded: false))")
         logger.debug("Test case: \(testsPath.testCase ?? "[all]")")
-
-        // Checking if tested project is a dir or the .xcodeproj file
-        let path = (project ?? testsPath.dirPath).path(percentEncoded: false)
-        if !path.hasSuffix(".xcodeproj") {
-            let projects = try FileManager.default.contentsOfDirectory(atPath: path).filter { $0.hasSuffix(".xcodeproj") }
-            if projects.count == 0 { throw ValidationError("Couldn't find any .xcodeproj") }
-            if projects.count > 1 { throw ValidationError("Found multiple .xcodeproj files") }
-
-            project = URL(filePath: path.appendingPathComponent(projects[0])).absoluteURL
-        }
 
         // Check for OpenAI Key
         openAIKey = openAIKey ?? Environment.apiKey

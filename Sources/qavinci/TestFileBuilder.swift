@@ -13,6 +13,7 @@ private let logger = Logger(label: #file.lastPathComponent)
 struct TestFileBuilder {
     let testsDir: QAVinciCommand.WorkDir
     let targetDir: URL
+    let bundleId: String
 
     func buildTestFile(maxSteps: UInt8) throws {
         guard let enumerator = FileManager.default.enumerator(
@@ -82,7 +83,8 @@ struct TestFileBuilder {
                         config: Config(maxSteps: \(maxSteps)),
                         objective: \"""
                         \(objective.replacing("\n", with: ". "))
-                        \"""
+                        \""",
+                        bundleId: \"\(bundleId)\"
                     )
                     Logging.info("✅ Done!")
                 } catch let err {

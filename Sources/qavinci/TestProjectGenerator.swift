@@ -72,13 +72,7 @@ struct TestProjectGenerator {
                         ),
                     ],
                     info: .init(
-                        path: "Info.plist"//,
-//                        attributes: [
-//                            "CFBundleDisplayName": "DummyApp",
-//                            "CFBundlePackageType": "$(PRODUCT_BUNDLE_PACKAGE_TYPE)",
-//                            "CFBundleExecutable": "$(EXECUTABLE_NAME)",
-//                            "LSRequiresIPhoneOS": "YES"
-//                        ]
+                        path: "Info.plist"
                     )
                 ),
                 Target(
@@ -116,8 +110,8 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-//                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("chore/run-on-device")), // TODO: rename repo & use HTTPS endpoint instead of SSH
-                "QAVinciKit": .local(path: "/Users/fernandosousa/Developer/qavinci-poc", group: nil),
+                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("main")), // TODO: rename repo & use HTTPS endpoint instead of SSH
+                
             ]
         )
     }
