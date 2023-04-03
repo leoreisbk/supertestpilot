@@ -34,21 +34,13 @@ struct TestRunner {
             try launchSimulator(uuid: destination.udid)
         }
 
-<<<<<<< HEAD
         logger.info("Preparing tests... (this may take a few minutes)")
-        try runTests(uuid: uuid, verbose: verbose, action: "build-for-testing")
-        logger.info("Running tests on \(deviceName)")
-        try runTests(uuid: uuid, verbose: verbose, action: "test-without-building")
+        try runTests(verbose: verbose, action: "build-for-testing")
+        logger.info("Running tests on \(destination.name)")
+        try runTests(verbose: verbose, action: "test-without-building")
     }
 
-    private func runTests(uuid: String, verbose: Bool, action: String) throws {
-=======
-        logger.info("Starting tests on \(destination.name)")
-        try runTests(verbose: verbose)
-    }
-
-    private func runTests(verbose: Bool) throws {
->>>>>>> 0c95d52 (chore: List destination options and select which device or simulator)
+    private func runTests(verbose: Bool, action: String) throws {
         let fileHandle = verbose ? FileHandle.standardOutput : try makeXcodeFileHandle()
 
         let platform: String
@@ -65,14 +57,8 @@ struct TestRunner {
         process.arguments = [
             "-project", testProjectPath,
             "-scheme", Constants.testProjectName,
-<<<<<<< HEAD
-            "-sdk", "iphonesimulator",
-            "-destination", "platform=iOS Simulator,id=\(uuid)",
-            action
-=======
             "-destination", platform,
-            "test"
->>>>>>> 0c95d52 (chore: List destination options and select which device or simulator)
+            action
         ]
 
         try ProcessPool.shared.run(process: process)

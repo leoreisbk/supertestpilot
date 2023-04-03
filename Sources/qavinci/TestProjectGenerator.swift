@@ -29,57 +29,21 @@ struct TestProjectGenerator {
     ) throws {
         logger.debug("Initializing project on \(targetDir)")
 
-        let swiftFile = """
-        import SwiftUI
-
-        @main
-        struct DummyApp: App {
-            var body: some Scene {
-                WindowGroup {
-                    Text("")
-                }
-            }
-        }
-        """
-
-        try? FileManager.default.createDirectory(at: targetDir.appendingPathComponent("DummyApp/"), withIntermediateDirectories: true)
-        let codePath = targetDir.appendingPathComponent("DummyApp/DummyApp.swift")
-        do {
-            try swiftFile.write(to: codePath, atomically: true, encoding: .utf8)
-        } catch {
-            print(error)
-        }
-
         self.project = try Project(
             basePath: Path(targetDir.path(percentEncoded: false)),
             name: Constants.testProjectName,
             targets: [
                 Target(
-                    name: "DummyApp",
-                    type: .application,
-                    platform: .iOS,
-                    settings: Settings(
-                        dictionary: [
-                            "PRODUCT_BUNDLE_IDENTIFIER": "co.work.qavinci.DummyApp",
-                            "DEVELOPMENT_TEAM": "KYVD9R48"
-                        ]
-                    ),
-                    sources: [
-                        TargetSource(
-                            path: targetDir.path(percentEncoded: false),
-                            includes: ["DummyApp/DummyApp.swift"],
-                            createIntermediateGroups: true
-                        ),
-                    ],
-                    info: .init(
-                        path: "Info.plist"
-                    )
-                ),
-                Target(
                     name: Constants.testProjectName,
                     type: .uiTestBundle,
                     platform: .iOS,
                     deploymentTarget: Version("15.0"),
+                    settings: Settings(dictionary: [
+                        "DEVELOPMENT_TEAM": "2H2EYKF86D",
+                        "PRODUCT_BUNDLE_IDENTIFIER": "co.work.uitester",
+                        "PROVISIONING_PROFILE_SPECIFIER": "match Development co.work.*",
+                        "CODE_SIGN_STYLE": "Manual",
+                    ]),
                     sources: [
                         TargetSource(
                             path: targetDir.path(percentEncoded: false),
@@ -88,7 +52,6 @@ struct TestProjectGenerator {
                         ),
                     ],
                     dependencies: [
-                        Dependency(type: .target, reference: "DummyApp"),
                         Dependency(type: .package(product: "QAVinciKit"), reference: "QAVinciKit"),
                     ],
                     info: Plist(path: "Info.plist")
@@ -98,7 +61,7 @@ struct TestProjectGenerator {
                 Scheme(
                     name: Constants.testProjectName,
                     build: Scheme.Build(targets: [
-                        Scheme.BuildTarget(target: TestableTargetReference("DummyApp"), buildTypes: [.testing]),
+                        Scheme.BuildTarget(target: TestableTargetReference(Constants.testProjectName), buildTypes: [.testing]),
                     ]),
                     test: Scheme.Test(
                         targets: [Scheme.Test.TestTarget(stringLiteral: Constants.testProjectName)],
@@ -110,8 +73,8 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("main")), // TODO: rename repo & use HTTPS endpoint instead of SSH
-                
+                // "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("main")), // TODO: rename repo & use HTTPS endpoint instead of SSH
+                "QAVinciKit": .local(path: "/Users/fnazarios/Developer/Projects/workandco/qavinci-poc", group: nil),
             ]
         )
     }

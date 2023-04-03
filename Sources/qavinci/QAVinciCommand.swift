@@ -33,6 +33,13 @@ struct QAVinciCommand: ParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
+        help: "The destination where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
+    )
+    var destination: String?
+    
+    @Option(
+        name: .shortAndLong,
+        parsing: .scanningForValue,
         help: "The OpenAI API Key to be used. Can be set as env var OPEN_AI_KEY"
     )
     var openAIKey: String!
@@ -81,24 +88,31 @@ struct QAVinciCommand: ParsableCommand {
         // Monitors the output of the tests and redirect to stdout
         try LogFileMonitor.shared.monitor(logFile: Constants.logFilePath)
         
-        let devices = try TestDestination.getDevices()
-        
-        devices
-            .enumerated()
-            .forEach { print("\($0.offset): \($0.element.name) \($0.element.osVersion) \($0.element.udid)") }
-        
-        guard let readLineValue = readLine(), let selectedDestinationIndex = Int(readLineValue) else {
-            return
+        let destinationDevice: Device
+        if
+            let destination = destination,
+            let udid = extractPlatformAndUDID(from: destination).udid,
+            let platform = extractPlatformAndUDID(from: destination).platform
+        {
+            destinationDevice = Device(udid: udid, name: "", isSimulator: platform.contains("Simulator"))
+        } else {
+            let devices = try TestDestination.getDevices()
+            devices
+                .enumerated()
+                .forEach { print("\($0.offset): \($0.element.name) \($0.element.osVersion) \($0.element.udid)") }
+            
+            guard let readLineValue = readLine(), let selectedDestinationIndex = Int(readLineValue) else {
+                return
+            }
+            
+            destinationDevice = devices[selectedDestinationIndex]
         }
         
-        let destination = devices[selectedDestinationIndex]
-        print("Selected destination: \(destination.name) \(destination.udid)")
-
         if !skipRun {
             try TestRunner(
                 testProjectPath: testProject.testProjectPath,
                 launchSimulator: launchSim,
-                destination: destination
+                destination: destinationDevice
             )
             .run(verbose: false)
         }
@@ -114,6 +128,23 @@ struct QAVinciCommand: ParsableCommand {
             throw ValidationError("Missing OpenAI API Key")
         }
         logger.debug("OpenAI API Key: \(openAIKey!)")
+    }
+    
+    private func extractPlatformAndUDID(from message: String) -> (platform: String?, udid: String?) {
+        let platformRegex = "platform=([^,]+)"
+        let udidRegex = "UDID=([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})"
+        
+        let platform = message
+            .range(of: platformRegex, options: .regularExpression)
+            .map { String(message[$0]) }
+            .map { $0.replacingOccurrences(of: "platform=", with: "") }
+        
+        let udid = message
+            .range(of: udidRegex, options: .regularExpression)
+            .map { String(message[$0]) }
+            .map { $0.replacingOccurrences(of: "UDID=", with: "") }
+        
+        return (platform, udid)
     }
 }
 
