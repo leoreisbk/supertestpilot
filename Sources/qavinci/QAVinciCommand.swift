@@ -101,6 +101,8 @@ struct QAVinciCommand: ParsableCommand {
                 .enumerated()
                 .forEach { print("\($0.offset): \($0.element.name) \($0.element.osVersion) \($0.element.udid)") }
             
+            print("Enter the device number (ex. 12):")
+            
             guard let readLineValue = readLine(), let selectedDestinationIndex = Int(readLineValue) else {
                 return
             }
@@ -132,7 +134,7 @@ struct QAVinciCommand: ParsableCommand {
     
     private func extractPlatformAndUDID(from message: String) -> (platform: String?, udid: String?) {
         let platformRegex = "platform=([^,]+)"
-        let udidRegex = "UDID=([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})"
+        let udidRegex = "UDID=([A-F\\d\\-]+)"
         
         let platform = message
             .range(of: platformRegex, options: .regularExpression)
