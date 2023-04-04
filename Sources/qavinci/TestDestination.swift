@@ -51,7 +51,7 @@ struct TestDestination {
                 isSimulator = true
             }
             
-            guard line.contains("iPhone") || line.contains("iPad") || line.contains("Mac") else {
+            guard line.contains("iPhone") || line.contains("iPad") else {
                 return
             }
             
