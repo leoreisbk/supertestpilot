@@ -1,6 +1,6 @@
 //
 //  Constants.swift
-//  qavinci
+//  testpilot
 //
 //  Created by Flávio Caetano on 3/17/23.
 //
@@ -8,8 +8,8 @@
 import Foundation
 
 enum Constants {
-    static let testProjectName = "UITester"
-    static let testFileExt = "qavinci"
+    static let testProjectName = "TestPilot"
+    static let testFileExt = "testpilot"
 
     func getTestProjectURL(forProject project: String) -> URL {
         FileManager.default.temporaryDirectory.appending(component: project.deletingPathExtension)

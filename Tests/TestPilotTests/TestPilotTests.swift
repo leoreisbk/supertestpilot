@@ -1,11 +1,11 @@
 import XCTest
-@testable import QAVinci
+@testable import TestPilot
 
-final class QAVinciTests: XCTestCase {
+final class TestPilotests: XCTestCase {
     func testExample() throws {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
-        XCTAssertEqual(QAVinci().text, "Hello, World!")
+        XCTAssertEqual(TestPilot().text, "Hello, World!")
     }
 }

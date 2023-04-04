@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "QAVinciKit"
-               BuildableName = "QAVinciKit"
-               BlueprintName = "QAVinciKit"
+               BlueprintIdentifier = "testpilot"
+               BuildableName = "testpilot"
+               BlueprintName = "testpilot"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -39,7 +39,18 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      viewDebuggingEnabled = "No">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "testpilot"
+            BuildableName = "testpilot"
+            BlueprintName = "testpilot"
+            ReferencedContainer = "container:">
+         </BuildableReference>
+      </BuildableProductRunnable>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -47,15 +58,16 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <MacroExpansion>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "QAVinciKit"
-            BuildableName = "QAVinciKit"
-            BlueprintName = "QAVinciKit"
+            BlueprintIdentifier = "testpilot"
+            BuildableName = "testpilot"
+            BlueprintName = "testpilot"
             ReferencedContainer = "container:">
          </BuildableReference>
-      </MacroExpansion>
+      </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

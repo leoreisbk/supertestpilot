@@ -3,14 +3,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "QAVinci",
+    name: "TestPilot",
     platforms: [
         .macOS(.v13),
         .iOS(.v15),
     ],
     products: [
-        .library(name: "QAVinciKit", targets: ["QAVinciKit"]),
-        .executable(name: "qavinci", targets: ["qavinci"]),
+        .library(name: "TestPilotKit", targets: ["TestPilotKit"]),
+        .executable(name: "testpilot", targets: ["testpilot"]),
     ],
     dependencies: [
         .package(url: "https://github.com/fjcaetano/openai-kit", branch: "feat/gpt-4"), // TODO: use version
@@ -21,13 +21,13 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "QAVinciKit",
+            name: "TestPilotKit",
             dependencies: [
                 .product(name: "OpenAIKit", package: "openai-kit"),
             ]
         ),
         .executableTarget(
-            name: "qavinci",
+            name: "testpilot",
             dependencies: [
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "LoggingFormatAndPipe", package: "swift-log-format-and-pipe"),

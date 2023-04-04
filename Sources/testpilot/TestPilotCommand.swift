@@ -1,6 +1,6 @@
 //
-//  QAVinciCommand.swift
-//  qavinci
+//  TestPilotCommand.swift
+//  testpilot
 //
 //  Created by Flávio Caetano on 3/21/23.
 //
@@ -10,8 +10,8 @@ import ArgumentParser
 import Logging
 
 private let logger = Logger(label: #file.lastPathComponent)
-struct QAVinciCommand: ParsableCommand {
-    static var configuration = CommandConfiguration(commandName: "qavinci")
+struct TestPilotCommand: ParsableCommand {
+    static var configuration = CommandConfiguration(commandName: "testpilot")
 
     @Argument(
         help: """
@@ -168,7 +168,7 @@ struct QAVinciCommand: ParsableCommand {
     }
 }
 
-extension QAVinciCommand {
+extension TestPilotCommand {
     struct WorkDir: Decodable {
         let dirPath: URL
         let testCase: String?

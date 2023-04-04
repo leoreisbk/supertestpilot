@@ -1,6 +1,6 @@
 //
-//  GenProj.swift
-//  qavinci
+//  TestProjectGenerator.swift
+//  testpilot
 //
 //  Created by Flávio Caetano on 3/16/23.
 //
@@ -53,7 +53,7 @@ struct TestProjectGenerator {
                         ),
                     ],
                     dependencies: [
-                        Dependency(type: .package(product: "QAVinciKit"), reference: "QAVinciKit"),
+                        Dependency(type: .package(product: "TestPilotKit"), reference: "TestPilotKit"),
                     ],
                     info: Plist(path: "Info.plist")
                 ),
@@ -75,7 +75,7 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-                "QAVinciKit": .remote(url: "git@github.com:workco/qavinci-poc.git", versionRequirement: .branch("main")), // TODO: rename repo & use HTTPS endpoint instead of SSH
+                "TestPilotKit": .remote(url: "git@github.com:workco/TestPilot.git", versionRequirement: .branch("main")), // TODO: rename repo & use HTTPS endpoint instead of SSH
             ]
         )
     }

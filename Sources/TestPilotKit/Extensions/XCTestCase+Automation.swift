@@ -1,6 +1,6 @@
 //
 //  XCTest+Automation.swift
-//  QAVinci
+//  TestPilotKit
 //
 //  Created by Flávio Caetano on 3/13/23.
 //

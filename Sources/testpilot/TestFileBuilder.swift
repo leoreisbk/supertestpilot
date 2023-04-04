@@ -1,6 +1,6 @@
 //
-//  main.swift
-//  qavinci
+//  TestFileBuilder.swift
+//  testpilot
 //
 //  Created by Flávio Caetano on 3/16/23.
 //
@@ -11,7 +11,7 @@ import Logging
 
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestFileBuilder {
-    let testsDir: QAVinciCommand.WorkDir
+    let testsDir: TestPilotCommand.WorkDir
     let targetDir: URL
     let bundleId: String
 
@@ -62,7 +62,7 @@ struct TestFileBuilder {
 
         let testFile = """
         import XCTest
-        import QAVinciKit
+        import TestPilotKit
 
         final class TestApp: XCTestCase {
         \(tests.joined(separator: "\n\n"))

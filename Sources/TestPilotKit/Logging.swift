@@ -1,6 +1,6 @@
 //
 //  Logging.swift
-//  QAVinciKit
+//  TestPilotKit
 //
 //  Created by Flávio Caetano on 3/20/23.
 //

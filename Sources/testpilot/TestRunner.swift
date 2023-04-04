@@ -1,6 +1,6 @@
 //
-//  RunCommand.swift
-//  qavinci
+//  TestRunner.swift
+//  testpilot
 //
 //  Created by Flávio Caetano on 3/17/23.
 //

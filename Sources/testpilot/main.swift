@@ -1,6 +1,6 @@
 //
 //  main.swift
-//  qavinci
+//  testpilot
 //
 //  Created by Flávio Caetano on 3/16/23.
 //
@@ -11,7 +11,7 @@ import LoggingFormatAndPipe
 
 // MARK: - Logging config
 // This needs to be called before any loggers are created :/
-private let isVerbose = (try? QAVinciCommand.parse(Array(ProcessInfo.processInfo.arguments[1...])))?.verbose ?? false
+private let isVerbose = (try? TestPilotCommand.parse(Array(ProcessInfo.processInfo.arguments[1...])))?.verbose ?? false
 LoggingSystem.bootstrap { msg in
     var res = LoggingFormatAndPipe.Handler(
         formatter: BasicFormatter(isVerbose ? [.timestamp, .level, .message] : [.message]),
@@ -34,4 +34,4 @@ sig.resume()
 #if DEBUG
 print(ProcessInfo.processInfo.arguments[0])
 #endif
-QAVinciCommand.main()
+TestPilotCommand.main()

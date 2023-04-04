@@ -1,4 +1,4 @@
-qavinci
+TestPilot
 ===
 
 Automated end-to-end tests for mobile apps using GPT-4.
@@ -6,32 +6,32 @@ Automated end-to-end tests for mobile apps using GPT-4.
 https://user-images.githubusercontent.com/1066295/227050296-9e616a41-ef9e-411c-8c14-03b396d2d0df.mp4
 
 # Installation
-You can install `qavinci` using Homebrew:
+You can install `testpilot` using Homebrew:
 
 ```sh
-$ brew tap workco/qavinci-poc
-$ brew install qavinci
+$ brew tap workco/testpilot
+$ brew install testpilot
 ```
 
 # Usage
-Write your test cases in plain natural language. The CLI scans the given directory for files using the `.qavinci` extension, then run each as an individual test case.
+Write your test cases in plain natural language. The CLI scans the given directory for files using the `.testpilot` extension, then run each as an individual test case.
 
 There are no rules for writing tests. Below are examples using a step-by-step approach where the test describes which elements must be interacted with, and another example that has just an objective, which GPT-4 will try to figure out how to achieve
 
 ### Examples for [Apple's Fruta app](https://developer.apple.com/documentation/swiftui/fruta_building_a_feature-rich_app_with_swiftui):
 ```
-# searchAndBuy.qavinci
+# searchAndBuy.testpilot
 Search for 'Tropical Blue' and navigate to that item. Add it to favorites.
 Buy with Apple Pay from the Favorites tab
 ```
 ```
-# manageFavorites.qavinci
+# manageFavorites.testpilot
 Scroll up, go to Sailor Man. then add it to Favorites. Go back to the Menu and then into "That's a Smore!".
 Add that to favorites. Go to the Favorites tab and then back to the root.
 Go to Sailor Man and remove it from favorites
 ```
 ```
-# buyWithApplePay.qavinci
+# buyWithApplePay.testpilot
 Buy my favorite beverage
 ```
 
@@ -41,25 +41,25 @@ Host the websocket logging server available on `ws-logging-server/`, in order to
 
 ## Running the tests
 
-Now you can just run `qavinci` providing the path to the test files, the bundle identifier for the app you are testing, and your OpenAI key:
+Now you can just run `testpilot` providing the path to the test files, the bundle identifier for the app you are testing, and your OpenAI key:
 ```sh
-$ qavinci [<tests-path> | .] -o <open-ai-key> --bundle-id 'your.bundle.id'
+$ testpilot [<tests-path> | .] -o <open-ai-key> --bundle-id 'your.bundle.id'
 ```
 
 The key can also be defined as an environment variable named `OPEN_AI_KEY`
 
 # Capabilities
-`qavinci` relies on accessibility labels to "see" and interact with your app. Currently, it can interact using the following commands. We're expanding its capabilities, but keep this in mind when writing your tests for now:
+`testpilot` relies on accessibility labels to "see" and interact with your app. Currently, it can interact using the following commands. We're expanding its capabilities, but keep this in mind when writing your tests for now:
 - Tapping on elements
 - Typing texts into elements
 - Scrolling up and down
 - Waiting (useful if you need to load something)
 
-A test is considered successful if `qavinci` was capable of executing all steps to completion.
+A test is considered successful if `testpilot` was capable of executing all steps to completion.
 
 # UI Minification & Token usage
 
-To reduce the number of tokens used on each step of the test execution and to ensure GPT-4 only receives relevant UI elements from the accessibility tree, QAVinci pre-processes a dump of the host app XCUIApplication, and removes any any tokens that may bloat the REST request or confuse GPT-4. All UI elements that don't contain a `label`, `identifier`, or `value` are automatically removed, since interacting with them becomes virtually impossible. Similarly, all frames and memory addresses also get stripped out, along with the UI dump "header" and "footer".
+To reduce the number of tokens used on each step of the test execution and to ensure GPT-4 only receives relevant UI elements from the accessibility tree, TestPilot pre-processes a dump of the host app XCUIApplication, and removes any any tokens that may bloat the REST request or confuse GPT-4. All UI elements that don't contain a `label`, `identifier`, or `value` are automatically removed, since interacting with them becomes virtually impossible. Similarly, all frames and memory addresses also get stripped out, along with the UI dump "header" and "footer".
 
 Considering the following raw UI dump. Notice how it has a header, footer and a bunch of `Other` UI elements that aren't used and will only increment the token count and limit for each request.
 ```
@@ -108,7 +108,7 @@ Query chain:
   }
 ```
 
-After minification, this is what QAVinci sends to GPT-4. Note how QAVinci preserved only the UI elements that can actually be interacted with:
+After minification, this is what TestPilot sends to GPT-4. Note how TestPilot preserved only the UI elements that can actually be interacted with:
 ```
 Button, label: 'Menu'
 Image, label: 'chevron'
