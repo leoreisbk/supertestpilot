@@ -1,0 +1,14 @@
+{
+  "name": "testpilot-logging-server",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "ws": "^8.13.0"
+  }
+}

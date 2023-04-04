@@ -38,3 +38,6 @@ bin/
 
 ## Swift Package Manager
 SourcePackages/
+
+## NPM
+node_modules/
