@@ -33,7 +33,7 @@ struct QAVinciCommand: ParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
-        help: "The destination where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
+        help: "The device where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
     )
     var destination: String?
     
