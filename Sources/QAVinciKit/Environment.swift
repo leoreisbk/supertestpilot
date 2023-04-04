@@ -15,4 +15,9 @@ enum Environment {
     static var wsReceiver: String? {
         ProcessInfo.processInfo.environment["WS_RECEIVER"]
     }
+
+    static var wsServerURL: URL? {
+        ProcessInfo.processInfo.environment["WS_SERVER"]
+            .flatMap(URL.init(string:))
+    }
 }

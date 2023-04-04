@@ -11,18 +11,30 @@ import Network
 public class Logging {
     static let shared = Logging()
 
-    private let task: URLSessionWebSocketTask
+    private var task: URLSessionWebSocketTask?
+    private var receiver: String?
 
     private init() {
-        // TODO: host on a remote server and add an option to use a custom server
-        self.task = URLSession.shared.webSocketTask(with: URL(string: "ws://6.tcp.ngrok.io:16192")!)
+        guard let url = Environment.wsServerURL else {
+            print("Invalid websocket logging server URL defined on environment variable WS_SERVER")
+            return
+        }
+
+        guard let receiver = Environment.wsReceiver else {
+            print("Websocket logging receiver not found on environment variable WS_RECEIVER")
+            return
+        }
+
+        let task = URLSession.shared.webSocketTask(with: url)
+        self.task = task
+        self.receiver = receiver
 
         func receive() {
             task.receive { result in
                 switch result {
                 case .success(let msg):
-                    print(msg.content)
-                    receive()
+                    print(msg.content ?? "Error: Websocket message can't be displayed")
+                    receive() // recursion
 
                 case .failure(let err):
                     dump(err)
@@ -35,8 +47,13 @@ public class Logging {
     }
 
     public static func info(_ msg: String) {
+        guard let task = shared.task, let receiver = shared.receiver else {
+            print("Message not sent to logging server - \(msg)")
+            return
+        }
+
         do {
-            try shared.task.send(.message(receiver: Environment.wsReceiver!, text: msg)) { error in
+            try task.send(.message(receiver: receiver, text: msg)) { error in
                 if let error = error {
                     print("An unexpected issue occurred: \(error)")
                 }

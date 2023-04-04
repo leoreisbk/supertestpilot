@@ -13,11 +13,11 @@ private let logger = Logger(label: #file.lastPathComponent)
 class WebsocketLoggingReceiver {
     private let task: URLSessionWebSocketTask
     private let address: String
-    init(address: String) {
+
+    init(address: String, serverURL: URL) {
         logger.debug("Initializing websocket logger")
 
-        // TODO: host on a remote server and add an option to use a custom server
-        self.task = URLSession.shared.webSocketTask(with: URL(string: "ws://6.tcp.ngrok.io:16192")!)
+        self.task = URLSession.shared.webSocketTask(with: serverURL)
         self.address = address
     }
 

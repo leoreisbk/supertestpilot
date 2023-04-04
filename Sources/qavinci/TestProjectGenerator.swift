@@ -25,7 +25,8 @@ struct TestProjectGenerator {
     init(
         targetDir: URL,
         openAIKey: String,
-        loggingAddress: String
+        loggingAddress: String,
+        loggingServerURL: URL
     ) throws {
         logger.debug("Initializing project on \(targetDir)")
 
@@ -68,6 +69,7 @@ struct TestProjectGenerator {
                         environmentVariables: [
                             .init(variable: "OPEN_AI_KEY", value: openAIKey, enabled: true),
                             .init(variable: "WS_RECEIVER", value: loggingAddress, enabled: true),
+                            .init(variable: "WS_SERVER", value: loggingServerURL.absoluteString, enabled: true),
                         ]
                     )
                 ),

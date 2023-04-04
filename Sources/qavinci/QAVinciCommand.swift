@@ -47,6 +47,19 @@ struct QAVinciCommand: ParsableCommand {
     @Option(name: .long, help: "The max number of steps that should be executed")
     var maxSteps: UInt8 = 10
 
+    @Option(
+        name: .long,
+        help: "The URL to the websocket logging server. Must start with `ws://` or `wss://`",
+        transform: { string in
+            guard let url = URL(string: string) else {
+                throw URLError(.badURL)
+            }
+
+            return url
+        }
+    )
+    var loggingServer: URL // TODO: provide a default value
+
     @Flag(name: .shortAndLong, help: "Launches the iOS simulator")
     var launchSim = false
 
@@ -60,7 +73,7 @@ struct QAVinciCommand: ParsableCommand {
         let loggingAddress = UUID().uuidString
 
         // Setting in logging client
-        let ws = WebsocketLoggingReceiver(address: loggingAddress)
+        let ws = WebsocketLoggingReceiver(address: loggingAddress, serverURL: loggingServer)
         try ws.startServer()
 
         let fm = FileManager.default
@@ -87,7 +100,8 @@ struct QAVinciCommand: ParsableCommand {
         let testProject = try TestProjectGenerator(
             targetDir: targetDir,
             openAIKey: openAIKey,
-            loggingAddress: loggingAddress
+            loggingAddress: loggingAddress,
+            loggingServerURL: loggingServer
         )
         try testProject.generate()
         
