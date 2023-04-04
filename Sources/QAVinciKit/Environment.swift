@@ -12,7 +12,7 @@ enum Environment {
         ProcessInfo.processInfo.environment["OPEN_AI_KEY"]
     }
 
-    static var logFile: String? {
-        ProcessInfo.processInfo.environment["LOG_FILE"]
+    static var wsReceiver: String? {
+        ProcessInfo.processInfo.environment["WS_RECEIVER"]
     }
 }

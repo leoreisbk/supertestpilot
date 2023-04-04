@@ -6,52 +6,65 @@
 //
 
 import Foundation
+import Network
 
 public class Logging {
     static let shared = Logging()
 
-    private var writer: Writer
+    private let task: URLSessionWebSocketTask
 
     private init() {
-        #if targetEnvironment(simulator)
-        do {
-            guard let filePath = Environment.logFile else {
-                throw ErrorCode.noEnvVar
-            }
+        // TODO: host on a remote server and add an option to use a custom server
+        self.task = URLSession.shared.webSocketTask(with: URL(string: "ws://6.tcp.ngrok.io:16192")!)
 
-            if !FileManager.default.fileExists(atPath: filePath) {
-                FileManager.default.createFile(atPath: filePath, contents: nil)
-            }
-            
-            guard let fileHandle = FileHandle(forWritingAtPath: filePath) else {
-                throw ErrorCode.fileNotCreated
-            }
+        func receive() {
+            task.receive { result in
+                switch result {
+                case .success(let msg):
+                    print(msg.content)
+                    receive()
 
-            self.writer = Writer(fileHandle: fileHandle)
-        } catch _ {
-            fatalError("Couldn't create logger")
+                case .failure(let err):
+                    dump(err)
+                }
+            }
         }
-        #else
-        self.writer = Writer(fileHandle: .nullDevice)
-        #endif
+        receive()
+
+        task.resume()
     }
 
     public static func info(_ msg: String) {
-        print(msg, to: &Self.shared.writer)
+        do {
+            try shared.task.send(.message(receiver: Environment.wsReceiver!, text: msg)) { error in
+                if let error = error {
+                    print("An unexpected issue occurred: \(error)")
+                }
+            }
+        } catch {
+            print("Couldn't log message: \(error)")
+        }
     }
 }
 
 private extension Logging {
-    struct Writer: TextOutputStream {
-        let fileHandle: FileHandle
-
-        func write(_ string: String) {
-            _ = try? fileHandle.seekToEnd()
-            try? fileHandle.write(contentsOf: Data(string.utf8))
-        }
-    }
-
-    enum ErrorCode: Error {
-        case noEnvVar, fileNotCreated
+    struct Message: Codable {
+        let rcv: String
+        let msg: String
     }
 }
+
+private extension URLSessionWebSocketTask.Message {
+    static func message(receiver: String, text: String) throws -> URLSessionWebSocketTask.Message {
+        try .data(JSONEncoder().encode(Logging.Message(rcv: receiver, msg: text)))
+    }
+
+    var content: String? {
+        switch self {
+        case .string(let result): return result
+        case .data(let data): return String(data: data, encoding: .utf8)
+        @unknown default: return nil
+        }
+    }
+}
+

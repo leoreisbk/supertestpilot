@@ -86,7 +86,7 @@ struct TestFileBuilder {
                         \""",
                         bundleId: \"\(bundleId)\"
                     )
-                    Logging.info("✅ Done!")
+                    Logging.info("✅ Test Successful!")
                 } catch let err {
                     Logging.info("❌ Test failed!")
                     Logging.info(err.localizedDescription)

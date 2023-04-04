@@ -57,6 +57,12 @@ struct QAVinciCommand: ParsableCommand {
     var verbose = false
 
     func run() throws {
+        let loggingAddress = UUID().uuidString
+
+        // Setting in logging client
+        let ws = WebsocketLoggingReceiver(address: loggingAddress)
+        try ws.startServer()
+
         let fm = FileManager.default
 
         // Setting up logging
@@ -81,12 +87,9 @@ struct QAVinciCommand: ParsableCommand {
         let testProject = try TestProjectGenerator(
             targetDir: targetDir,
             openAIKey: openAIKey,
-            logFile: Constants.logFilePath
+            loggingAddress: loggingAddress
         )
         try testProject.generate()
-
-        // Monitors the output of the tests and redirect to stdout
-        try LogFileMonitor.shared.monitor(logFile: Constants.logFilePath)
         
         let destinationDevice: Device
         if
@@ -110,6 +113,7 @@ struct QAVinciCommand: ParsableCommand {
             destinationDevice = devices[selectedDestinationIndex]
         }
         
+        // Run tests
         if !skipRun {
             try TestRunner(
                 testProjectPath: testProject.testProjectPath,
@@ -121,8 +125,9 @@ struct QAVinciCommand: ParsableCommand {
     }
 
     mutating func validate() throws {
-        logger.debug("Tests path: \(testsPath.dirPath.path(percentEncoded: false))")
+        logger.debug("Tests path: '\(testsPath.dirPath.path(percentEncoded: false))'")
         logger.debug("Test case: \(testsPath.testCase ?? "[all]")")
+        logger.debug("Project: '\(project?.path(percentEncoded: false) ?? "N/A")'")
 
         // Check for OpenAI Key
         openAIKey = openAIKey ?? Environment.apiKey
