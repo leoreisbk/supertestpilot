@@ -20,7 +20,7 @@ struct TestPilotCommand: ParsableCommand {
         completion: .directory,
         transform: { WorkDir(path: $0) }
     )
-    var testsPath = WorkDir(path: DefaultValues.testsPath)
+    var testsPath = WorkDir(path: FileManager.default.currentDirectoryPath)
 
     @Option(
         name: .long,
@@ -48,14 +48,14 @@ struct TestPilotCommand: ParsableCommand {
         parsing: .scanningForValue,
         help: "The app's bundle id to be tested"
     )
-    var bundleId: String
+    var bundleId: String!
 
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
         help: "The device where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
     )
-    var device: String?
+    var destination: String?
     
     @Option(
         name: .shortAndLong,
@@ -200,6 +200,5 @@ extension TestPilotCommand {
 extension TestPilotCommand {
     enum DefaultValues {
         static let configFileName = "testpilot.config.json"
-        static let testsPath = FileManager.default.currentDirectoryPath
     }
 }
