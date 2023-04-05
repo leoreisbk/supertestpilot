@@ -141,7 +141,6 @@ struct QAVinciCommand: ParsableCommand {
     mutating func validate() throws {
         logger.debug("Tests path: '\(testsPath.dirPath.path(percentEncoded: false))'")
         logger.debug("Test case: \(testsPath.testCase ?? "[all]")")
-        logger.debug("Project: '\(project?.path(percentEncoded: false) ?? "N/A")'")
 
         // Check for OpenAI Key
         openAIKey = openAIKey ?? Environment.apiKey

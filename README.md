@@ -35,9 +35,15 @@ Go to Sailor Man and remove it from favorites
 Buy my favorite beverage
 ```
 
-Then just run `qavinci` providing the path to the test files and tested project, and your OpenAI key:
+## Before running tests - Start the logging server
+
+Host the websocket logging server available on `ws-logging-server/`, in order to see the steps being executed by the test runner. This is required due to [limitation around Xcode test targets](https://developer.apple.com/forums/thread/727620). See the [server's documentation](./ws-logging-server/README.md) for running instructions.
+
+## Running the tests
+
+Now you can just run `qavinci` providing the path to the test files, the bundle identifier for the app you are testing, and your OpenAI key:
 ```sh
-$ qavinci [<tests-path> | .] -o <open-ai-key>
+$ qavinci [<tests-path> | .] -o <open-ai-key> --bundle-id 'your.bundle.id'
 ```
 
 The key can also be defined as an environment variable named `OPEN_AI_KEY`

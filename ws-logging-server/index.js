@@ -1,5 +1,5 @@
 const WebSocketServer = require('ws');
-const port = 23153;
+const port = process.argv[2] || 23153;
 
 const wss = new WebSocketServer.Server({ port });
 const receivers = {};
