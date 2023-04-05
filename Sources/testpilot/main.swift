@@ -9,29 +9,40 @@ import Foundation
 import Logging
 import LoggingFormatAndPipe
 
-// MARK: - Logging config
-// This needs to be called before any loggers are created :/
-private let isVerbose = (try? TestPilotCommand.parse(Array(ProcessInfo.processInfo.arguments[1...])))?.verbose ?? false
-LoggingSystem.bootstrap { msg in
-    var res = LoggingFormatAndPipe.Handler(
-        formatter: BasicFormatter(isVerbose ? [.timestamp, .level, .message] : [.message]),
-        pipe: LoggerTextOutputStreamPipe.standardOutput
-    )
-    res.logLevel = isVerbose ? .debug : .info
-    return res
-}
+do {
+    let args = Array(ProcessInfo.processInfo.arguments[1...])
+    let configReader = ConfigFileReader(args: args)
+    
+    let cmdArgs = try configReader?.getArguments() ?? args
 
-// MARK: - Sig trap
-signal(SIGINT, SIG_IGN)
-let sig = DispatchSource.makeSignalSource(signal: SIGINT)
-sig.setEventHandler {
-   ProcessPool.shared.terminateRunningProcesses()
-}
+    // MARK: - Logging config
+    // This needs to be called before any loggers are created :/
+    let isVerbose = configReader?.verbose == true
+    LoggingSystem.bootstrap { msg in
+        var res = LoggingFormatAndPipe.Handler(
+            formatter: BasicFormatter(isVerbose ? [.timestamp, .level, .message] : [.message]),
+            pipe: LoggerTextOutputStreamPipe.standardOutput
+        )
+        res.logLevel = isVerbose ? .debug : .info
+        return res
+    }
 
-sig.resume()
+    // MARK: - Sig trap
+    signal(SIGINT, SIG_IGN)
+    let sig = DispatchSource.makeSignalSource(signal: SIGINT)
+    sig.setEventHandler {
+        ProcessPool.shared.terminateRunningProcesses()
+    }
 
-// MARK: - MAIN
+    sig.resume()
+
+    // MARK: - MAIN
 #if DEBUG
-print(ProcessInfo.processInfo.arguments[0])
+    print(ProcessInfo.processInfo.arguments[0])
 #endif
-TestPilotCommand.main()
+
+    let cmd = try TestPilotCommand.parse(cmdArgs)
+    try cmd.run()
+} catch {
+    TestPilotCommand.exit(withError: error)
+}

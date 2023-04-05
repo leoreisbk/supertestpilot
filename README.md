@@ -73,6 +73,19 @@ Enter the device number (ex. 12):
 2
 ```
 
+## Config File
+
+Since the arguments sent to `testpilot` can grow to an extensive list, you can define these in a JSON config file and use that by default. By default, `testpilot` looks for a file named `testpilot.config.json` in the current directly. Alternatively, you can send the path to the config file as an argument:
+
+```json
+// testpilot.config.json
+{
+  "bundle-id": "your.bundle.id",
+  "logging-server": "ws://loggingserver.domain",
+  "device": "UDID", 
+}
+```
+
 # Capabilities
 `testpilot` relies on accessibility labels to "see" and interact with your app. Currently, it can interact using the following commands. We're expanding its capabilities, but keep this in mind when writing your tests for now:
 - Tapping on elements

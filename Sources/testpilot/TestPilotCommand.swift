@@ -23,6 +23,27 @@ struct TestPilotCommand: ParsableCommand {
     var testsPath = WorkDir(path: FileManager.default.currentDirectoryPath)
 
     @Option(
+        name: .long,
+        help: "The URL to the websocket logging server. Must start with `ws://` or `wss://`",
+        transform: { string in
+            guard let url = URL(string: string) else {
+                throw URLError(.badURL)
+            }
+
+            return url
+        }
+    )
+    var loggingServer: URL
+
+    @Option(
+        name: .shortAndLong,
+        parsing: .scanningForValue,
+        help: "The config file to be used instead of providing arguments (default: \(DefaultValues.configFileName))",
+        completion: .file(extensions: [".json"])
+    )
+    var config: String?
+
+    @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
         help: "The app's bundle id to be tested"
@@ -45,19 +66,6 @@ struct TestPilotCommand: ParsableCommand {
 
     @Option(name: .long, help: "The max number of steps that should be executed")
     var maxSteps: UInt8 = 10
-
-    @Option(
-        name: .long,
-        help: "The URL to the websocket logging server. Must start with `ws://` or `wss://`",
-        transform: { string in
-            guard let url = URL(string: string) else {
-                throw URLError(.badURL)
-            }
-
-            return url
-        }
-    )
-    var loggingServer: URL // TODO: provide a default value
 
     @Flag(name: .shortAndLong, help: "Launches the iOS simulator")
     var launchSim = false
@@ -186,5 +194,11 @@ extension TestPilotCommand {
                 testCase = nil
             }
         }
+    }
+}
+
+extension TestPilotCommand {
+    enum DefaultValues {
+        static let configFileName = "testpilot.config.json"
     }
 }
