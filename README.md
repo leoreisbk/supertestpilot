@@ -48,6 +48,31 @@ $ testpilot [<tests-path> | .] -o <open-ai-key> --bundle-id 'your.bundle.id'
 
 The key can also be defined as an environment variable named `OPEN_AI_KEY`
 
+### Test device
+
+You can preemptively specify which device should be used for testing with the `--device` option. When using that option, you must also provide which platform that device uses:
+
+```sh
+$ testpilot --device 'platform=iOS Simulator,UDID=53D7B166-09AC-4A9B-9815-6264EC2552AD'
+```
+> Note that `UDID` need to be all caps following this exacly pattern.
+
+If you don't send the `--device` option, `testpilot` will halt and ask you which device you'd like to use. Enter the number of the desired device from the given list:
+
+```sh
+$ testpilot
+
+Found 1 test file:
+1. Sample test
+
+0: iPad 16.2 53D7B166-09AC-4A9B-9815-6264EC2552AD
+1: iPad Air 16.2 9ADC85CC-6826-40F5-BC44-43CBAFE76D60
+2: iPad Pro 16.2 1BEFFE89-5BDA-403C-9479-D20497FA52E8
+
+Enter the device number (ex. 12):
+2
+```
+
 # Capabilities
 `testpilot` relies on accessibility labels to "see" and interact with your app. Currently, it can interact using the following commands. We're expanding its capabilities, but keep this in mind when writing your tests for now:
 - Tapping on elements
