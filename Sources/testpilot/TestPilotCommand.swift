@@ -9,7 +9,6 @@ import Foundation
 import ArgumentParser
 import Logging
 
-private let logger = Logger(label: #file.lastPathComponent)
 struct TestPilotCommand: ParsableCommand {
     static var configuration = CommandConfiguration(commandName: "testpilot")
 
@@ -28,14 +27,14 @@ struct TestPilotCommand: ParsableCommand {
         parsing: .scanningForValue,
         help: "The app's bundle id to be tested"
     )
-    var bundleId: String!
+    var bundleId: String
 
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
         help: "The device where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
     )
-    var destination: String?
+    var device: String?
     
     @Option(
         name: .shortAndLong,
@@ -70,6 +69,7 @@ struct TestPilotCommand: ParsableCommand {
     var verbose = false
 
     func run() throws {
+        let logger = Logger(label: #file.lastPathComponent)
         let loggingAddress = UUID().uuidString
 
         // Setting in logging client
@@ -107,19 +107,21 @@ struct TestPilotCommand: ParsableCommand {
         
         let destinationDevice: Device
         if
-            let destination = destination,
-            let udid = extractPlatformAndUDID(from: destination).udid,
-            let platform = extractPlatformAndUDID(from: destination).platform
+            let device = device,
+            let udid = extractPlatformAndUDID(from: device).udid,
+            let platform = extractPlatformAndUDID(from: device).platform
         {
             destinationDevice = Device(udid: udid, name: "", isSimulator: platform.contains("Simulator"))
         } else {
+            logger.info("Finding devices to use...\n")
             let devices = try TestDestination.getDevices()
             devices
                 .enumerated()
-                .forEach { print("\($0.offset): \($0.element.name) \($0.element.osVersion) \($0.element.udid)") }
-            
-            print("Enter the device number (ex. 12):")
-            
+                .forEach { logger.info("\($0.offset): \($0.element.name) \($0.element.osVersion) \($0.element.udid)") }
+
+            // There's no way to print using logger.info without ending in a new line
+            print("\nEnter the device number (ex. 12): ", terminator: "")
+
             guard let readLineValue = readLine(), let selectedDestinationIndex = Int(readLineValue) else {
                 return
             }
@@ -139,6 +141,7 @@ struct TestPilotCommand: ParsableCommand {
     }
 
     mutating func validate() throws {
+        let logger = Logger(label: #file.lastPathComponent)
         logger.debug("Tests path: '\(testsPath.dirPath.path(percentEncoded: false))'")
         logger.debug("Test case: \(testsPath.testCase ?? "[all]")")
 
