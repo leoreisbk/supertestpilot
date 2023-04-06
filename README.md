@@ -105,7 +105,7 @@ Since you can run `testpilot` on real devices you need to provide the code sign 
 {
   "bundle-id": "your.bundle.id",
   "logging-server": "ws://loggingserver.domain",
-  "device": "UDID", 
+  "device": "platform=iOS Simulator,UDID=[DEVICE_UDID]", 
   "code-sign-config": "/path/to/codesign.config.json",
 }
 ```
