@@ -20,7 +20,7 @@ struct TestPilotCommand: ParsableCommand {
         completion: .directory,
         transform: { WorkDir(path: $0) }
     )
-    var testsPath = WorkDir(path: FileManager.default.currentDirectoryPath)
+    var testsPath = WorkDir(path: DefaultValues.testsPath)
 
     @Option(
         name: .long,
@@ -48,7 +48,7 @@ struct TestPilotCommand: ParsableCommand {
         parsing: .scanningForValue,
         help: "The app's bundle id to be tested"
     )
-    var bundleId: String!
+    var bundleId: String
 
     @Option(
         name: .shortAndLong,
