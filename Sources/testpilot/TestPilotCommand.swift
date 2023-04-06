@@ -20,7 +20,7 @@ struct TestPilotCommand: ParsableCommand {
         completion: .directory,
         transform: { WorkDir(path: $0) }
     )
-    var testsPath = WorkDir(path: FileManager.default.currentDirectoryPath)
+    var testsPath = WorkDir(path: DefaultValues.testsPath)
 
     @Option(
         name: .long,
@@ -200,5 +200,6 @@ extension TestPilotCommand {
 extension TestPilotCommand {
     enum DefaultValues {
         static let configFileName = "testpilot.config.json"
+        static let testsPath = FileManager.default.currentDirectoryPath
     }
 }

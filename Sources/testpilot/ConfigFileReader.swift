@@ -63,7 +63,7 @@ class ConfigFileReader {
 extension ConfigFileReader {
     struct Command: ParsableCommand {
         @Argument(completion: .directory)
-        var testsPath: String = FileManager.default.currentDirectoryPath
+        var testsPath: String = TestPilotCommand.DefaultValues.testsPath
 
         @Option(name: .shortAndLong, transform: { URL(filePath: $0) })
         var config: URL? = URL(
@@ -72,7 +72,7 @@ extension ConfigFileReader {
                 .appendingPathComponent(TestPilotCommand.DefaultValues.configFileName)
         )
 
-        @Option(name: .shortAndLong)
+        @Flag(name: .shortAndLong)
         var verbose = false
 
         func run() throws {
