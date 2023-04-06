@@ -88,17 +88,7 @@ Since the arguments sent to `testpilot` can grow to an extensive list, you can d
 
 ## Code Sign on Real Devices
 
-Since you can run `testpilot` on real devices you need to provide the code sign identity and provisioning profile. You can do this by setting `--code-sign-config` with the following `json` format file:
-
-```json
-// codesign.config.json
-{
-    "teamId": "[TEAM_ID]",
-    "runnerBundleId": "[RUNNER_BUNDLE_ID]",
-    "provisioningProfile": "[RUNNER_PROVISIONING_PROFILE]",
-    "codeSignStyle": "Manual"
-}
-```
+You need to provide the teamID, bundleID and the provisioning profile in order to run `testpilot` using phisical devices. 
 
 ```json
 // testpilot.config.json
@@ -106,7 +96,9 @@ Since you can run `testpilot` on real devices you need to provide the code sign 
   "bundle-id": "your.bundle.id",
   "logging-server": "ws://loggingserver.domain",
   "device": "platform=iOS Simulator,UDID=[DEVICE_UDID]", 
-  "code-sign-config": "/path/to/codesign.config.json",
+  "team-id": "your-team-id",
+  "runner-bundle-id": "your.runner.bundle.id",
+  "provisioning-profile": "your.provisioning.profile"
 }
 ```
 
