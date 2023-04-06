@@ -95,7 +95,7 @@ You need to provide the teamID, bundleID and the provisioning profile in order t
 {
   "bundle-id": "your.bundle.id",
   "logging-server": "ws://loggingserver.domain",
-  "device": "platform=iOS Simulator,UDID=[DEVICE_UDID]", 
+  "device": "platform=iOS,UDID=[DEVICE_UDID]", 
   "team-id": "your-team-id",
   "runner-bundle-id": "your.runner.bundle.id",
   "provisioning-profile": "your.provisioning.profile"
