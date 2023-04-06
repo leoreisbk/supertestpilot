@@ -208,5 +208,6 @@ extension TestPilotCommand {
 extension TestPilotCommand {
     enum DefaultValues {
         static let configFileName = "testpilot.config.json"
+        static let testsPath = FileManager.default.currentDirectoryPath
     }
 }
