@@ -10,9 +10,11 @@ import Network
 
 public class Logging {
     static let shared = Logging()
+    private static let pingInterval: TimeInterval = 30
 
     private var task: URLSessionWebSocketTask?
     private var receiver: String?
+    private var timer: Timer?
 
     private init() {
         guard let url = Environment.wsServerURL else {
@@ -29,6 +31,21 @@ public class Logging {
         self.task = task
         self.receiver = receiver
 
+        // Keeping the WS connection alive by pinging the server every 30s
+        DispatchQueue.main.async { [weak self] in
+            self?.timer = Timer.scheduledTimer(withTimeInterval: Self.pingInterval, repeats: true) { _ in
+                print("Pinging ws logging server")
+                task.sendPing {
+                    if let error = $0 {
+                        dump(error)
+                    } else {
+                        print("WS logging server responded with pong")
+                    }
+                }
+            }
+        }
+
+        // Receiving messages
         func receive() {
             task.receive { result in
                 switch result {
@@ -43,6 +60,7 @@ public class Logging {
         }
         receive()
 
+        // Connect to the ws server
         task.resume()
     }
 
