@@ -56,13 +56,24 @@ struct TestPilotCommand: ParsableCommand {
         help: "The device where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
     )
     var device: String?
+        
+    @Option(
+        name: .shortAndLong,
+        help: "The Runner TeamID to sign the runner app when running tests on real devices"
+    )
+    var teamID: String?
     
     @Option(
-        name: .long,
-        help: "The Runner Code Sign config file to be used when running tests on real devices",
-        transform: { URL(filePath: $0) }
+        name: .shortAndLong,
+        help: "The Runner BundleID for the runner app when running tests on real devices"
     )
-    var codeSignConfig: URL?
+    var runnerBundleID: String?
+    
+    @Option(
+        name: .shortAndLong,
+        help: "The Provisioning Profile to be used to sign the runner app when running tests on real devices"
+    )
+    var provisioningProfile: String?
     
     @Option(
         name: .shortAndLong,
@@ -117,7 +128,9 @@ struct TestPilotCommand: ParsableCommand {
             openAIKey: openAIKey,
             loggingAddress: loggingAddress,
             loggingServerURL: loggingServer,
-            codeSignJSON: codeSignConfig
+            teamID: teamID,
+            bundleID: runnerBundleID,
+            provisioningProfile: provisioningProfile
         )
         try testProject.generate()
         

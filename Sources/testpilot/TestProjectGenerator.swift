@@ -27,24 +27,24 @@ struct TestProjectGenerator {
         openAIKey: String,
         loggingAddress: String,
         loggingServerURL: URL,
-        codeSignJSON: URL? = nil
+        teamID: String? = nil,
+        bundleID: String? = nil,
+        provisioningProfile: String? = nil
     ) throws {
         logger.debug("Initializing project on \(targetDir)")
         
         let codeSignSettings: ProjectSpec.Settings
-        if let codeSignJSON = codeSignJSON {
-            let codeSign = try CodeSign.from(file: codeSignJSON)
+        if let teamID = teamID, let bundleID = bundleID, let provisioningProfile = provisioningProfile {
             codeSignSettings = .init(dictionary: [
-                "DEVELOPMENT_TEAM": codeSign.teamId,
-                "PRODUCT_BUNDLE_IDENTIFIER": codeSign.runnerBundleId,
-                "PROVISIONING_PROFILE_SPECIFIER": codeSign.provisioningProfile,
-                "CODE_SIGN_STYLE": codeSign.codeSignStyle,
+                "DEVELOPMENT_TEAM": teamID,
+                "PRODUCT_BUNDLE_IDENTIFIER": bundleID,
+                "PROVISIONING_PROFILE_SPECIFIER": provisioningProfile,
+                "CODE_SIGN_STYLE": "Manual",
                 "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
                 "SUPPORTS_MACCATALYST": "NO"
             ])
         } else {
             codeSignSettings = .init(dictionary: [
-                "PRODUCT_BUNDLE_IDENTIFIER": "co.work.TestPilot.UIRunner",
                 "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
                 "SUPPORTS_MACCATALYST": "NO"
             ])
@@ -100,20 +100,6 @@ struct TestProjectGenerator {
         try FileWriter(project: project).writePlists()
         let xcodeProj = try ProjectGenerator(project: project).generateXcodeProject(userName: "$USER")
         try xcodeProj.write(path: project.defaultProjectPath)
-    }
-}
-
-private extension TestProjectGenerator {
-    struct CodeSign: Decodable {
-        let teamId: String
-        let runnerBundleId: String
-        let provisioningProfile: String
-        let codeSignStyle: String
-        
-        static func from(file: URL) throws -> Self {
-            let jsonData = try Data(contentsOf: file)
-            return try JSONDecoder().decode(Self.self, from: jsonData)
-        }
     }
 }
 
