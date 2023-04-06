@@ -55,7 +55,14 @@ struct TestPilotCommand: ParsableCommand {
         parsing: .scanningForValue,
         help: "The device where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
     )
-    var destination: String?
+    var device: String?
+    
+    @Option(
+        name: .long,
+        help: "The Runner Code Sign config file to be used when running tests on real devices",
+        transform: { URL(filePath: $0) }
+    )
+    var codeSignConfig: URL?
     
     @Option(
         name: .shortAndLong,
@@ -109,15 +116,16 @@ struct TestPilotCommand: ParsableCommand {
             targetDir: targetDir,
             openAIKey: openAIKey,
             loggingAddress: loggingAddress,
-            loggingServerURL: loggingServer
+            loggingServerURL: loggingServer,
+            codeSignJSON: codeSignConfig
         )
         try testProject.generate()
         
         let destinationDevice: Device
         if
-            let device = device,
-            let udid = extractPlatformAndUDID(from: device).udid,
-            let platform = extractPlatformAndUDID(from: device).platform
+            let destination = device,
+            let udid = extractPlatformAndUDID(from: destination).udid,
+            let platform = extractPlatformAndUDID(from: destination).platform
         {
             destinationDevice = Device(udid: udid, name: "", isSimulator: platform.contains("Simulator"))
         } else {

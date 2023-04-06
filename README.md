@@ -86,6 +86,30 @@ Since the arguments sent to `testpilot` can grow to an extensive list, you can d
 }
 ```
 
+## Code Sign on Real Devices
+
+Since you can run `testpilot` on real devices you need to provide the code sign identity and provisioning profile. You can do this by setting `--code-sign-config` with the following `json` format file:
+
+```json
+// codesign.config.json
+{
+    "teamId": "[TEAM_ID]",
+    "runnerBundleId": "[RUNNER_BUNDLE_ID]",
+    "provisioningProfile": "[RUNNER_PROVISIONING_PROFILE]",
+    "codeSignStyle": "Manual"
+}
+```
+
+```json
+// testpilot.config.json
+{
+  "bundle-id": "your.bundle.id",
+  "logging-server": "ws://loggingserver.domain",
+  "device": "UDID", 
+  "code-sign-config": "/path/to/codesign.config.json",
+}
+```
+
 # Capabilities
 `testpilot` relies on accessibility labels to "see" and interact with your app. Currently, it can interact using the following commands. We're expanding its capabilities, but keep this in mind when writing your tests for now:
 - Tapping on elements

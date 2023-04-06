@@ -36,8 +36,8 @@ struct TestRunner {
 
         logger.info("Preparing tests... (this may take a few minutes)")
         try runTests(verbose: verbose, action: "build-for-testing")
-        logger.info("Running tests on \(destination.name)")
-        try runTests(verbose: verbose, action: "test-without-building")
+        logger.info("Running tests on \(destinationDeviceInfo)")
+        try runTests(verbose: verbose, action: "test")
     }
 
     private func runTests(verbose: Bool, action: String) throws {
@@ -89,6 +89,10 @@ struct TestRunner {
         logger.debug("xcodebuild logfile: \(xcodeLogFileURL.path(percentEncoded: false))")
         FileManager.default.createFile(atPath: xcodeLogFileURL.path(percentEncoded: false), contents: nil)
         return try FileHandle(forWritingTo: xcodeLogFileURL)
+    }
+    
+    private var destinationDeviceInfo: String {
+        destination.name.isEmpty ? destination.udid : destination.name
     }
 }
 

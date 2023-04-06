@@ -26,9 +26,29 @@ struct TestProjectGenerator {
         targetDir: URL,
         openAIKey: String,
         loggingAddress: String,
-        loggingServerURL: URL
+        loggingServerURL: URL,
+        codeSignJSON: URL? = nil
     ) throws {
         logger.debug("Initializing project on \(targetDir)")
+        
+        let codeSignSettings: ProjectSpec.Settings
+        if let codeSignJSON = codeSignJSON {
+            let codeSign = try CodeSign.from(file: codeSignJSON)
+            codeSignSettings = .init(dictionary: [
+                "DEVELOPMENT_TEAM": codeSign.teamId,
+                "PRODUCT_BUNDLE_IDENTIFIER": codeSign.runnerBundleId,
+                "PROVISIONING_PROFILE_SPECIFIER": codeSign.provisioningProfile,
+                "CODE_SIGN_STYLE": codeSign.codeSignStyle,
+                "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
+                "SUPPORTS_MACCATALYST": "NO"
+            ])
+        } else {
+            codeSignSettings = .init(dictionary: [
+                "PRODUCT_BUNDLE_IDENTIFIER": "co.work.TestPilot.UIRunner",
+                "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
+                "SUPPORTS_MACCATALYST": "NO"
+            ])
+        }
 
         self.project = try Project(
             basePath: Path(targetDir.path(percentEncoded: false)),
@@ -39,12 +59,7 @@ struct TestProjectGenerator {
                     type: .uiTestBundle,
                     platform: .iOS,
                     deploymentTarget: Version("15.0"),
-                    settings: Settings(dictionary: [
-                        "DEVELOPMENT_TEAM": "2H2EYKF86D",
-                        "PRODUCT_BUNDLE_IDENTIFIER": "co.work.uitester",
-                        "PROVISIONING_PROFILE_SPECIFIER": "match Development co.work.*",
-                        "CODE_SIGN_STYLE": "Manual",
-                    ]),
+                    settings: codeSignSettings,
                     sources: [
                         TargetSource(
                             path: targetDir.path(percentEncoded: false),
@@ -85,6 +100,20 @@ struct TestProjectGenerator {
         try FileWriter(project: project).writePlists()
         let xcodeProj = try ProjectGenerator(project: project).generateXcodeProject(userName: "$USER")
         try xcodeProj.write(path: project.defaultProjectPath)
+    }
+}
+
+private extension TestProjectGenerator {
+    struct CodeSign: Decodable {
+        let teamId: String
+        let runnerBundleId: String
+        let provisioningProfile: String
+        let codeSignStyle: String
+        
+        static func from(file: URL) throws -> Self {
+            let jsonData = try Data(contentsOf: file)
+            return try JSONDecoder().decode(Self.self, from: jsonData)
+        }
     }
 }
 
