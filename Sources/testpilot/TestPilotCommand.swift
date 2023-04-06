@@ -136,9 +136,9 @@ struct TestPilotCommand: ParsableCommand {
         
         let destinationDevice: Device
         if
-            let destination = device,
-            let udid = extractPlatformAndUDID(from: destination).udid,
-            let platform = extractPlatformAndUDID(from: destination).platform
+            let device = device,
+            let udid = extractPlatformAndUDID(from: device).udid,
+            let platform = extractPlatformAndUDID(from: device).platform
         {
             destinationDevice = Device(udid: udid, name: "", isSimulator: platform.contains("Simulator"))
         } else {
