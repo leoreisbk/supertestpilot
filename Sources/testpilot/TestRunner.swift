@@ -15,41 +15,34 @@ struct TestRunner {
     let launchSimulator: Bool
 
     private let xcodePath: URL
-    private let destination: Device
+    private let device: Device
 
     private var xcodeLogFileURL: URL = {
         Constants.tempDir
             .appending(component: "xcodebuild-\(ISO8601DateFormatter().string(from: Date())).log")
     }()
 
-    init(testProjectPath: String, launchSimulator: Bool, destination: Device) throws {
+    init(testProjectPath: String, launchSimulator: Bool, device: Device) throws {
         self.testProjectPath = testProjectPath
         self.launchSimulator = launchSimulator
-        self.destination = destination
+        self.device = device
         self.xcodePath = try Xcode.getXcodePath()
     }
 
     func run(verbose: Bool) throws {
         if launchSimulator {
-            try launchSimulator(uuid: destination.udid)
+            try launchSimulator(uuid: device.udid)
         }
 
         logger.info("Preparing tests... (this may take a few minutes)")
         try runTests(verbose: verbose, action: "build-for-testing")
-        logger.info("Running tests on \(destinationDeviceInfo)")
-        try runTests(verbose: verbose, action: "test")
+        logger.info("Running tests on \(device.name)")
+        try runTests(verbose: verbose, action: "test-without-building")
     }
 
     private func runTests(verbose: Bool, action: String) throws {
         let fileHandle = verbose ? FileHandle.standardOutput : try makeXcodeFileHandle()
 
-        let platform: String
-        if destination.isSimulator {
-            platform = "platform=iOS Simulator,id=\(destination.udid)"
-        } else {
-            platform = "platform=iOS,id=\(destination.udid)"
-        }
-        
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/xcodebuild")
         process.standardError = fileHandle
@@ -57,7 +50,7 @@ struct TestRunner {
         process.arguments = [
             "-project", testProjectPath,
             "-scheme", Constants.testProjectName,
-            "-destination", platform,
+            "-destination", device.destination,
             action
         ]
 
@@ -90,12 +83,16 @@ struct TestRunner {
         FileManager.default.createFile(atPath: xcodeLogFileURL.path(percentEncoded: false), contents: nil)
         return try FileHandle(forWritingTo: xcodeLogFileURL)
     }
-    
-    private var destinationDeviceInfo: String {
-        destination.name.isEmpty ? destination.udid : destination.name
-    }
 }
 
 enum ErrorCase: Error {
     case xcodeNotFound, deviceNotFound
+}
+
+private extension Device {
+    var destination: String {
+        isSimulator
+            ? "platform=iOS Simulator,id=\(udid)"
+            : "platform=iOS,id=\(udid)"
+    }
 }

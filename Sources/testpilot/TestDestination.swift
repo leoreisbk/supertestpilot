@@ -1,5 +1,8 @@
 import Foundation
 import Logging
+import ArgumentParser
+
+private let logger = Logger(label: #file.lastPathComponent)
 
 struct Device: Decodable {
     let udid: String
@@ -20,14 +23,35 @@ struct Device: Decodable {
     }
 }
 
-struct TestDestination {
-    static func getDevices() throws -> [Device] {
+class TestDestination {
+    static func getDevice(withID id: String) throws -> Device {
+        let devices = try getDevices()
+        guard let result = devices.first(where: { $0.udid == id }) else {
+            throw ValidationError("Device with UDID \(id) not found")
+        }
+
+        return result
+    }
+
+    static func promptUserForDevice() throws -> Device {
+        logger.info("Finding devices to use...\n")
+        let devices = try TestDestination.getDevices()
+        devices
+            .enumerated()
+            .forEach { logger.info("\($0.offset): \($0.element.name) (\($0.element.osVersion)) \($0.element.udid)") }
+
+        let selectedDestinationIndex = promptUserForIndex(in: devices.indices)
+        return devices[selectedDestinationIndex]
+    }
+
+    private static func getDevices() throws -> [Device] {
         let output = Pipe()
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/xcrun")
         process.standardOutput = output
         process.arguments = ["xctrace", "list", "devices"]
-        
+
+        logger.debug("Getting device list")
         try ProcessPool.shared.run(process: process)
         process.waitUntilExit()
         
@@ -38,11 +62,14 @@ struct TestDestination {
         return try extractDevices(from: String(data: data, encoding: .utf8) ?? "")
     }
     
-    static func extractDevices(from input: String) throws -> [Device] {
+    private static func extractDevices(from input: String) throws -> [Device] {
         let lines = input.components(separatedBy: .newlines)
         let nameRegex = try NSRegularExpression(pattern: "^[^(]+")
         let osVersionRegex = try NSRegularExpression(pattern: "\\((\\d+\\.\\d+)\\)")
         let udidRegex = try NSRegularExpression(pattern: "\\(([A-F\\d\\-]+)\\)")
+
+        logger.debug("Devices found:")
+        logger.debug(.init(stringLiteral: input))
 
         var devices: [Device] = []
         var isSimulator = false
@@ -82,5 +109,22 @@ struct TestDestination {
         }
             
         return devices
+    }
+
+    private static func promptUserForIndex(in bounds: Range<Int>) -> Int {
+        // There's no way to print using logger.info without ending in a new line
+        print("\nEnter the device number (ex. 4): ", terminator: "")
+
+        repeat {
+            if
+                let readLineValue = readLine(), // prompting user input
+                let index = Int(readLineValue), // convert to int
+                bounds.contains(index) // check if index within bounds
+            {
+                return index
+            }
+
+            print("Invalid device selected. Please select a number between 0 and \(bounds.upperBound - 1) (ex. 0): ", terminator: "")
+        } while true
     }
 }

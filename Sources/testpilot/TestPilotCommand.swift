@@ -58,7 +58,7 @@ struct TestPilotCommand: ParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
-        help: "The device where the tests are going to run. Ex.: platform=iOS,id=[DEVICE_UDID] or platform=iOS Simulator,id=[DEVICE_UDID]"
+        help: "The UDID for the device where the tests are going to run"
     )
     var device: String?
         
@@ -140,27 +140,10 @@ struct TestPilotCommand: ParsableCommand {
         try testProject.generate()
         
         let destinationDevice: Device
-        if
-            let device = device,
-            let udid = extractPlatformAndUDID(from: device).udid,
-            let platform = extractPlatformAndUDID(from: device).platform
-        {
-            destinationDevice = Device(udid: udid, name: "", isSimulator: platform.contains("Simulator"))
+        if let deviceUDID = device {
+            destinationDevice = try TestDestination.getDevice(withID: deviceUDID)
         } else {
-            logger.info("Finding devices to use...\n")
-            let devices = try TestDestination.getDevices()
-            devices
-                .enumerated()
-                .forEach { logger.info("\($0.offset): \($0.element.name) \($0.element.osVersion) \($0.element.udid)") }
-
-            // There's no way to print using logger.info without ending in a new line
-            print("\nEnter the device number (ex. 12): ", terminator: "")
-
-            guard let readLineValue = readLine(), let selectedDestinationIndex = Int(readLineValue) else {
-                return
-            }
-            
-            destinationDevice = devices[selectedDestinationIndex]
+            destinationDevice = try TestDestination.promptUserForDevice()
         }
         
         // Run tests
@@ -168,7 +151,7 @@ struct TestPilotCommand: ParsableCommand {
             try TestRunner(
                 testProjectPath: testProject.testProjectPath,
                 launchSimulator: launchSim,
-                destination: destinationDevice
+                device: destinationDevice
             )
             .run(verbose: false)
         }
@@ -185,23 +168,6 @@ struct TestPilotCommand: ParsableCommand {
             throw ValidationError("Missing OpenAI API Key")
         }
         logger.debug("OpenAI API Key: \(openAIKey!)")
-    }
-    
-    private func extractPlatformAndUDID(from message: String) -> (platform: String?, udid: String?) {
-        let platformRegex = "platform=([^,]+)"
-        let udidRegex = "UDID=([A-F\\d\\-]+)"
-        
-        let platform = message
-            .range(of: platformRegex, options: .regularExpression)
-            .map { String(message[$0]) }
-            .map { $0.replacingOccurrences(of: "platform=", with: "") }
-        
-        let udid = message
-            .range(of: udidRegex, options: .regularExpression)
-            .map { String(message[$0]) }
-            .map { $0.replacingOccurrences(of: "UDID=", with: "") }
-        
-        return (platform, udid)
     }
 }
 
