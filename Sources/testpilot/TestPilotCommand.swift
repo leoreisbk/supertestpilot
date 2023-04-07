@@ -138,23 +138,27 @@ struct TestPilotCommand: ParsableCommand {
             provisioningProfile: provisioningProfile
         )
         try testProject.generate()
-        
+
+        guard !skipRun else {
+            logger.debug("Skipping test execution as per flag")
+            throw ExitCode.success
+        }
+
+        // Checking devices
         let destinationDevice: Device
         if let deviceUDID = device {
             destinationDevice = try TestDestination.getDevice(withID: deviceUDID)
         } else {
             destinationDevice = try TestDestination.promptUserForDevice()
         }
-        
+
         // Run tests
-        if !skipRun {
-            try TestRunner(
-                testProjectPath: testProject.testProjectPath,
-                launchSimulator: launchSim,
-                device: destinationDevice
-            )
-            .run(verbose: false)
-        }
+        try TestRunner(
+            testProjectPath: testProject.testProjectPath,
+            launchSimulator: launchSim,
+            device: destinationDevice
+        )
+        .run(verbose: false)
     }
 
     mutating func validate() throws {
