@@ -90,7 +90,8 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-                "TestPilotKit": .remote(url: "git@github.com:workco/TestPilot.git", versionRequirement: .branch("main")), // TODO: rename repo & use HTTPS endpoint instead of SSH
+                // TODO: remove auth token. (possibly change version requirement to a tag instead of branch)
+                "TestPilotKit": .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")),
             ]
         )
     }
