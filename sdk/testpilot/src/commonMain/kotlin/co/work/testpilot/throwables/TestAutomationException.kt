@@ -7,4 +7,5 @@ sealed class TestAutomationException(message: String) : Exception(message) {
     class AssertionFailed(value: String?, expected: String?, description: String? = null) : TestAutomationException(
         "Assertion ${description?.let { "'$it'" } ?: ""} failed (value: $value, expected: $expected"
     )
+    class InvalidCommand(cmd: String?) : TestAutomationException("Invalid command '$cmd'")
 }

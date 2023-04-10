@@ -3,11 +3,11 @@ package co.work.testpilot.extensions
 fun String.simplifyUI(): String {
     var simplifiedUI = this
     // Removing all elements without relevant info; also removes all hex mem addresses and frames
-    simplifiedUI = Regex("(\\n\\s*.*\\}\\}$|, 0x.*\\}\\})").replace(simplifiedUI, "")
-    simplifiedUI = Regex("^\\s\\s+").replace(simplifiedUI, "")
+    simplifiedUI = Regex("(\\n\\s*.*\\}\\}$|, 0x.*\\}\\})", RegexOption.MULTILINE).replace(simplifiedUI, "")
+    simplifiedUI = Regex("^\\s\\s+", RegexOption.MULTILINE).replace(simplifiedUI, "")
 
     // Removing "header"
-    val headerRange = Regex("→Application.*?$").matchAt(simplifiedUI, 0)?.range
+    val headerRange = Regex("→Application.*?$", RegexOption.MULTILINE).find(simplifiedUI)?.range
     if (headerRange != null) {
         simplifiedUI = simplifiedUI.substring(startIndex = headerRange.last + 1)
     }

@@ -5,17 +5,16 @@ import co.work.testpilot.extensions.simplifyUI
 import co.work.testpilot.extensions.waitForExistenceIfNecessary
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.suspendTryOrNull
-import co.work.testpilot.utils.tryOrNull
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonDecoder
 import platform.XCTest.*
 import kotlin.math.roundToLong
 
 object TestPilot {
     // TODO: config default to empty object
+    @Throws(TestAutomationException::class, CancellationException::class)
     suspend fun automate(test: XCTestCase, config: Config, objective: String, bundleId: String? = null) {
         val runner = Runner(config)
 
