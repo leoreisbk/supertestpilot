@@ -100,7 +100,15 @@ You need to provide the teamID, bundleID and the provisioning profile in order t
 
 A test is considered successful if `testpilot` was capable of executing all steps to completion.
 
-# UI Minification & Token usage
+# OpenAI API Data and Usage
+
+Since TestPilot uses OpenAI's GPT-4 API, keep in mind that data related to your application will be shared with OpenAI and may be used for further training of their LLM models.
+
+Regarding the application context, TestPilot only shares a text representation of the accessibility tree, however, that might include sensitive information, including authenticated data used while testing. TestPilot, by definition, also sends the content of your test cases, so refrain from including any production credentials if you're testing a sign-in flow, for instance.
+
+A safe governance model for data shared with TestPilot, and consequently OpenAI, should include ephemeral credentials with limited scope and permissions, which can be quickly revoked and re-generated if necessary.
+
+## UI Minification & Token usage
 
 To reduce the number of tokens used on each step of the test execution and to ensure GPT-4 only receives relevant UI elements from the accessibility tree, TestPilot pre-processes a dump of the host app XCUIApplication, and removes any any tokens that may bloat the REST request or confuse GPT-4. All UI elements that don't contain a `label`, `identifier`, or `value` are automatically removed, since interacting with them becomes virtually impossible. Similarly, all frames and memory addresses also get stripped out, along with the UI dump "header" and "footer".
 
