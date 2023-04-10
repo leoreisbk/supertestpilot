@@ -77,28 +77,17 @@ Enter the device number (ex. 12):
 
 Since the arguments sent to `testpilot` can grow to an extensive list, you can define these in a JSON config file and use that by default. By default, `testpilot` looks for a file named `testpilot.config.json` in the current directly. Alternatively, you can send the path to the config file as an argument:
 
-```json
-// testpilot.config.json
-{
-  "bundle-id": "your.bundle.id",
-  "logging-server": "ws://loggingserver.domain",
-  "device": "UDID", 
-}
-```
-
-## Code Sign on Real Devices
-
-You need to provide the teamID, bundleID and the provisioning profile in order to run `testpilot` using phisical devices. 
+You need to provide the teamID, bundleID and the provisioning profile in order to run `testpilot` using phisical devices.
 
 ```json
 // testpilot.config.json
 {
-  "bundle-id": "your.bundle.id",
+  "bundle-id": "tested.app.bundle.id",  // This is the bundle identifier for the app you're testing. Ex.: com.apple.Fitness
   "logging-server": "ws://loggingserver.domain",
-  "device": "platform=iOS,UDID=[DEVICE_UDID]", 
-  "team-id": "your-team-id",
-  "runner-bundle-id": "your.runner.bundle.id",
-  "provisioning-profile": "your.provisioning.profile"
+  "device": "platform=iOS Simulator,UDID=[UDID]", 
+  "team-id": "[TEAM-ID]",
+  "runner-bundle-id": "[RUNNER_TEST_BUNDLE_ID]", // This bundle identifier must match the provisioning profile
+  "provisioning-profile": "[PROVISIONING-PROFILE-NAME]"  
 }
 ```
 

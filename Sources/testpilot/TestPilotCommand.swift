@@ -10,7 +10,12 @@ import ArgumentParser
 import Logging
 
 struct TestPilotCommand: ParsableCommand {
-    static var configuration = CommandConfiguration(commandName: "testpilot")
+    static var configuration = CommandConfiguration(
+        commandName: "testpilot",
+        discussion: """
+        When testing on real devices, you must provide a --runner-bundle-id, --team-id, and --provisioning-profile for development that must match, in order to sign the Test Runner app to run on your device
+        """
+    )
 
     @Argument(
         help: """
@@ -46,7 +51,7 @@ struct TestPilotCommand: ParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .scanningForValue,
-        help: "The app's bundle id to be tested"
+        help: "The bundle identifier of the app being tested"
     )
     var bundleId: String
 
@@ -59,19 +64,19 @@ struct TestPilotCommand: ParsableCommand {
         
     @Option(
         name: .shortAndLong,
-        help: "The Runner TeamID to sign the runner app when running tests on real devices"
+        help: "The Apple TeamID that should be used to sign the Test Runner application"
     )
     var teamID: String?
     
     @Option(
         name: .shortAndLong,
-        help: "The Runner BundleID for the runner app when running tests on real devices"
+        help: "The bundle identifier that should be used by the Test Runner app. Must match the provided provisioning profile"
     )
     var runnerBundleID: String?
     
     @Option(
         name: .shortAndLong,
-        help: "The Provisioning Profile to be used to sign the runner app when running tests on real devices"
+        help: "The development Provisioning Profile to be used to sign the Test Runner app"
     )
     var provisioningProfile: String?
     
