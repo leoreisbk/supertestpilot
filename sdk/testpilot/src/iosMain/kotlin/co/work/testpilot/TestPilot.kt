@@ -3,6 +3,7 @@ package co.work.testpilot
 import co.work.testpilot.extensions.getElement
 import co.work.testpilot.extensions.simplifyUI
 import co.work.testpilot.extensions.waitForExistenceIfNecessary
+import co.work.testpilot.throwables.ConfigurationException
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.suspendTryOrNull
 import kotlinx.coroutines.CancellationException
@@ -13,8 +14,12 @@ import platform.XCTest.*
 import kotlin.math.roundToLong
 
 object TestPilot {
+    init {
+        Logging.start()
+    }
+
     // TODO: config default to empty object
-    @Throws(TestAutomationException::class, CancellationException::class)
+    @Throws(TestAutomationException::class, ConfigurationException::class, CancellationException::class)
     suspend fun automate(test: XCTestCase, config: Config, objective: String, bundleId: String? = null) {
         val runner = Runner(config)
 
@@ -40,12 +45,11 @@ object TestPilot {
             // Parse the response
             lastCommand = jsonCommand
             val instruction = jsonDecoder.decodeFromString<Instruction>(jsonCommand)
-            // TODO Logging.info(" ↳ \(instruction.description)")
+            Logging.info(" ↳ ${instruction.description}")
 
             // Execute the instruction
             when (instruction) {
                 is Instruction.Assert -> {
-                    // FIXME XCTAssertEqual(instruction.answer, instruction.expected, instruction.description)
                     if (instruction.answer != instruction.expected) {
                         throw TestAutomationException.AssertionFailed(
                             value = instruction.answer,

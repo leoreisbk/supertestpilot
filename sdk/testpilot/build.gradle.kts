@@ -41,6 +41,7 @@ kotlin {
                 implementation("com.aallam.openai:openai-client:3.1.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
+                implementation("io.ktor:ktor-client-websockets:$ktorVersion")
                 implementation("io.github.aakira:napier:$napierVersion")
                 implementation(kotlin("test"))
             }
