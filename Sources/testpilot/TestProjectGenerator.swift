@@ -16,6 +16,8 @@ import Version
 
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestProjectGenerator {
+    static let runnerDeploymentVersion = Version("15.0")
+
     let project: Project
 
     var testProjectPath: String {
@@ -58,7 +60,7 @@ struct TestProjectGenerator {
                     name: Constants.testProjectName,
                     type: .uiTestBundle,
                     platform: .iOS,
-                    deploymentTarget: Version("15.0"),
+                    deploymentTarget: Self.runnerDeploymentVersion,
                     settings: codeSignSettings,
                     sources: [
                         TargetSource(

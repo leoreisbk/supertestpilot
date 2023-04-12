@@ -1,6 +1,7 @@
 import Foundation
 import Logging
 import ArgumentParser
+import Version
 
 private let logger = Logger(label: #file.lastPathComponent)
 
@@ -9,6 +10,10 @@ struct Device: Decodable {
     let name: String
     let osVersion: String
     let isSimulator: Bool
+
+    var version: Version {
+        Version(tolerant: osVersion) ?? .null
+    }
     
     init(
         udid: String,
@@ -37,6 +42,8 @@ class TestDestination {
         logger.info("Finding devices to use...\n")
         let devices = try TestDestination.getDevices()
         devices
+            // Ensures we're not suggesting any devices below the runner's deployment target
+            .filter { $0.version >= TestProjectGenerator.runnerDeploymentVersion }
             .enumerated()
             .forEach { logger.info("\($0.offset): \($0.element.name) (\($0.element.osVersion)) \($0.element.udid)") }
 
