@@ -22,7 +22,7 @@ wss.on("connection", ws => {
 
   ws.on("message", data => {
     try {
-      const json = JSON.parse(data.toString());
+      const json = JSON.parse(data);
       const { rcv, msg } = json;
       if (!rcv) {
         throw new Error('Invalid message');
@@ -36,8 +36,14 @@ wss.on("connection", ws => {
           console.error(`Receiver not registered: ${rcv}`)
           ws.send(`{"error":"Receiver not registered"}`);
         } else {
-          console.log(`Sending msg to receiver (${rcv}) - ${msg}`);
-          receivers[rcv].send(msg);
+          if (Object.keys(json).length == 2) {
+            // legacy logging
+            console.log(`Sending msg to legacy receiver (${rcv}) - ${msg}`);
+            receivers[rcv].send(msg);
+          } else {
+            console.log(`Sending msg to receiver (${rcv}) - ${data}`);
+            receivers[rcv].send(data.toString());
+          }
         }
       }
     } catch (err) {
