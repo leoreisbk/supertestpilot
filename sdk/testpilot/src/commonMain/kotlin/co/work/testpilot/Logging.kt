@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
+import kotlin.native.ObjCName
 
 @Serializable
 data class LoggingMessage(val rcv: String, val msg: String)
@@ -32,13 +33,17 @@ object Logging {
             install(WebSockets)
         }
         scope.launch {
-            client.webSocket(
-                request = { },
-                urlString = url,
-            ) {
-                outgoingFlow.collect { message ->
-                    outgoing.send(Frame.Text(Json.encodeToString(message)))
+            try {
+                client.webSocket(
+                    request = { },
+                    urlString = url,
+                ) {
+                    outgoingFlow.collect { message ->
+                        outgoing.send(Frame.Text(Json.encodeToString(message)))
+                    }
                 }
+            } catch (err: Throwable) {
+                println("Could not connect to logging server: $err")
             }
         }
     }
