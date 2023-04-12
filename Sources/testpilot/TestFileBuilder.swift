@@ -64,6 +64,7 @@ struct TestFileBuilder {
         import XCTest
         import TestPilotKit
 
+        @MainActor
         final class TestApp: XCTestCase {
         \(tests.joined(separator: "\n\n"))
         }
@@ -78,19 +79,20 @@ struct TestFileBuilder {
         """
             func test\(title.capitalizedSentence)() async {
                 do {
-                    Logging.info("\\nStarting test: '\(title.capitalizedSentence.sentence)'")
-                    try await automate(
-                        config: Config(maxSteps: \(maxSteps)),
+                    Logging.shared.info(msg: "\\nStarting test: '\(title.capitalizedSentence.sentence)'")
+                    try await TestPilot.shared.automate(
+                        test: self,
+                        config: ConfigBuilder().maxSteps(steps: \(maxSteps)).build(),
                         objective: \"""
                         \(objective.replacing("\n", with: ". "))
                         \""",
                         bundleId: \"\(bundleId)\",
                         shouldRecordSteps: \(title.lowercased().contains("_record"))
                     )
-                    Logging.info("✅ Test Successful!")
+                    Logging.shared.info(msg: "✅ Test Successful!")
                 } catch let err {
-                    Logging.info("❌ Test failed!")
-                    Logging.info(err.localizedDescription)
+                    Logging.shared.info(msg: "❌ Test failed!")
+                    Logging.shared.info(msg: err.localizedDescription)
                 }
             }
         """
