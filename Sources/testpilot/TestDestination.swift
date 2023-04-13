@@ -41,9 +41,10 @@ class TestDestination {
     static func promptUserForDevice() throws -> Device {
         logger.info("Finding devices to use...\n")
         let devices = try TestDestination.getDevices()
-        devices
             // Ensures we're not suggesting any devices below the runner's deployment target
             .filter { $0.version >= TestProjectGenerator.runnerDeploymentVersion }
+
+        devices
             .enumerated()
             .forEach { logger.info("\($0.offset): \($0.element.name) (\($0.element.osVersion)) \($0.element.udid)") }
 
