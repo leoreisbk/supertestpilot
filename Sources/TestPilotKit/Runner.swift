@@ -27,7 +27,7 @@ class Runner {
 extension Runner {
     func getCompletionResponse(for ui: String, last: String?, objective: String) async throws -> String? {
         let response = try await aiClient.chats.create(
-            model: Model.GPT4.gpt4_0314,
+            model: Model.GPT4.gpt40314,
             messages: [
                 .system(content: Prompts.system(objective: objective)),
                 .user(content: """

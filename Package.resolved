@@ -10,15 +10,6 @@
       }
     },
     {
-      "identity" : "async-http-client",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-server/async-http-client.git",
-      "state" : {
-        "revision" : "864c8d9e0ead5de7ba70b61c8982f89126710863",
-        "version" : "1.15.0"
-      }
-    },
-    {
       "identity" : "graphviz",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SwiftDocOrg/GraphViz.git",
