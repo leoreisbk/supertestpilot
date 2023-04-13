@@ -15,7 +15,7 @@ kotlin {
         }
     }
     
-    val xcf = XCFramework("TestPilotKit")
+    val xcf = XCFramework("TestPilotShared")
     listOf(
         iosX64(),
         iosArm64(),
@@ -27,7 +27,7 @@ kotlin {
         }
 
         it.binaries.framework {
-            baseName = "TestPilotKit"
+            baseName = "TestPilotShared"
             xcf.add(this)
         }
     }

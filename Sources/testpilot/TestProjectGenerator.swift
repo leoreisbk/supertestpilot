@@ -14,6 +14,7 @@ import XcodeProj
 import Logging
 import Version
 
+private let USE_LOCAL_KMM_SDK = true
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestProjectGenerator {
     static let runnerDeploymentVersion = Version("15.0")
@@ -22,6 +23,18 @@ struct TestProjectGenerator {
 
     var testProjectPath: String {
         project.defaultProjectPath.string
+    }
+    
+    private static func testPilotKitPackage(_ testpilotKitPath: String?) -> SwiftPackage {
+        if (USE_LOCAL_KMM_SDK) {
+            let localSourcePath = Path(URL(filePath: #file).deletingLastPathComponent().path())
+            let localPackagePath = Path(components: [localSourcePath.string, "../../sdk/swift-wrapper"])
+            return .local(path: localPackagePath.absolute().string, group: nil)
+        } else if let testpilotKitPath = testpilotKitPath {
+            return .local(path: testpilotKitPath, group: nil)
+        } else {
+            return .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
+        }
     }
 
     init(
@@ -53,10 +66,6 @@ struct TestProjectGenerator {
             ])
         }
         
-        let testpilotKit: SwiftPackage = testpilotKitPath.map {
-            .local(path: $0, group: nil)
-        } ?? .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
-
         self.project = try Project(
             basePath: Path(targetDir.path(percentEncoded: false)),
             name: Constants.testProjectName,
@@ -97,7 +106,7 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-                "TestPilotKit": testpilotKit
+                "TestPilotKit": Self.testPilotKitPackage(testpilotKitPath)
             ]
         )
     }
