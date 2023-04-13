@@ -7,7 +7,7 @@ This is a Kotlin Multiplatform implementation of TestPilotKit.
 The shared KMM module can be built with the following Gradle command:
 
 ```sh
-./gradlew testpilot:assembleTestPilotSharedDebugXCFramework
+./gradlew testpilot:assembleTestPilotSharedXCFramework
 ```
 
 The above command will build all configurations, including Debug and Release. This might take a while, so in order to speed up development, you can build specifically the Debug framework:
