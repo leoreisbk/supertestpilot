@@ -10,6 +10,15 @@
       }
     },
     {
+      "identity" : "async-http-client",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/cs-workco/async-http-client",
+      "state" : {
+        "branch" : "main",
+        "revision" : "44e50843ef3f196ed8910809f04daaa98125b347"
+      }
+    },
+    {
       "identity" : "graphviz",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SwiftDocOrg/GraphViz.git",
@@ -32,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/fjcaetano/openai-kit",
       "state" : {
-        "branch" : "feat/gpt-4",
-        "revision" : "2136d9c97745bf7aaa31154821bb6b4c5e968bdc"
+        "branch" : "main",
+        "revision" : "7069833bfbcbc2631190388aec1f1587eaed79fb"
       }
     },
     {
@@ -113,8 +122,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "9b2848d76f5caad08b97e71a04345aa5bdb23a06",
-        "version" : "2.49.0"
+        "revision" : "e0cc6dd6ffa8e6a6f565938acd858b24e47902d0",
+        "version" : "2.50.0"
       }
     },
     {

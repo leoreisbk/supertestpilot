@@ -5,6 +5,7 @@ import PackageDescription
 let package = Package(
     name: "TestPilot",
     platforms: [
+        .macOS(.v13),
         .iOS(.v15),
     ],
     products: [
@@ -12,7 +13,7 @@ let package = Package(
         .executable(name: "testpilot", targets: ["testpilot"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/fjcaetano/openai-kit", branch: "main"), // TODO: use version
+        .package(url: "https://github.com/fjcaetano/openai-kit", branch: "main"),
         .package(url: "https://github.com/yonaskolb/XcodeGen", from: "2.0.0"),
         .package(url: "https://github.com/Adorkable/swift-log-format-and-pipe", from: "0.1.1"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
