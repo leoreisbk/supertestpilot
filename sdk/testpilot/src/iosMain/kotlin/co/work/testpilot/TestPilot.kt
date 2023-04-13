@@ -19,7 +19,7 @@ object TestPilot {
     }
 
     // TODO: config default to empty object
-    @Throws(TestAutomationException::class, ConfigurationException::class, CancellationException::class)
+    @Throws(TestAutomationException::class, ConfigurationException::class, CancellationException::class, Exception::class)
     suspend fun automate(test: XCTestCase, config: Config, objective: String, bundleId: String? = null) {
         val runner = Runner(config)
 
