@@ -53,15 +53,6 @@ struct TestProjectGenerator {
             ])
         }
         
-//        let testpilotKit: SwiftPackage
-//        if let testpilotKitPath = testpilotKitPath {
-//            testpilotKit = .local(path: "\(testpilotKitPath)", group: nil)
-//            print("********* Found local: --\(testpilotKitPath)--, \(testpilotKit.toJSONValue())")
-//        } else {
-//            print("********* Found Remote: --         --")
-//            testpilotKit = .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
-//        }
-        
         let testpilotKit: SwiftPackage = testpilotKitPath.map {
             .local(path: $0, group: nil)
         } ?? .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
