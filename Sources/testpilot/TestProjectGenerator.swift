@@ -31,7 +31,8 @@ struct TestProjectGenerator {
         loggingServerURL: URL,
         teamID: String? = nil,
         bundleID: String? = nil,
-        provisioningProfile: String? = nil
+        provisioningProfile: String? = nil,
+        testpilotKitPath: String? = nil
     ) throws {
         logger.debug("Initializing project on \(targetDir)")
         
@@ -51,6 +52,19 @@ struct TestProjectGenerator {
                 "SUPPORTS_MACCATALYST": "NO"
             ])
         }
+        
+//        let testpilotKit: SwiftPackage
+//        if let testpilotKitPath = testpilotKitPath {
+//            testpilotKit = .local(path: "\(testpilotKitPath)", group: nil)
+//            print("********* Found local: --\(testpilotKitPath)--, \(testpilotKit.toJSONValue())")
+//        } else {
+//            print("********* Found Remote: --         --")
+//            testpilotKit = .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
+//        }
+        
+        let testpilotKit: SwiftPackage = testpilotKitPath.map {
+            .local(path: $0, group: nil)
+        } ?? .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
 
         self.project = try Project(
             basePath: Path(targetDir.path(percentEncoded: false)),
@@ -92,8 +106,7 @@ struct TestProjectGenerator {
                 ),
             ],
             packages: [
-                // TODO: remove auth token. (possibly change version requirement to a tag instead of branch)
-                "TestPilotKit": .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")),
+                "TestPilotKit": testpilotKit
             ]
         )
     }

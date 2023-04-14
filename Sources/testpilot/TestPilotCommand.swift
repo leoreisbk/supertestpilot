@@ -89,6 +89,12 @@ struct TestPilotCommand: ParsableCommand {
 
     @Option(name: .long, help: "The max number of steps that should be executed")
     var maxSteps: UInt8 = 10
+    
+    @Option(
+        name: .long,
+        help: "The full local path to the TestPilotKit library"
+    )
+    var testpilotKitPath: String?
 
     @Flag(name: .shortAndLong, help: "Launches the iOS simulator")
     var launchSim = false
@@ -135,7 +141,8 @@ struct TestPilotCommand: ParsableCommand {
             loggingServerURL: loggingServer,
             teamID: teamID,
             bundleID: runnerBundleID,
-            provisioningProfile: provisioningProfile
+            provisioningProfile: provisioningProfile,
+            testpilotKitPath: testpilotKitPath
         )
         try testProject.generate()
 
