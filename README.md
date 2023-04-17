@@ -79,6 +79,8 @@ Since the arguments sent to `testpilot` can grow to an extensive list, you can d
 
 You need to provide the teamID, bundleID and the provisioning profile in order to run `testpilot` using phisical devices.
 
+In case you'd like to use a local version of the TestPilotKit library for development and testing, add `testpilot-kit-path` with its value containing the full path of the local instance, to the config file.
+
 ```json
 // testpilot.config.json
 {
@@ -87,7 +89,8 @@ You need to provide the teamID, bundleID and the provisioning profile in order t
   "device": "platform=iOS Simulator,UDID=[UDID]", 
   "team-id": "[TEAM-ID]",
   "runner-bundle-id": "[RUNNER_TEST_BUNDLE_ID]", // This bundle identifier must match the provisioning profile
-  "provisioning-profile": "[PROVISIONING-PROFILE-NAME]"  
+  "provisioning-profile": "[PROVISIONING-PROFILE-NAME]",
+  "testpilot-kit-path": "/Users/me/libraries/TestPilotKit_Path" // For development ONLY
 }
 ```
 

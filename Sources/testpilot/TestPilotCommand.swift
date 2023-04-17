@@ -90,10 +90,7 @@ struct TestPilotCommand: ParsableCommand {
     @Option(name: .long, help: "The max number of steps that should be executed")
     var maxSteps: UInt8 = 10
     
-    @Option(
-        name: .long,
-        help: "The full local path to the TestPilotKit library"
-    )
+    @Option(name: .long, help: .private)
     var testpilotKitPath: String?
 
     @Flag(name: .shortAndLong, help: "Launches the iOS simulator")
