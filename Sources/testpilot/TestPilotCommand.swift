@@ -109,13 +109,10 @@ struct TestPilotCommand: ParsableCommand {
         // Setting in logging client
         let ws = WebsocketLoggingReceiver(address: loggingAddress, serverURL: loggingServer)
         try ws.startServer()
-
+        
+        logger.info("Log file \(Constants.logFilePath)")
+        
         let fm = FileManager.default
-
-        // Setting up logging
-        logger.debug("Log File: \(Constants.logFilePath)")
-        try fm.createDirectory(atPath: Constants.logFilePath.deletingLastPathComponent, withIntermediateDirectories: true)
-        fm.createFile(atPath: Constants.logFilePath, contents: nil)
 
         // Creating target directory
         let targetDir = Constants.tempDir
