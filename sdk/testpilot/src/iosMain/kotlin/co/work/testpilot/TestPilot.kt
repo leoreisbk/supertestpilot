@@ -34,13 +34,18 @@ object TestPilot {
         val jsonDecoder = Json { ignoreUnknownKeys = true }
 
         for (stepIndex in 0 until config.maxSteps) {
-            val jsonCommand = suspendTryOrNull {
+            val jsonCommand = try {
                 runner.getCompletionResponse(
                     app.debugDescription?.simplifyUI() ?: "",
                     last = lastCommand,
                     objective = objective,
                 )
-            } ?: throw TestAutomationException.EmptyResponse()
+            } catch (err: Throwable) {
+                throw TestAutomationException.CompletionRequestFailed(err)
+            }
+            if (jsonCommand.isNullOrEmpty()) {
+                throw TestAutomationException.EmptyResponse()
+            }
 
             // Parse the response
             lastCommand = jsonCommand

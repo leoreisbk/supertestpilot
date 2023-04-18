@@ -43,7 +43,7 @@ class Runner(val config: Config) {
             )
         )
 
-        return response.choices.first().message?.content
+        return response.choices.firstOrNull()?.message?.content
     }
 
     // TODO: add @Throws
