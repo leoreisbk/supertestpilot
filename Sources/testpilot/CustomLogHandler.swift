@@ -6,6 +6,7 @@ public struct CustomLogHandler: LogHandler {
     public let formatter: LoggingFormatAndPipe.Formatter
     public let verboseFormatter: LoggingFormatAndPipe.Formatter
     public let pipe: LoggingFormatAndPipe.Pipe
+    // The logLevel is being used by the Logger so we need let it as .debug and let the CustomLogHandler filter using the logLevelInternal
     public var logLevel: Logger.Level = .debug
     
     private let logLevelInternal: Logger.Level
@@ -33,11 +34,13 @@ public struct CustomLogHandler: LogHandler {
             ? self.prettyMetadata
             : self.prettify(self.metadata.merging(metadata!, uniquingKeysWith: { _, new in new }))
 
+        // This saves all the log including .debug on the file.
         if var stream = self.verboseStream {
             let verboseFormattedMessage = self.verboseFormatter.processLog(level: level, message: message, prettyMetadata: prettyMetadata, file: file, function: function, line: line)
             stream.write("\(verboseFormattedMessage)\n")
         }
         
+        // This sent all the log including to the default stdout filtering by the log level
         if self.logLevelInternal <= level {
             let formattedMessage = self.formatter.processLog(level: level, message: message, prettyMetadata: prettyMetadata, file: file, function: function, line: line)
             self.pipe.handle(formattedMessage)
