@@ -7,7 +7,7 @@ import kotlinx.serialization.json.*
 object InstructionSerializer : JsonContentPolymorphicSerializer<Instruction>(Instruction::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<out Instruction> {
         val commandString = element.jsonObject["cmd"]?.jsonPrimitive?.contentOrNull
-        val command = TestCommand.values().firstOrNull { it.name.lowercase() == commandString }
+        val command = TestCommand.values().firstOrNull { it.name.lowercase() == commandString?.lowercase() }
         return when (command) {
             TestCommand.Tap -> Instruction.Tap.serializer()
             TestCommand.Type -> Instruction.Type.serializer()
