@@ -5,24 +5,26 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
-import kotlin.native.ObjCName
-import kotlin.text.String
 
 private const val pingIntervalSeconds = 30
+private const val pingTimeoutSeconds = 10
 
 @Serializable
 data class LoggingMessage(val rcv: String, val msg: String)
 
 object Logging {
-    private val outgoingFlow = MutableSharedFlow<LoggingMessage>()
+    private val outgoingChannel = Channel<LoggingMessage>(
+        capacity = 50, // Max number of log entries that will be buffered if the socket is not connected
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
     private val receiver = Environment.wsReceiver
     private val scope = CoroutineScope(Dispatchers.Default)
 
@@ -37,10 +39,10 @@ object Logging {
             return
         }
 
-        val client = HttpClient {
-            install(WebSockets)
-        }
         scope.launch {
+            val client = HttpClient {
+                install(WebSockets)
+            }
             try {
                 // Connect to the ws server
                 client.webSocket(
@@ -48,8 +50,9 @@ object Logging {
                     urlString = url,
                 ) {
                     pingIntervalMillis = pingIntervalSeconds * 1000L
+                    timeoutMillis = pingTimeoutSeconds * 1000L
                     val outgoingJob = launch {
-                        outgoingFlow.collect { message ->
+                        outgoingChannel.consumeEach { message ->
                             outgoing.send(Frame.Text(Json.encodeToString(message)))
                         }
                     }
@@ -80,7 +83,7 @@ object Logging {
         if (receiver != null) {
             scope.launch {
                 try {
-                    outgoingFlow.emit(LoggingMessage(rcv = receiver, msg = msg))
+                    outgoingChannel.send(LoggingMessage(rcv = receiver, msg = msg))
                 } catch (err: Throwable) {
                     println("Couldn't log message: ${err.message}")
                 }
