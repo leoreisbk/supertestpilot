@@ -1,6 +1,7 @@
 package co.work.testpilot
 
 import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
@@ -40,7 +41,7 @@ object Logging {
         }
 
         scope.launch {
-            val client = HttpClient {
+            val client = HttpClient(CIO) {
                 install(WebSockets)
             }
             try {
