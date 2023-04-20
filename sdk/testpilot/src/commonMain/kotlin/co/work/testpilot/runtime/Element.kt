@@ -1,6 +1,10 @@
-package co.work.testpilot
+package co.work.testpilot.runtime
 
 import kotlinx.serialization.Serializable
+
+data class Element(val type: ElementType, val id: Int, val label: String, val value: String? = null, val selected: Boolean? = null) {
+    override fun toString() = listOfNotNull("${type.name}, id: $id, label: $label", value?.let { "value: $it" }, selected?.let{ "selected" }).joinToString(", ")
+}
 
 @Serializable
 enum class ElementType {

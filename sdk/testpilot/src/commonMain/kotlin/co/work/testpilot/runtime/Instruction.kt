@@ -1,8 +1,19 @@
-package co.work.testpilot
+package co.work.testpilot.runtime
 
 import co.work.testpilot.throwables.TestAutomationException
-import kotlinx.serialization.*
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+private enum class TestCommand {
+    Tap,
+    Type,
+    Assert,
+    ScrollDown,
+    ScrollUp,
+    GoBack,
+    Wait,
+    Done,
+}
 
 object InstructionSerializer : JsonContentPolymorphicSerializer<Instruction>(Instruction::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<out Instruction> {
@@ -26,10 +37,10 @@ object InstructionSerializer : JsonContentPolymorphicSerializer<Instruction>(Ins
 @Serializable(with = InstructionSerializer::class)
 sealed class Instruction {
     @Serializable
-    data class Tap(val type: ElementType, val label: String, val reason: String) : Instruction()
+    data class Tap(val id: Int, val reason: String) : Instruction()
 
     @Serializable
-    data class Type(val type: ElementType, val label: String, val text: String, val reason: String) : Instruction()
+    data class Type(val id: Int, val text: String, val reason: String) : Instruction()
 
     @Serializable
     data class Assert(val answer: String?, val expected: String, val reason: String) : Instruction()
@@ -52,9 +63,9 @@ sealed class Instruction {
     override fun toString() = description
     val description get() = when (this) {
         is Assert -> "$reason - Asserting expected value ($expected) equals to discovered value (${answer ?: "N/A"})"
-        is Tap -> "$reason - Tapping '$label' $type"
+        is Tap -> "$reason - Tapping element with ID: '$id'"
         is Wait -> "$reason - Waiting for $seconds seconds"
-        is Type -> "$reason - Typing '$text' into '$label' $type"
+        is Type -> "$reason - Typing '$text' into element with ID: '$id'"
         is Done -> reason
         is GoBack -> reason
         is ScrollDown -> reason

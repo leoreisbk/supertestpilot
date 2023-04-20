@@ -1,21 +1,23 @@
 package co.work.testpilot.extensions
 
-fun String.simplifyUI(): String {
-    var simplifiedUI = this
-    // Removing all elements without relevant info; also removes all hex mem addresses and frames
-    simplifiedUI = Regex("(\\n\\s*.*\\}\\}$|, 0x.*\\}\\})", RegexOption.MULTILINE).replace(simplifiedUI, "")
-    simplifiedUI = Regex("^\\s\\s+", RegexOption.MULTILINE).replace(simplifiedUI, "")
+import co.work.testpilot.runtime.Element
+import co.work.testpilot.runtime.ElementType
+import platform.XCTest.XCUIApplication
+import platform.XCTest.XCUIElementSnapshotProtocol
+import platform.XCTest.XCUIElementSnapshotProvidingProtocol
 
-    // Removing "header"
-    val headerRange = Regex("→Application.*?$", RegexOption.MULTILINE).find(simplifiedUI)?.range
-    if (headerRange != null) {
-        simplifiedUI = simplifiedUI.substring(startIndex = headerRange.last + 1)
-    }
-
-    // Removing "footer"
-    val footerIndex = simplifiedUI.indexOf("\nPath to element")
-    if (footerIndex >= 0) {
-        simplifiedUI = simplifiedUI.substring(startIndex = 0, endIndex = footerIndex)
-    }
-    return simplifiedUI
+private fun makeElement(id: Int, snapshot: XCUIElementSnapshotProtocol): Element? {
+    val elementType = snapshot.elementType.toTestPilotElementType()
+    (elementType != ElementType.Unknown && snapshot.label.isNotEmpty()) || return null
+    return Element(elementType, id, snapshot.label, snapshot.value as? String, if (snapshot.selected) true else null)
 }
+
+private val XCUIElementSnapshotProtocol.all: List<XCUIElementSnapshotProtocol>
+    get() = listOf(this) + children.flatMap { (it as XCUIElementSnapshotProtocol).all }
+
+val XCUIApplication.elements: Map<Int, Pair<XCUIElementSnapshotProtocol, Element>>
+    get() {
+        val snapshot = (this as XCUIElementSnapshotProvidingProtocol).snapshotWithError(null) ?: return emptyMap()
+        return snapshot.all.mapIndexedNotNull { i, e -> makeElement(i, e)?.let { Pair(e, it) } }
+            .associateBy({ it.second.id }, { it })
+    }

@@ -1,7 +1,7 @@
 package co.work.testpilot.extensions
 
+import co.work.testpilot.runtime.ElementType
 import platform.XCTest.*
-import co.work.testpilot.ElementType
 
 private val xcUIElementTypeMap = mapOf(
     XCUIElementTypeAny to ElementType.Any,
@@ -88,7 +88,7 @@ private val xcUIElementTypeMap = mapOf(
     XCUIElementTypeStatusItem to ElementType.StatusItem,
 )
 
-fun XCUIElementType.toElementType(): ElementType {
+fun XCUIElementType.toTestPilotElementType(): ElementType {
     return xcUIElementTypeMap[this] ?: ElementType.Unknown
 }
 

@@ -1,5 +1,6 @@
-package co.work.testpilot
+package co.work.testpilot.runtime
 
+import co.work.testpilot.Environment
 import co.work.testpilot.throwables.ConfigurationException
 import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
