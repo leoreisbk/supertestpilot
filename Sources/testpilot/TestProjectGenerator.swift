@@ -14,7 +14,7 @@ import XcodeProj
 import Logging
 import Version
 
-private let USE_LOCAL_KMM_SDK = true
+private let useLocalKMMSDK = true
 private let logger = Logger(label: #file.lastPathComponent)
 struct TestProjectGenerator {
     static let runnerDeploymentVersion = Version("15.0")
@@ -26,7 +26,7 @@ struct TestProjectGenerator {
     }
     
     private static func testPilotKitPackage(_ testpilotKitPath: String?) -> SwiftPackage {
-        if (USE_LOCAL_KMM_SDK) {
+        if (useLocalKMMSDK) {
             let localSourcePath = Path(URL(filePath: #file).deletingLastPathComponent().path())
             let localPackagePath = Path(components: [localSourcePath.string, "../../sdk/swift-wrapper"])
             return .local(path: localPackagePath.absolute().string, group: nil)
