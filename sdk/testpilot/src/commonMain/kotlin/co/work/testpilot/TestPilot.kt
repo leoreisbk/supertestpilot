@@ -57,6 +57,7 @@ object TestPilot {
                     runner = runner,
                     app = app,
                     instruction = instruction,
+                    uiSnapshot = uiSnapshot,
                 )
             }
         }

@@ -4,6 +4,7 @@ interface TestActor<Snapshot: AppUISnapshot, App: TestableApp<Snapshot>> {
     suspend fun performInstruction(
         runner: Runner,
         app: App,
-        instruction: Instruction.Actionable
+        instruction: Instruction.Actionable,
+        uiSnapshot: Snapshot,
     )
 }

@@ -19,4 +19,6 @@ sealed class TestAutomationException(message: String, cause: Throwable? = null) 
             else -> cause.message
         } ?: cause.cause?.message
     ) : TestAutomationException("The completion request failed (${message})", cause)
+    class AppNotFound : TestAutomationException("The application was not found")
+    class AppLaunchFailed(id: String) : TestAutomationException("Application '${id}' could not be launched")
 }

@@ -13,7 +13,8 @@ class TestActorIOS(val testCase: XCTestCase) : TestActor<AppUISnapshotIOS, Testa
     override suspend fun performInstruction(
         runner: Runner,
         app: TestableAppIOS,
-        instruction: Instruction.Actionable
+        instruction: Instruction.Actionable,
+        uiSnapshot: AppUISnapshotIOS,
     ) {
         val xcApp = app.xcApp
         when (instruction) {
