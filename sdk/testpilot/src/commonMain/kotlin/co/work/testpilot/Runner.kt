@@ -12,6 +12,8 @@ import com.aallam.openai.api.model.Model
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.Models
 import com.aallam.openai.client.OpenAI
+import com.aallam.openai.client.OpenAIConfig
+import com.aallam.openai.client.OpenAIHost
 import io.ktor.client.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -24,7 +26,17 @@ private enum class OpenAIModel(val idString: String) {
 }
 
 class Runner(val config: Config) {
-    val aiClient = OpenAI(token = config.apiKey)
+    val aiClient = OpenAI(
+        OpenAIConfig(
+            token = config.apiKey,
+            organization = "org-DgB1MCTeVpS8oxsY9fE7atqr",
+            host = OpenAIHost("https://openai.work.dev"),
+            headers = mapOf(
+                "X-WorkCo-User-Id" to "test@work.co",
+                "X-WorkCo-Project-Id" to "testpilot",
+            ),
+        )
+    )
     val serializer = Json { ignoreUnknownKeys = true }
 
     // TODO: add @Throws
