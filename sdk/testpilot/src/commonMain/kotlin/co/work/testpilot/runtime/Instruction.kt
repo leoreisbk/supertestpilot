@@ -36,23 +36,26 @@ object InstructionSerializer : JsonContentPolymorphicSerializer<Instruction>(Ins
 
 @Serializable(with = InstructionSerializer::class)
 sealed class Instruction {
+    // Represents an instruction that requires an actor to perform an action (such as Tap, Type, etc), rather than a logical instruction (Done, Wait)
+    sealed interface Actionable
+    
     @Serializable
-    data class Tap(val id: Int, val reason: String) : Instruction()
+    data class Tap(val id: Int, val reason: String) : Instruction(), Actionable
 
     @Serializable
-    data class Type(val id: Int, val text: String, val reason: String) : Instruction()
+    data class Type(val id: Int, val text: String, val reason: String) : Instruction(), Actionable
 
     @Serializable
     data class Assert(val answer: String?, val expected: String, val reason: String) : Instruction()
 
     @Serializable
-    data class ScrollDown(val reason: String) : Instruction()
+    data class ScrollDown(val reason: String) : Instruction(), Actionable
 
     @Serializable
-    data class ScrollUp(val reason: String) : Instruction()
+    data class ScrollUp(val reason: String) : Instruction(), Actionable
 
     @Serializable
-    data class GoBack(val reason: String) : Instruction()
+    data class GoBack(val reason: String) : Instruction(), Actionable
 
     @Serializable
     data class Wait(val seconds: Float, val reason: String) : Instruction()
