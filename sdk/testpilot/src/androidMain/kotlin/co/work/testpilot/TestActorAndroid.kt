@@ -2,6 +2,7 @@ package co.work.testpilot
 
 import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.runtime.Runner
+import co.work.testpilot.throwables.TestAutomationException
 
 class TestActorAndroid : TestActor<AppUISnapshotAndroid, TestableAppAndroid> {
     override suspend fun performInstruction(
@@ -12,9 +13,11 @@ class TestActorAndroid : TestActor<AppUISnapshotAndroid, TestableAppAndroid> {
     ) {
         when (instruction) {
             is Instruction.Type -> {
+                val element = uiSnapshot.getAndroidElementById(instruction.id) ?: throw TestAutomationException.ElementNotFound(instruction.id)
                 // TODO
             }
             is Instruction.Tap -> {
+                val element = uiSnapshot.getAndroidElementById(instruction.id) ?: throw TestAutomationException.ElementNotFound(instruction.id)
                 // TODO
             }
             is Instruction.ScrollUp -> {

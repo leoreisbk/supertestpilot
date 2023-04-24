@@ -1,7 +1,12 @@
 package co.work.testpilot
 
-import androidx.test.uiautomator.UiObject
 import androidx.test.uiautomator.UiObject2
+
+fun List<UiObject2>.traverseFind(predicate: (UiObject2) -> Boolean): List<UiObject2> {
+    return flatMap {
+        listOfNotNull(it.takeIf(predicate)) + it.children.traverseFind(predicate)
+    }
+}
 
 class AppUISnapshotAndroid(val elements: List<UiObject2>) : AppUISnapshot {
     private fun generateUiRepresentation(
@@ -29,12 +34,12 @@ class AppUISnapshotAndroid(val elements: List<UiObject2>) : AppUISnapshot {
         val scrollable = if (element.isScrollable) " scrollable" else ""
         val label = if (element.contentDescription != null) " label=\"${element.contentDescription}\"" else if (element.text != null) " label=\"${element.text}\"" else ""
 
-        result.append("$indentationSpaces$resumedClass id=${getElementId(element)} $writable$clickable$checkable$checked$scrollable$label\n")
+        result.append("$indentationSpaces$resumedClass id=${getAndroidElementId(element)} $writable$clickable$checkable$checked$scrollable$label\n")
     }
 
     // TO-DO: ids should be pre-generated
-    fun getElementId(element: UiObject2): Int = elements.indexOf(element)
-    fun getElementById(id: Int): UiObject2? = elements.getOrNull(id)
+    fun getAndroidElementId(element: UiObject2): Int = elements.indexOf(element)
+    fun getAndroidElementById(id: Int): UiObject2? = elements.getOrNull(id)
 
     override fun toPromptString(): String {
         val result = StringBuilder()

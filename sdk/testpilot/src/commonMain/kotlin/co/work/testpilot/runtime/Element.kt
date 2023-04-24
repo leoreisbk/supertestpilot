@@ -91,4 +91,5 @@ enum class ElementType {
     Tab,
     TouchBar,
     StatusItem,
+    View,
 }
