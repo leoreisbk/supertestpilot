@@ -24,18 +24,13 @@ object TestPilot {
 
         app.launch()
 
-        var lastCommand: String? = null
-        val jsonDecoder = Json { ignoreUnknownKeys = true }
-
         for (stepIndex in 0 until config.maxSteps) {
             println("RUNNING OBJECTIVE: $objective")
 
             val uiSnapshot = app.snapshot()
-            val elementMap = uiSnapshot.elements
-            val elementList = elementMap.values.map { it.second }
 
             val instruction = try {
-                runner.getInstruction(objective, elementList)
+                runner.getInstruction(objective, uiSnapshot)
             } catch (err: Throwable) {
                 throw TestAutomationException.CompletionRequestFailed(err)
             }

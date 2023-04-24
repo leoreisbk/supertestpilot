@@ -12,12 +12,12 @@ import com.aallam.openai.client.OpenAI
 
 private const val ENABLE_SIMPLIFY_PROMPT = false
 
-data class SimplifyPromptInput(val objective: String, val ui: Collection<Element>)
+data class SimplifyPromptInput(val objective: String, val formattedUI: String)
 
 class SimplifyPrompt(client: OpenAI) : OpenAIPrompt<SimplifyPromptInput, String>(client) {
     override suspend fun run(input: SimplifyPromptInput): String {
         if (!ENABLE_SIMPLIFY_PROMPT) {
-            return uiState(input.ui)
+            return uiState(input.formattedUI)
         }
 
         val request = ChatCompletionRequest(
@@ -25,7 +25,7 @@ class SimplifyPrompt(client: OpenAI) : OpenAIPrompt<SimplifyPromptInput, String>
             messages = listOf(
                 ChatMessage(ChatRole.System, system),
                 ChatMessage(ChatRole.User, objective(input.objective)),
-                ChatMessage(ChatRole.User, uiState(input.ui)),
+                ChatMessage(ChatRole.User, uiState(input.formattedUI)),
             ),
             temperature = 0.7,
             n = 1,
@@ -44,6 +44,6 @@ class SimplifyPrompt(client: OpenAI) : OpenAIPrompt<SimplifyPromptInput, String>
 
         fun objective(objective: String) = "OBJECTIVE: $objective"
 
-        fun uiState(ui: Collection<Element>) = ui.joinToString("\n")
+        fun uiState(ui: String) = ui
     }
 }

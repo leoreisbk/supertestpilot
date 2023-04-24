@@ -6,15 +6,16 @@ import platform.XCTest.XCUIApplication
 import platform.XCTest.XCUIElementSnapshotProtocol
 import platform.XCTest.XCUIElementSnapshotProvidingProtocol
 
-private fun makeElement(id: Int, snapshot: XCUIElementSnapshotProtocol): Element? {
+internal fun makeElement(id: Int, snapshot: XCUIElementSnapshotProtocol): Element? {
     val elementType = snapshot.elementType.toTestPilotElementType()
     (elementType != ElementType.Unknown && snapshot.label.isNotEmpty()) || return null
     return Element(elementType, id, snapshot.label, snapshot.value as? String, if (snapshot.selected) true else null)
 }
 
-private val XCUIElementSnapshotProtocol.all: List<XCUIElementSnapshotProtocol>
+internal val XCUIElementSnapshotProtocol.all: List<XCUIElementSnapshotProtocol>
     get() = listOf(this) + children.flatMap { (it as XCUIElementSnapshotProtocol).all }
 
+@Deprecated("Deprecated. Use AppUISnapshotIOS instead.")
 val XCUIApplication.elements: Map<Int, Pair<XCUIElementSnapshotProtocol, Element>>
     get() {
         val snapshot = (this as XCUIElementSnapshotProvidingProtocol).snapshotWithError(null) ?: return emptyMap()

@@ -1,7 +1,8 @@
 package co.work.testpilot
 
-import co.work.testpilot.extensions.simplifyUI
+import co.work.testpilot.throwables.TestAutomationException
 import platform.XCTest.XCUIApplication
+import platform.XCTest.XCUIElementSnapshotProvidingProtocol
 
 class TestableAppIOS(bundleId: String? = null) : TestableApp<AppUISnapshotIOS> {
     val xcApp = if (bundleId != null) {
@@ -15,6 +16,9 @@ class TestableAppIOS(bundleId: String? = null) : TestableApp<AppUISnapshotIOS> {
     }
 
     override suspend fun snapshot(): AppUISnapshotIOS {
-        return AppUISnapshotIOS(xcApp.debugDescription)
+        val snapshotProvider = xcApp as XCUIElementSnapshotProvidingProtocol
+        val snapshot = snapshotProvider.snapshotWithError(null) ?: throw TestAutomationException.SnapshotFailed()
+
+        return AppUISnapshotIOS(snapshot)
     }
 }

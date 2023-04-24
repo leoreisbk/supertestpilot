@@ -1,5 +1,6 @@
 package co.work.testpilot.runtime
 
+import co.work.testpilot.AppUISnapshot
 import co.work.testpilot.runtime.prompts.InstructPrompt
 import co.work.testpilot.runtime.prompts.InstructPromptInput
 import co.work.testpilot.runtime.prompts.SimplifyPrompt
@@ -22,8 +23,8 @@ class Runner(private val config: Config) {
     private var lastInstruction: Instruction? = null
 
     @Throws(TestAutomationException::class, CancellationException::class)
-    suspend fun getInstruction(objective: String, ui: Collection<Element>): Instruction {
-        val simplifiedUI = simplifyPrompt(SimplifyPromptInput(objective, ui))
+    suspend fun getInstruction(objective: String, uiSnapshot: AppUISnapshot): Instruction {
+        val simplifiedUI = simplifyPrompt(SimplifyPromptInput(objective, uiSnapshot.toPromptString()))
         val instruction = instructPrompt(InstructPromptInput(objective, simplifiedUI, lastInstruction))
         lastInstruction = instruction
         return instruction
