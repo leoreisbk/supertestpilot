@@ -1,16 +1,10 @@
 package co.work.testpilot
 
-import co.work.testpilot.extensions.getElement
-import co.work.testpilot.extensions.simplifyUI
-import co.work.testpilot.extensions.waitForExistenceIfNecessary
+import co.work.testpilot.runtime.Config
 import co.work.testpilot.throwables.ConfigurationException
 import co.work.testpilot.throwables.TestAutomationException
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import platform.XCTest.*
-import kotlin.math.roundToLong
 
 object TestPilotIOS {
     @Throws(

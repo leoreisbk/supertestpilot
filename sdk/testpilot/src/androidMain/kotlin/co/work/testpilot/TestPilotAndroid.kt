@@ -1,5 +1,6 @@
 package co.work.testpilot
 
+import co.work.testpilot.runtime.Config
 import co.work.testpilot.throwables.ConfigurationException
 import co.work.testpilot.throwables.TestAutomationException
 import kotlin.coroutines.cancellation.CancellationException

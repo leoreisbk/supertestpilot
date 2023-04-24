@@ -1,5 +1,8 @@
 package co.work.testpilot
 
+import co.work.testpilot.runtime.Instruction
+import co.work.testpilot.runtime.Runner
+
 class TestActorAndroid : TestActor<AppUISnapshotAndroid, TestableAppAndroid> {
     override suspend fun performInstruction(
         runner: Runner,
