@@ -29,6 +29,7 @@ enum Prompts {
         {"cmd": "goBack", "reason": "REASON"} - Go Back, regardless of the element
         {"cmd": "wait", "seconds": X, "reason": "REASON"} - Wait or sleep for X seconds. X is a Double
         {"cmd": "done", "reason": "REASON"} - You think you've fulfilled your objective and there's nothing more to do
+        {"cmd": "check", "type": "E", "label": "X", "reason": "REASON"} - check if the current UI element of type "E" exists with label "X"
 
         EXAMPLE:
         ===

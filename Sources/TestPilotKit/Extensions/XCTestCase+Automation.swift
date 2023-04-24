@@ -103,6 +103,13 @@ public extension XCTestCase {
             case .done:
                 persistenceManager.persistSteps()
                 return
+                
+            case let .check(type: type, label: label, reason: _):
+                if let match = try await getElement(from: runner, app: app, type: type, label: label) {
+                    match.waitForElementToBecomeVisible(timeout: 10)
+                } else {
+                    XCTFail("Could not find element of type: [\(type)], with label: [\(label)]")
+                }
             }
         }
 

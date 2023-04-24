@@ -21,6 +21,7 @@ enum Instruction: Decodable {
     case goBack(reason: String)
     case wait(seconds: TimeInterval, reason: String)
     case done(reason: String)
+    case check(type: XCUIElement.ElementType, label: String, reason: String)
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -62,13 +63,19 @@ enum Instruction: Decodable {
 
         case .done:
             self = .done(reason: reason)
+            
+        case .check:
+            let type = try container.decode(XCUIElement.ElementType.self, forKey: .type)
+            let label = try container.decode(String.self, forKey: .label)
+            
+            self = .check(type: type, label: label, reason: reason)
         }
     }
 }
 
 private extension Instruction {
     enum Command: String, Decodable {
-        case tap, type, assert, scrollDown, scrollUp, goBack, wait, done
+        case tap, type, assert, scrollDown, scrollUp, goBack, wait, done, check
     }
 }
 
@@ -91,6 +98,8 @@ extension Instruction: CustomStringConvertible {
         case let .goBack(reason: reason): return reason
         case let .scrollDown(reason: reason): return reason
         case let .scrollUp(reason: reason): return reason
+        case let .check(type: type, label: label, reason: reason):
+            return "\(reason) Checking '\(label)' \(type) exists"
         }
     }
 }

@@ -14,7 +14,7 @@ class Runner {
     let httpClient = HTTPClient(eventLoopGroupProvider: .createNew)
     let aiClient: OpenAIKit.Client
     let config: Config
-
+    
     init(config: Config) {
         self.config = config
         self.aiClient = OpenAIKit.Client(
