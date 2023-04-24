@@ -10,10 +10,16 @@ import com.aallam.openai.api.chat.ChatRole
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 
+private const val ENABLE_SIMPLIFY_PROMPT = false
+
 data class SimplifyPromptInput(val objective: String, val ui: Collection<Element>)
 
 class SimplifyPrompt(client: OpenAI) : OpenAIPrompt<SimplifyPromptInput, String>(client) {
     override suspend fun run(input: SimplifyPromptInput): String {
+        if (!ENABLE_SIMPLIFY_PROMPT) {
+            return uiState(input.ui)
+        }
+
         val request = ChatCompletionRequest(
             model = ModelId(OpenAIModel.GPT3_5_Turbo_0301.idString),
             messages = listOf(
