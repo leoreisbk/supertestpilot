@@ -73,7 +73,7 @@ class TestDestination {
     private static func extractDevices(from input: String) throws -> [Device] {
         let lines = input.components(separatedBy: .newlines)
         let nameRegex = try NSRegularExpression(pattern: "^[^(]+")
-        let osVersionRegex = try NSRegularExpression(pattern: "\\((\\d+\\.\\d+)\\)")
+        let osVersionRegex = try NSRegularExpression(pattern: "\\((\\d+(\\.\\d)+)\\)")
         let udidRegex = try NSRegularExpression(pattern: "\\(([A-F\\d\\-]+)\\)")
 
         logger.debug("Devices found:")
@@ -84,10 +84,6 @@ class TestDestination {
         lines.forEach { line in
             if line.contains("Simulators") {
                 isSimulator = true
-            }
-            
-            guard line.contains("iPhone") || line.contains("iPad") else {
-                return
             }
             
             let nameNSRange = nameRegex.rangeOfFirstMatch(in: line, range: NSRange(location: 0, length: line.utf16.count))
