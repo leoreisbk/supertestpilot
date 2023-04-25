@@ -5,8 +5,6 @@ import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.runtime.Runner
 import co.work.testpilot.throwables.TestAutomationException
 import kotlinx.coroutines.delay
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import kotlin.math.roundToLong
 
 object TestPilot {

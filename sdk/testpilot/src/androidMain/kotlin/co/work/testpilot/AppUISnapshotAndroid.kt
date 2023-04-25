@@ -8,13 +8,14 @@ fun List<UiObject2>.traverseFind(predicate: (UiObject2) -> Boolean): List<UiObje
     }
 }
 
-class AppUISnapshotAndroid(val elements: List<UiObject2>) : AppUISnapshot {
+class AppUISnapshotAndroid(private val elements: MutableList<UiObject2>) : AppUISnapshot {
     private fun generateUiRepresentation(
         listOfElements: List<UiObject2>,
         result: StringBuilder,
         numberOfSpace: Int = 0,
     ) {
         for (element in listOfElements) {
+            addAndroidElement(element)
             if (element.children == null || element.children.isEmpty()) {
                 addMinifiedElement(result, element, numberOfSpace)
             } else {
@@ -40,6 +41,9 @@ class AppUISnapshotAndroid(val elements: List<UiObject2>) : AppUISnapshot {
     // TO-DO: ids should be pre-generated
     fun getAndroidElementId(element: UiObject2): Int = elements.indexOf(element)
     fun getAndroidElementById(id: Int): UiObject2? = elements.getOrNull(id)
+    private fun addAndroidElement(element: UiObject2) {
+        elements.add(element)
+    }
 
     override fun toPromptString(): String {
         val result = StringBuilder()
