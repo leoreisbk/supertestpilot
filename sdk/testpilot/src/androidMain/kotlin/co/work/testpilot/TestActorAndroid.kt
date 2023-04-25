@@ -9,22 +9,26 @@ class TestActorAndroid : TestActor<AppUISnapshotAndroid, TestableAppAndroid> {
         runner: Runner,
         app: TestableAppAndroid,
         instruction: Instruction.Actionable,
-        uiSnapshot: AppUISnapshotAndroid,
+        uiSnapshot: AppUISnapshotAndroid
     ) {
         when (instruction) {
             is Instruction.Type -> {
                 val element = uiSnapshot.getAndroidElementById(instruction.id) ?: throw TestAutomationException.ElementNotFound(instruction.id)
-                // TODO
+                element.text = instruction.text
             }
             is Instruction.Tap -> {
                 val element = uiSnapshot.getAndroidElementById(instruction.id) ?: throw TestAutomationException.ElementNotFound(instruction.id)
-                // TODO
+                element.click()
             }
             is Instruction.ScrollUp -> {
-                // TODO
+                val displayHeight = app.device.displayHeight
+                val aFifthScreenHeight = (displayHeight * 0.2f).toInt()
+                app.device.swipe(0, aFifthScreenHeight, 0, displayHeight - aFifthScreenHeight, 100)
             }
             is Instruction.ScrollDown -> {
-                // TODO
+                val displayHeight = app.device.displayHeight
+                val aFifthScreenHeight = (displayHeight * 0.2f).toInt()
+                app.device.swipe(0, displayHeight - aFifthScreenHeight, 0, aFifthScreenHeight, 100)
             }
             is Instruction.GoBack -> {
                 app.device.pressBack()
