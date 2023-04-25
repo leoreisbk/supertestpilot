@@ -73,16 +73,20 @@ public extension XCTestCase {
                 XCTAssertEqual(answer, expected, instruction.description)
 
             case let .type(type: type, label: label, text: text, reason: _):
-                let match = try await getElement(from: runner, app: app, type: type, label: label)
-                match.waitForExistenceIfNecessary(timeout: 10)
-                match.tap()
-                match.typeText(text)
-
+                if let match = try await getElement(from: runner, app: app, type: type, label: label) {
+                    match.waitForExistenceIfNecessary(timeout: 10)
+                    match.tap()
+                    match.typeText(text)
+                } else {
+                    XCTFail("Could not find element of type: [\(type)], with label: [\(label)]")
+                }
             case let .tap(type: type, label: label, reason: _):
-                let match = try await getElement(from: runner, app: app, type: type, label: label)
-                match.waitForExistenceIfNecessary(timeout: 10)
-                match.tap()
-
+                if let match = try await getElement(from: runner, app: app, type: type, label: label) {
+                    match.waitForExistenceIfNecessary(timeout: 10)
+                    match.tap()
+                } else {
+                    XCTFail("Could not find element of type: [\(type)], with label: [\(label)]")
+                }
             case .scrollUp:
                 app.swipeDown(velocity: .slow)
 
@@ -105,7 +109,7 @@ public extension XCTestCase {
         throw "Maximum number of steps exceeded (\(config.maxSteps))"
     }
 
-    private func getElement(from runner: Runner, app: XCUIElement, type: XCUIElement.ElementType, label: String) async throws -> XCUIElement {
+    private func getElement(from runner: Runner, app: XCUIElement, type: XCUIElement.ElementType, label: String) async throws -> XCUIElement? {
         let match = app.firstMatch(of: type, label: label)
         guard !match.exists else {
             return match
@@ -117,7 +121,9 @@ public extension XCTestCase {
         let line = try await runner.searchEmbeddings(input: ui, query: label, n: 1).first ?? ""
         let labelMatch = try NSRegularExpression(pattern: "label: '(?<label>.*?)'($|,)", options: [])
             .firstMatch(in: line, options: [], range: NSMakeRange(0, line.count))
-        let range = labelMatch!.range(withName: "label")
+
+        guard let matchedLabel = labelMatch else { return nil }
+        let range = matchedLabel.range(withName: "label")
 
         return app.firstMatch(of: type, label: (line as NSString).substring(with: range))
     }
