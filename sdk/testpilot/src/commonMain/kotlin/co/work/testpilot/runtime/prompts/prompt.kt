@@ -1,6 +1,7 @@
 package co.work.testpilot.runtime.prompts
 
 import co.work.testpilot.Logging
+import co.work.testpilot.runtime.Config
 import com.aallam.openai.api.BetaOpenAI
 import com.aallam.openai.api.chat.ChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionRequest
@@ -12,7 +13,7 @@ interface Prompt<I, O> {
 }
 
 @OptIn(BetaOpenAI::class)
-abstract class OpenAIPrompt<I, O>(protected val client: OpenAI): Prompt<I, O> {
+abstract class OpenAIPrompt<I, O>(protected val client: OpenAI, protected val config: Config): Prompt<I, O> {
     protected enum class OpenAIModel(val idString: String) {
         GPT3_TextEmbeddingAda002("text-embedding-ada-002"),
         GPT3_TextDavinci003("text-davinci-003"),

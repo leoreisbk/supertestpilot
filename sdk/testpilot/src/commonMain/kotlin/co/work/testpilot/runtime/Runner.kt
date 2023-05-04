@@ -18,8 +18,8 @@ class Runner(private val config: Config) {
         logLevel = LogLevel.None
     ))
 
-    private val simplifyPrompt = SimplifyPrompt(aiClient)
-    private val instructPrompt = InstructPrompt(aiClient)
+    private val simplifyPrompt = SimplifyPrompt(aiClient, config)
+    private val instructPrompt = InstructPrompt(aiClient, config)
     private var lastInstruction: Instruction? = null
 
     @Throws(TestAutomationException::class, CancellationException::class)

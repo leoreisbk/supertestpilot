@@ -2,6 +2,7 @@
 
 package co.work.testpilot.runtime.prompts
 
+import co.work.testpilot.runtime.Config
 import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.removeComments
@@ -17,7 +18,7 @@ import kotlinx.serialization.json.Json
 
 data class InstructPromptInput(val objective: String, val simplifiedUI: String, val lastInstruction: Instruction? = null)
 
-class InstructPrompt(client: OpenAI): OpenAIPrompt<InstructPromptInput, Instruction>(client) {
+class InstructPrompt(client: OpenAI, config: Config): OpenAIPrompt<InstructPromptInput, Instruction>(client, config) {
     override suspend fun run(input: InstructPromptInput): Instruction {
         val request = ChatCompletionRequest(
             model = ModelId(OpenAIModel.GPT4_0314.idString),
@@ -28,9 +29,9 @@ class InstructPrompt(client: OpenAI): OpenAIPrompt<InstructPromptInput, Instruct
                     input.lastInstruction?.let(serializer::encodeToString)
                 )),
             ),
-            temperature = 0.7,
+            temperature = config.temperature,
             n = 1,
-            maxTokens = 256,
+            maxTokens = config.maxTokens,
         )
         val response = client.testPilotChatCompletion(request)
         val jsonCommand = response.firstCompletionContent ?: throw TestAutomationException.EmptyResponse()
