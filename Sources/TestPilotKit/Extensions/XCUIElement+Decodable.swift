@@ -134,10 +134,9 @@ extension XCUIElement {
         return waitForExistence(timeout: timeout)
     }
     
-    @discardableResult
-        func waitForElementToBecomeVisible(timeout: TimeInterval) -> Bool {
-            return waitForExistence(timeout: timeout) && isHittable
-        }
+    @discardableResult func waitForElementToBecomeVisible(timeout: TimeInterval) -> Bool {
+        return waitForExistence(timeout: timeout) && isHittable
+    }
     
     func firstMatch(of type: XCUIElement.ElementType, label: String) -> XCUIElement {
         descendants(matching: type).matching(identifier: label).firstMatch
