@@ -16,6 +16,7 @@ class Environment {
 val Environment.Companion.parsedHeaders: Map<String, String> get() {
     return openAIHeaders
         ?.split(Regex("(?<!\\\\);")) // This regex allows values to be escaped if they contain a semicolon.
+        ?.map { it.replace("\\;", ";") } // Remove escaping
         ?.fold(emptyMap()) { result, item ->
             val colonIndex = item.indexOf(":")
             val key = item.subSequence(0, colonIndex).toString()
