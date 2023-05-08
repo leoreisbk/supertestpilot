@@ -1,6 +1,7 @@
 package co.work.testpilot.runtime
 
 import co.work.testpilot.AppUISnapshot
+import co.work.testpilot.openai.OpenAIModel
 import co.work.testpilot.runtime.prompts.InstructPrompt
 import co.work.testpilot.runtime.prompts.InstructPromptInput
 import co.work.testpilot.runtime.prompts.SimplifyPrompt

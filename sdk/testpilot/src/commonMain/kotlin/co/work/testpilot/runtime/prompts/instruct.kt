@@ -3,6 +3,7 @@
 package co.work.testpilot.runtime.prompts
 
 import co.work.testpilot.runtime.Config
+import co.work.testpilot.openai.OpenAIModel
 import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.removeComments
