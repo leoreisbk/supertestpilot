@@ -93,6 +93,7 @@ struct TestFileBuilder {
                 } catch let err {
                     Logging.info("❌ Test failed!")
                     Logging.info(err.localizedDescription)
+                    XCTFail(err.localizedDescription)
                 }
             }
         """
