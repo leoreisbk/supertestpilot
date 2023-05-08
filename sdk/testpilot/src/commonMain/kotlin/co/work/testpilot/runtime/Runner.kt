@@ -20,6 +20,9 @@ import kotlin.coroutines.cancellation.CancellationException
 class Runner(private val config: Config) {
     private val aiClient = OpenAI(config = OpenAIConfig(
         token = config.apiKey,
+        organization = config.apiOrg,
+        headers = config.apiHeaders,
+        host = config.apiHost?.let { OpenAIHost(it) } ?: OpenAIHost.OpenAI,
         logLevel = LogLevel.None
     ))
 

@@ -40,18 +40,22 @@ class ConfigFileReader {
 
         let result = jsonContent.reduce([testsPath]) { partialResult, kv in
             let key = "--\(kv.key)"
-            guard let boolValue = kv.value as? Bool else {
-                return partialResult + [key, "\(kv.value)"]
-            }
+            if kv.key == "open-ai-headers", let valueDict = kv.value as? [String: String] {
+                // Map headers dictionary into a list of arguments 
+                let headerArgs = valueDict.flatMap { (headerKey, headerValue) in ["--open-ai-header", "\(headerKey): \(headerValue)"] }
+                return partialResult + headerArgs
+            } else if let boolValue = kv.value as? Bool {
+                if boolValue {
+                    if kv.key == "verbose" {
+                        self.verbose = true
+                    }
 
-            if boolValue {
-                if kv.key == "verbose" {
-                    self.verbose = true
+                    return partialResult + [key]
+                } else {
+                    return partialResult
                 }
-
-                return partialResult + [key]
             } else {
-                return partialResult
+                return partialResult + [key, "\(kv.value)"]
             }
         }
 

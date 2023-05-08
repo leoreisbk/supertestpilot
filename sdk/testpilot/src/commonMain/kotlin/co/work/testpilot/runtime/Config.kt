@@ -1,6 +1,7 @@
 package co.work.testpilot.runtime
 
 import co.work.testpilot.Environment
+import co.work.testpilot.parsedHeaders
 import co.work.testpilot.throwables.ConfigurationException
 import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
@@ -8,6 +9,9 @@ import kotlin.native.ObjCName
 
 data class Config(
     val apiKey: String,
+    var apiHost: String?,
+    var apiOrg: String?,
+    var apiHeaders: Map<String, String>,
     val maxTokens: Int,
     val temperature: Double,
     val maxSteps: Int,
@@ -22,6 +26,9 @@ object ConfigDefaults {
 @OptIn(ExperimentalObjCName::class)
 class ConfigBuilder {
     var apiKey: String? = null
+    var apiHost: String? = null
+    var apiOrg: String? = null
+    val apiHeaders: MutableMap<String, String> = mutableMapOf()
     var maxTokens: Int = ConfigDefaults.maxTokens
     var temperature: Double = ConfigDefaults.temperature
     var maxSteps: Int = ConfigDefaults.maxSteps
@@ -49,8 +56,26 @@ class ConfigBuilder {
         return this
     }
 
+    fun apiHost(host: String?): ConfigBuilder {
+        this.apiHost = host
+        return this
+    }
+
+    fun apiOrganization(org: String?): ConfigBuilder {
+        this.apiOrg = org
+        return this
+    }
+
+    fun apiHeader(key: String, value: String): ConfigBuilder {
+        this.apiHeaders[key] = value
+        return this
+    }
+
     fun build(): Config = Config(
         apiKey = apiKey ?: Environment.apiKey ?: throw ConfigurationException.ApiKeyRequired(),
+        apiHost = apiHost ?: Environment.openAIHost,
+        apiOrg = apiOrg ?: Environment.openAIOrg,
+        apiHeaders = apiHeaders + Environment.parsedHeaders,
         maxTokens = maxTokens,
         temperature = temperature,
         maxSteps = maxSteps

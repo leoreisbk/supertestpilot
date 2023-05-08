@@ -86,6 +86,27 @@ struct TestPilotCommand: ParsableCommand {
         help: "The OpenAI API Key to be used. Can be set as env var OPEN_AI_KEY"
     )
     var openAIKey: String!
+    
+    @Option(
+        name: .long,
+        parsing: .scanningForValue,
+        help: "The OpenAI Organization Key to be used. Can be set as env var OPEN_AI_ORG"
+    )
+    var openAIOrg: String!
+    
+    @Option(
+        name: .long,
+        parsing: .scanningForValue,
+        help: "The OpenAI API Host to be used. Can be set as env var OPEN_AI_HOST"
+    )
+    var openAIHost: String!
+    
+    @Option(
+        name: .long,
+        parsing: .singleValue,
+        help: "Specifies one or more headers that will be sent on every OpenAI API request. Can be set as env var OPEN_AI_HEADERS. Formatted as \"Key: Value\""
+    )
+    var openAIHeader: [String] = []
 
     @Option(name: .long, help: "The max number of steps that should be executed")
     var maxSteps: UInt8 = 10
@@ -118,6 +139,20 @@ struct TestPilotCommand: ParsableCommand {
         let targetDir = Constants.tempDir
         logger.debug("Creating project on: \(targetDir.path(percentEncoded: false))")
         try? fm.createDirectory(at: targetDir, withIntermediateDirectories: true)
+        
+        // Parse header arguments into a dictionary
+        let headersDict: [String: String] = self.openAIHeader.reduce([:]) { result, item in
+            if let equalIndex = item.firstIndex(of: ":") {
+                let key = String(item[item.startIndex..<equalIndex])
+                    .trimmingCharacters(in: .whitespaces)
+                let value = String(item[item.index(after: equalIndex)..<item.endIndex])
+                    .trimmingCharacters(in: .whitespaces)
+                
+                return result.merged([key: value])
+            } else {
+                return result
+            }
+        }
 
         // Regenerate the test file
         try TestFileBuilder(
@@ -131,6 +166,9 @@ struct TestPilotCommand: ParsableCommand {
         let testProject = try TestProjectGenerator(
             targetDir: targetDir,
             openAIKey: openAIKey,
+            openAIOrg: openAIOrg,
+            openAIHost: openAIHost,
+            openAIHeaders: headersDict,
             loggingAddress: loggingAddress,
             loggingServerURL: loggingServer,
             teamID: teamID,

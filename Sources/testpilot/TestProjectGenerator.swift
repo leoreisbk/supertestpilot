@@ -40,6 +40,9 @@ struct TestProjectGenerator {
     init(
         targetDir: URL,
         openAIKey: String,
+        openAIOrg: String? = nil,
+        openAIHost: String? = nil,
+        openAIHeaders: [String: String] = [:],
         loggingAddress: String,
         loggingServerURL: URL,
         teamID: String? = nil,
@@ -64,6 +67,26 @@ struct TestProjectGenerator {
                 "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
                 "SUPPORTS_MACCATALYST": "NO"
             ])
+        }
+        
+        var optionalEnvs = [XCScheme.EnvironmentVariable]()
+        if let openAIOrg = openAIOrg {
+            optionalEnvs.append(.init(variable: "OPEN_AI_ORG", value: openAIOrg, enabled: true))
+        }
+        if let openAIHost = openAIHost {
+            optionalEnvs.append(.init(variable: "OPEN_AI_HOST", value: openAIHost, enabled: true))
+        }
+        if openAIHeaders.count > 0 {
+            // Encode headers into a single string where keys and their respective values are separated by a ":"
+            // where multiple entries will be separated by a ";"
+            let headersEnv = openAIHeaders
+                .map { (key, value) in
+                    let escapedValue = value.replacingOccurrences(of: ";", with: "\\;")
+                    return "\(key):\(escapedValue)"
+                }
+                .joined(separator: ";")
+            
+            optionalEnvs.append(.init(variable: "OPEN_AI_HEADERS", value: headersEnv, enabled: true))
         }
         
         self.project = try Project(
@@ -101,7 +124,7 @@ struct TestProjectGenerator {
                             .init(variable: "OPEN_AI_KEY", value: openAIKey, enabled: true),
                             .init(variable: "WS_RECEIVER", value: loggingAddress, enabled: true),
                             .init(variable: "WS_SERVER", value: loggingServerURL.absoluteString, enabled: true),
-                        ]
+                        ] + optionalEnvs
                     )
                 ),
             ],
