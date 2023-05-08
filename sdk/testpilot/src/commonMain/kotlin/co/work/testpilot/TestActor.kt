@@ -1,5 +1,6 @@
 package co.work.testpilot
 
+import co.work.testpilot.runtime.ElementType
 import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.runtime.Runner
 
@@ -9,5 +10,12 @@ interface TestActor<Snapshot: AppUISnapshot, App: TestableApp<Snapshot>> {
         app: App,
         instruction: Instruction.Actionable,
         uiSnapshot: Snapshot,
+    )
+
+    suspend fun findAndEnsureElementVisibleAndHittable(
+        uiSnapshot: Snapshot,
+        type: ElementType,
+        label: String,
+        app: App,
     )
 }

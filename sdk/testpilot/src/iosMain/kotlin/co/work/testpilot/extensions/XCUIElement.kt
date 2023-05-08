@@ -11,6 +11,11 @@ fun XCUIElement.waitForExistenceIfNecessary(timeoutSeconds: Double): Boolean {
         return waitForExistenceWithTimeout(timeoutSeconds)
     }
 }
+
+fun XCUIElement.waitForElementToBecomeVisible(timeoutSeconds: Double): Boolean {
+    return waitForExistenceWithTimeout(timeoutSeconds) && isHittable()
+}
+
 fun XCUIElement.firstMatchOrNull(type: XCUIElementType, label: String): XCUIElement? {
     return tryOrNull { descendantsMatchingType(type).matchingIdentifier(label).firstMatch }
 }

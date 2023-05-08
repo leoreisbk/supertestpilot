@@ -13,6 +13,7 @@ private enum class TestCommand {
     GoBack,
     Wait,
     Done,
+    Check,
 }
 
 object InstructionSerializer : JsonContentPolymorphicSerializer<Instruction>(Instruction::class) {
@@ -28,6 +29,7 @@ object InstructionSerializer : JsonContentPolymorphicSerializer<Instruction>(Ins
             TestCommand.GoBack -> Instruction.GoBack.serializer()
             TestCommand.Wait -> Instruction.Wait.serializer()
             TestCommand.Done -> Instruction.Done.serializer()
+            TestCommand.Check -> Instruction.Check.serializer()
 
             else -> throw TestAutomationException.InvalidCommand(commandString)
         }
@@ -63,12 +65,16 @@ sealed class Instruction {
     @Serializable
     data class Done(val reason: String) : Instruction()
 
+    @Serializable
+    data class Check(val type: ElementType, val label: String, val reason: String) : Instruction()
+
     override fun toString() = description
     val description get() = when (this) {
         is Assert -> "$reason - Asserting expected value ($expected) equals to discovered value (${answer ?: "N/A"})"
         is Tap -> "$reason - Tapping element with ID: '$id'"
         is Wait -> "$reason - Waiting for $seconds seconds"
         is Type -> "$reason - Typing '$text' into element with ID: '$id'"
+        is Check -> "$reason - Checking that element of type '$type' exists with label '$label'"
         is Done -> reason
         is GoBack -> reason
         is ScrollDown -> reason

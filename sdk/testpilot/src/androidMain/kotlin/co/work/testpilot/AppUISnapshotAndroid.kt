@@ -50,4 +50,7 @@ class AppUISnapshotAndroid(private val elements: MutableList<UiObject2>) : AppUI
         generateUiRepresentation(this.elements, result)
         return result.toString()
     }
+
+    override val allElements: List<AppUIElementSnapshot>
+        get() = TODO("Not yet implemented")
 }

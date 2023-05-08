@@ -1,7 +1,10 @@
 package co.work.testpilot
 
 import co.work.testpilot.extensions.findIn
+import co.work.testpilot.extensions.toXCUIElementType
+import co.work.testpilot.extensions.waitForElementToBecomeVisible
 import co.work.testpilot.extensions.waitForExistenceIfNecessary
+import co.work.testpilot.runtime.ElementType
 import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.runtime.Runner
 import co.work.testpilot.throwables.TestAutomationException
@@ -19,7 +22,7 @@ class TestActorIOS(val testCase: XCTestCase) : TestActor<AppUISnapshotIOS, Testa
             is Instruction.Type -> {
                 val element = uiSnapshot.getXcElementById(instruction.id)
                     ?.findIn(app.xcApp)
-                    ?: throw TestAutomationException.ElementNotFound(instruction.id)
+                    ?: throw TestAutomationException.ElementNotFound.WithId(instruction.id)
 
                 element.waitForExistenceIfNecessary(timeoutSeconds = 10.0)
                 element.tap()
@@ -28,7 +31,7 @@ class TestActorIOS(val testCase: XCTestCase) : TestActor<AppUISnapshotIOS, Testa
             is Instruction.Tap -> {
                 val element = uiSnapshot.getXcElementById(instruction.id)
                     ?.findIn(app.xcApp)
-                    ?: throw TestAutomationException.ElementNotFound(instruction.id)
+                    ?: throw TestAutomationException.ElementNotFound.WithId(instruction.id)
 
                 element.waitForExistenceIfNecessary(timeoutSeconds = 10.0)
                 element.tap()
@@ -40,5 +43,27 @@ class TestActorIOS(val testCase: XCTestCase) : TestActor<AppUISnapshotIOS, Testa
                 match.tap()
             }
         }
+    }
+
+    override suspend fun findAndEnsureElementVisibleAndHittable(
+        uiSnapshot: AppUISnapshotIOS,
+        type: ElementType,
+        label: String,
+        app: TestableAppIOS
+    ) {
+        val matchingElement = uiSnapshot.firstXcElementOrNull(
+            type = type.toXCUIElementType(),
+            label = label,
+        ) ?: throw TestAutomationException.ElementNotFound.WithLabel(label)
+
+        val isElementVisible = matchingElement.findIn(app.xcApp)
+            ?.waitForElementToBecomeVisible(timeoutSeconds = 10.0)
+            ?: false
+
+        if (!isElementVisible) {
+            throw TestAutomationException.ElementNotFound.WithLabel(label)
+        }
+
+        Logging.info("Element of type ($type) and label ($label) is visible and hittable")
     }
 }

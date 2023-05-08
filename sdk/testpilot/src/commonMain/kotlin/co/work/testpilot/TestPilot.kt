@@ -4,6 +4,7 @@ import co.work.testpilot.runtime.Config
 import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.runtime.Runner
 import co.work.testpilot.throwables.TestAutomationException
+import co.work.testpilot.utils.suspendTryOrNull
 import kotlinx.coroutines.delay
 import kotlin.math.roundToLong
 
@@ -55,6 +56,34 @@ object TestPilot {
                     instruction = instruction,
                     uiSnapshot = uiSnapshot,
                 )
+                is Instruction.Check -> {
+                    try {
+                        // Try to find an element that matches the exact parameters.
+                        actor.findAndEnsureElementVisibleAndHittable(
+                            uiSnapshot = uiSnapshot,
+                            type = instruction.type,
+                            label = instruction.label,
+                            app = app,
+                        )
+                    } catch (err: Throwable) {
+                        // We couldn't find an element that matches the exact parameters. Use embeddings to find the most appropriate
+                        // element.
+                        val bestMatchingLabel = suspendTryOrNull {
+                            runner.searchEmbeddings(
+                                items = uiSnapshot.allElements.map { it.label },
+                                query = instruction.label,
+                                n = 1,
+                            ).firstOrNull()
+                        } ?: throw TestAutomationException.ElementNotFound.WithLabel(instruction.label)
+
+                        actor.findAndEnsureElementVisibleAndHittable(
+                            uiSnapshot = uiSnapshot,
+                            type = instruction.type,
+                            label = bestMatchingLabel,
+                            app = app,
+                        )
+                    }
+                }
             }
         }
 
