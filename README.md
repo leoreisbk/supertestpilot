@@ -94,7 +94,13 @@ In case you'd like to use a local version of the TestPilotKit library for develo
   "team-id": "[TEAM-ID]",
   "runner-bundle-id": "[RUNNER_TEST_BUNDLE_ID]", // This bundle identifier must match the provisioning profile
   "provisioning-profile": "[PROVISIONING-PROFILE-NAME]",
-  "testpilot-kit-path": "/Users/me/libraries/TestPilotKit_Path" // For development ONLY
+  "testpilot-kit-path": "/Users/me/libraries/TestPilotKit_Path", // For development ONLY
+  "open-ai-key": "[OPEN_AI_KEY]",
+  "open-ai-org": "[OPEN_AI_ORG]",
+  "open-ai-host": "[OPEN_AI_HOST]", // If omitted, will default to OpenAI's official API.
+  "open-ai-headers": {
+      "User-Agent": "TestPilot"
+  },
 }
 ```
 
