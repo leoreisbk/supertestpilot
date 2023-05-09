@@ -70,8 +70,6 @@ extension Runner {
             .filter { !$0.isEmpty }
 
         let response = try await aiClient.embeddings.create(input: texts + [query])
-
-//        print("============= Embeddings: \(response.data)")
             
         return Embedding.search(
             on: response.data
