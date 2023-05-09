@@ -33,7 +33,7 @@ struct TestProjectGenerator {
         } else if let testpilotKitPath = testpilotKitPath {
             return .local(path: testpilotKitPath, group: nil)
         } else {
-            return .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
+            return .remote(url: "https://fjcaetano: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@github.com/workco/TestPilot.git", versionRequirement: .branch("main")) // TODO: rename repo & use HTTPS endpoint instead of SSH
         }
     }
 
