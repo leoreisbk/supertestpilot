@@ -42,7 +42,8 @@ extension Runner {
             n: 1,
             maxTokens: config.maxTokens
         )
-
+        print("=================Objective: \(objective)")
+        print("=================Completion Response: \(response.choices[0].message.content)")
         return response.choices[0].message.content
     }
 
@@ -56,6 +57,8 @@ extension Runner {
             temperature: config.temperature,
             n: 1
         )
+        
+        print("===========Spliting into steps: \(response.choices)")
 
         return try JSONDecoder().decode([String].self, from: Data(response.choices[0].text.utf8))
     }
@@ -68,6 +71,8 @@ extension Runner {
 
         let response = try await aiClient.embeddings.create(input: texts + [query])
 
+//        print("============= Embeddings: \(response.data)")
+            
         return Embedding.search(
             on: response.data
                 .dropLast(1)

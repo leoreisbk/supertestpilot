@@ -10,7 +10,18 @@ import XCTest
 
 public extension XCTestCase {
     @MainActor
-    func automate(config: Config = .init(), objective: String, bundleId: String? = nil) async throws {
+    func automate(
+        config: Config = .init(),
+        objective: String,
+        bundleId: String? = nil,
+        shouldRecordSteps: Bool = false
+    ) async throws {
+        if shouldRecordSteps {
+            Logging.info("** Recording Steps **")
+        }
+        
+        let persistenceManager = PersistenceManager(objective: objective, shouldRecordSteps: shouldRecordSteps)
+        
         let runner = Runner(config: config)
         defer {
             Task {
@@ -29,20 +40,31 @@ public extension XCTestCase {
         var lastCommand: String?
         let jsonDecoder = JSONDecoder()
 
-        for _ in 0..<config.maxSteps {
-            let jsonCommand = try await runner.getCompletionResponse(
-                for: app.debugDescription.simplifyUI(),
-                last: lastCommand,
-                objective: objective
-            )
-            guard let jsonCommand = jsonCommand else {
-                XCTFail("OpenAI returned empty response")
-                return
+        for stepIndex in 0..<config.maxSteps {
+            
+            let commandToExecute: String
+            if !shouldRecordSteps, let command = persistenceManager.getStep(index: stepIndex) {
+                commandToExecute = command
+            } else {
+                let jsonCommand = try await runner.getCompletionResponse(
+                    for: app.debugDescription.simplifyUI(),
+                    last: lastCommand,
+                    objective: objective
+                )
+                guard let jsonCommand = jsonCommand else {
+                    XCTFail("OpenAI returned empty response")
+                    return
+                }
+                
+                persistenceManager.updateStep(index: stepIndex, value: jsonCommand)
+                
+                commandToExecute = jsonCommand
             }
-
+            
+            lastCommand = commandToExecute
+            
             // Parse the response
-            lastCommand = jsonCommand
-            let instruction = try jsonDecoder.decode(Instruction.self, from: Data(jsonCommand.utf8))
+            let instruction = try jsonDecoder.decode(Instruction.self, from: Data(commandToExecute.utf8))
             Logging.info(" ↳ \(instruction.description)")
 
             // Execute the instruction

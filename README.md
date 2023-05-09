@@ -48,6 +48,10 @@ $ testpilot [<tests-path> | .] -o <open-ai-key> --bundle-id 'your.bundle.id'
 
 The key can also be defined as an environment variable named `OPEN_AI_KEY`
 
+## Recording test steps
+
+Test steps are automatically recorded and stored in user defaults, the first time they are executed. If you'd like to override the recording of a test, append "_record" to the test file name. Ex. `testsomething_record.testpilot` 
+
 ### Test device
 
 You can preemptively specify which device should be used for testing with the `--device` option. When using that option, you must also provide which platform that device uses:
