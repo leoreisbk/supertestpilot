@@ -20,7 +20,7 @@ public extension XCTestCase {
             Logging.info("** Recording Steps **")
         }
         
-        let persistenceManager = PersistenceManager(objective: objective, shouldRecordSteps: shouldRecordSteps)
+        let persistenceManager = PersistenceManager(objective: objective)
         
         let runner = Runner(config: config)
         defer {
@@ -56,7 +56,7 @@ public extension XCTestCase {
                     return
                 }
                 
-                persistenceManager.updateStep(index: stepIndex, value: jsonCommand)
+                persistenceManager.recordStep(jsonCommand)
                 
                 commandToExecute = jsonCommand
             }
@@ -97,6 +97,7 @@ public extension XCTestCase {
                 try await Task.sleep(nanoseconds: UInt64(seconds * 1e9))
 
             case .done:
+                persistenceManager.persistSteps()
                 return
             }
         }

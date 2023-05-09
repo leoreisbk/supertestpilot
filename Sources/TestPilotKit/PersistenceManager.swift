@@ -9,18 +9,16 @@ import Foundation
 
 class PersistenceManager {
     private let objective: String
-    private let shouldRecordSteps: Bool
+    
+    private var currentSteps: [String?] = []
     
     private var knownStepsForObjective: [String?] {
-        guard let allSteps = UserDefaults.standard.object(forKey: Constants.userDefaultsKey) as? [String: [String?]], let stepsForObjective = allSteps[objective] else { return [] }
+        guard let allTests = UserDefaults.standard.object(forKey: Constants.userDefaultsKey) as? [String: [String?]], let stepsForObjective = allTests[objective] else { return [] }
         return stepsForObjective
     }
     
-    init(objective: String,
-         shouldRecordSteps: Bool
-    ) {
+    init(objective: String) {
         self.objective = objective
-        self.shouldRecordSteps = shouldRecordSteps
         
         addObjectiveIfRequired()
     }
@@ -32,11 +30,6 @@ class PersistenceManager {
         {
             userDefaults.set([objective: [String?]()], forKey: Constants.userDefaultsKey)
         }
-
-        // Clear the previously stored steps if this run needs to be recorded.
-        guard shouldRecordSteps else { return }
-        
-        updateStepsForObjective([])
     }
     
     func getStep(index: Int) -> String? {
@@ -48,19 +41,15 @@ class PersistenceManager {
         return steps[index]
     }
     
-    func updateStep(index: Int, value: String?) {
-        var stepsForObjective = knownStepsForObjective
-        
-        stepsForObjective.append(value)
-        
-        updateStepsForObjective(stepsForObjective)
+    func recordStep(_ value: String?) {
+        currentSteps.append(value)
     }
     
-    private func updateStepsForObjective(_ steps: [String?]) {
-        guard var allSteps = UserDefaults.standard.object(forKey: Constants.userDefaultsKey) as? [String: [String?]] else { return }
+    func persistSteps() {
+        guard var allTests = UserDefaults.standard.object(forKey: Constants.userDefaultsKey) as? [String: [String?]], !currentSteps.isEmpty else { return }
         
-        allSteps[objective] = steps
-        UserDefaults.standard.set(allSteps, forKey: Constants.userDefaultsKey)
+        allTests[objective] = currentSteps
+        UserDefaults.standard.set(allTests, forKey: Constants.userDefaultsKey)
     }
 }
 
