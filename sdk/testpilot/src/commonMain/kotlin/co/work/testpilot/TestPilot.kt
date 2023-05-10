@@ -6,6 +6,9 @@ import co.work.testpilot.runtime.Runner
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.suspendTryOrNull
 import kotlinx.coroutines.delay
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.math.roundToLong
 
 object TestPilot {
@@ -13,12 +16,48 @@ object TestPilot {
         Logging.start()
     }
 
+    private suspend fun getPersistableInstruction(
+        persistenceManager: PersistenceManager,
+        shouldRecordSteps: Boolean,
+        stepIndex: Int,
+        objective: String,
+        uiSnapshot: AppUISnapshot,
+        runner: Runner,
+    ): Instruction {
+        val serializer = Json { ignoreUnknownKeys = true }
+
+        // Try retrieving a recorded step first
+        val recordedInstruction: String? = if (!shouldRecordSteps) {
+            persistenceManager.getStep(stepIndex)
+        } else null
+
+        return if (recordedInstruction != null) {
+            // If there is a recorded step at this position, return it.
+            serializer.decodeFromString(recordedInstruction)
+        } else {
+            // If we don't have a recorded step, use inference
+            val result = try {
+                runner.getInstruction(objective, uiSnapshot)
+            } catch (err: Throwable) {
+                throw TestAutomationException.CompletionRequestFailed(err)
+            }
+
+            persistenceManager.recordStep(result)
+            serializer.decodeFromString(result)
+        }
+    }
+
     suspend fun <Snapshot: AppUISnapshot, App: TestableApp<Snapshot>> automate(
         app: App,
         actor: TestActor<Snapshot, App>,
         config: Config,
         objective: String,
+        persistenceManager: PersistenceManager,
+        shouldRecordSteps: Boolean,
     ) {
+        if (shouldRecordSteps) {
+            Logging.info("** Recording Steps **")
+        }
         val runner = Runner(config)
 
         app.launch()
@@ -28,11 +67,14 @@ object TestPilot {
 
             val uiSnapshot = app.snapshot()
 
-            val instruction = try {
-                runner.getInstruction(objective, uiSnapshot)
-            } catch (err: Throwable) {
-                throw TestAutomationException.CompletionRequestFailed(err)
-            }
+            val instruction = getPersistableInstruction(
+                persistenceManager = persistenceManager,
+                shouldRecordSteps = shouldRecordSteps,
+                stepIndex = stepIndex,
+                objective = objective,
+                uiSnapshot = uiSnapshot,
+                runner = runner,
+            )
             Logging.info(" ↳ ${instruction.description}")
 
             // Execute the instruction
@@ -49,7 +91,10 @@ object TestPilot {
                 is Instruction.Wait -> {
                     delay((instruction.seconds * 1000).roundToLong())
                 }
-                is Instruction.Done -> return
+                is Instruction.Done -> {
+                    persistenceManager.persistSteps()
+                    return
+                }
                 is Instruction.Actionable -> actor.performInstruction(
                     runner = runner,
                     app = app,

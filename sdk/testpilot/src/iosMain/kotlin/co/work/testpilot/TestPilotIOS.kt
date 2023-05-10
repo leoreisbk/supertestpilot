@@ -18,12 +18,15 @@ object TestPilotIOS {
         config: Config, 
         objective: String, 
         bundleId: String? = null,
+        shouldRecordSteps: Boolean,
     ) {
         TestPilot.automate(
             app = TestableAppIOS(bundleId),
             actor = TestActorIOS(test),
             config = config,
             objective = objective,
+            persistenceManager = PersistenceManagerIOS(objective),
+            shouldRecordSteps = shouldRecordSteps,
         )
     }
 }

@@ -28,10 +28,10 @@ class Runner(private val config: Config) {
 
     private val simplifyPrompt = SimplifyPrompt(aiClient, config)
     private val instructPrompt = InstructPrompt(aiClient, config)
-    private var lastInstruction: Instruction? = null
+    private var lastInstruction: String? = null
 
     @Throws(TestAutomationException::class, CancellationException::class)
-    suspend fun getInstruction(objective: String, uiSnapshot: AppUISnapshot): Instruction {
+    suspend fun getInstruction(objective: String, uiSnapshot: AppUISnapshot): String {
         val simplifiedUI = simplifyPrompt(SimplifyPromptInput(objective, uiSnapshot.toPromptString()))
         val instruction = instructPrompt(InstructPromptInput(objective, simplifiedUI, lastInstruction))
         lastInstruction = instruction

@@ -17,17 +17,17 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-data class InstructPromptInput(val objective: String, val simplifiedUI: String, val lastInstruction: Instruction? = null)
+data class InstructPromptInput(val objective: String, val simplifiedUI: String, val lastInstruction: String? = null)
 
-class InstructPrompt(client: OpenAI, config: Config): OpenAIPrompt<InstructPromptInput, Instruction>(client, config) {
-    override suspend fun run(input: InstructPromptInput): Instruction {
+class InstructPrompt(client: OpenAI, config: Config): OpenAIPrompt<InstructPromptInput, String>(client, config) {
+    override suspend fun run(input: InstructPromptInput): String {
         val request = ChatCompletionRequest(
             model = ModelId(OpenAIModel.GPT4_0314.idString),
             messages = listOf(
                 ChatMessage(ChatRole.System, system(input.objective)),
                 ChatMessage(ChatRole.User, uiState(
                     input.simplifiedUI,
-                    input.lastInstruction?.let(serializer::encodeToString)
+                    input.lastInstruction
                 )),
             ),
             temperature = config.temperature,
@@ -36,7 +36,7 @@ class InstructPrompt(client: OpenAI, config: Config): OpenAIPrompt<InstructPromp
         )
         val response = client.testPilotChatCompletion(request)
         val jsonCommand = response.firstCompletionContent ?: throw TestAutomationException.EmptyResponse()
-        return serializer.decodeFromString(jsonCommand)
+        return jsonCommand
     }
 
     private companion object {

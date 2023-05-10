@@ -7,12 +7,14 @@ import kotlin.coroutines.cancellation.CancellationException
 
 object TestPilotAndroid {
     @Throws(TestAutomationException::class, ConfigurationException::class, CancellationException::class, Exception::class)
-    suspend fun automate(config: Config, objective: String) {
+    suspend fun automate(config: Config, objective: String, shouldRecordSteps: Boolean = false) {
         TestPilot.automate(
             app = TestableAppAndroid(),
             actor = TestActorAndroid(),
             config = config,
             objective = objective,
+            persistenceManager = PersistenceManagerAndroid(objective),
+            shouldRecordSteps = shouldRecordSteps,
         )
     }
 }
