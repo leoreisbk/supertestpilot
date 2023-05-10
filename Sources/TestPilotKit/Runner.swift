@@ -19,7 +19,7 @@ class Runner {
         self.config = config
         self.aiClient = OpenAIKit.Client(
             httpClient: httpClient,
-            configuration: .init(apiKey: config.apiKey)
+            configuration: config.openAIConfig
         )
     }
 }

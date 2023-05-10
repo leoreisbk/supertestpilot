@@ -11,7 +11,7 @@ import XCTest
 public extension XCTestCase {
     @MainActor
     func automate(
-        config: Config = .init(),
+        config: Config,
         objective: String,
         bundleId: String? = nil,
         shouldRecordSteps: Bool = false

@@ -6,19 +6,16 @@
 //
 
 import Foundation
+import OpenAIKit
 
 public struct Config {
-    let apiKey: String
     let maxTokens: Int
     let temperature: Double
     let maxSteps: Int
+    let openAIConfig: Configuration
 
-    public init(apiKey: String? = nil, maxTokens: Int = 200, temperature: Double = 0, maxSteps: Int = 10) {
-        guard let apiKey = apiKey ?? Environment.apiKey else {
-            fatalError("You must provide an API Key with a Config, or as an OPEN_AI_KEY env var")
-        }
-
-        self.apiKey = apiKey
+    public init(openAIConfig: Configuration, maxTokens: Int = 200, temperature: Double = 0, maxSteps: Int = 10) {
+        self.openAIConfig = openAIConfig
         self.maxTokens = maxTokens
         self.temperature = temperature
         self.maxSteps = maxSteps
