@@ -86,8 +86,7 @@ struct TestFileBuilder {
                         objective: \"""
                         \(objective.replacing("\n", with: ". "))
                         \""",
-                        bundleId: \"\(bundleId)\",
-                        shouldRecordSteps: \(title.lowercased().contains("_record"))
+                        bundleId: \"\(bundleId)\"
                     )
                     Logging.info("✅ Test Successful!")
                 } catch let err {

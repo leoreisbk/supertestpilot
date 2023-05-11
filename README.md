@@ -50,7 +50,7 @@ The key can also be defined as an environment variable named `OPEN_AI_KEY`
 
 ## Recording test steps
 
-Test steps are automatically recorded and stored in user defaults, the first time they are executed. If you'd like to override the recording of a test, append "_record" to the test file name. Ex. `testsomething_record.testpilot` 
+Test steps are automatically recorded and stored in user defaults, the first time they are executed. If a pre-recorded session fails, they will be cleared from local storage and a fresh session will run.
 
 ### Test device
 
