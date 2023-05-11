@@ -1,6 +1,7 @@
 package co.work.testpilot
 
 import androidx.test.uiautomator.UiObject2
+import co.work.testpilot.runtime.ElementType
 
 fun List<UiObject2>.traverseFind(predicate: (UiObject2) -> Boolean): List<UiObject2> {
     return flatMap {
@@ -8,24 +9,16 @@ fun List<UiObject2>.traverseFind(predicate: (UiObject2) -> Boolean): List<UiObje
     }
 }
 
-class AppUISnapshotAndroid(private val elements: MutableList<UiObject2>) : AppUISnapshot {
-    private fun generateUiRepresentation(
-        listOfElements: List<UiObject2>,
-        result: StringBuilder,
-        numberOfSpace: Int = 0,
-    ) {
-        for (element in listOfElements) {
-            addAndroidElement(element)
-            if (element.children == null || element.children.isEmpty()) {
-                addMinifiedElement(result, element, numberOfSpace)
-            } else {
-                addMinifiedElement(result, element, numberOfSpace)
-                generateUiRepresentation(element.children, result, numberOfSpace + 1)
-            }
-        }
+fun List<UiObject2>.traverse(): List<UiObject2> {
+    return flatMap {
+        listOf(it) + it.children.traverse()
     }
+}
 
-    private fun addMinifiedElement(result: StringBuilder, element: UiObject2, spaces: Int) {
+class AppUISnapshotAndroid(private val elements: List<UiObject2>) : AppUISnapshot {
+    private val traverseElements = elements.traverse()
+
+    private fun getMinifiedElementDescription(element: UiObject2, spaces: Int = 0): String {
         val indentationSpaces = " ".repeat(spaces)
         val resumedClass = element.className.substring(element.className.lastIndexOf('.') + 1)
         val writable = if (element.className.contains("EditText")) "writable" else ""
@@ -35,22 +28,37 @@ class AppUISnapshotAndroid(private val elements: MutableList<UiObject2>) : AppUI
         val scrollable = if (element.isScrollable) " scrollable" else ""
         val label = if (element.contentDescription != null) " label=\"${element.contentDescription}\"" else if (element.text != null) " label=\"${element.text}\"" else ""
 
-        result.append("$indentationSpaces$resumedClass id=${getAndroidElementId(element)} $writable$clickable$checkable$checked$scrollable$label\n")
+        return "$indentationSpaces$resumedClass id=${getAndroidElementId(element)} $writable$clickable$checkable$checked$scrollable$label"
     }
 
-    // TO-DO: ids should be pre-generated
-    fun getAndroidElementId(element: UiObject2): Int = elements.indexOf(element)
-    fun getAndroidElementById(id: Int): UiObject2? = elements.getOrNull(id)
-    private fun addAndroidElement(element: UiObject2) {
-        elements.add(element)
-    }
+    fun getAndroidElementId(element: UiObject2): Int = traverseElements.indexOf(element)
+    fun getAndroidElementById(id: Int): UiObject2? = traverseElements.getOrNull(id)
 
     override fun toPromptString(): String {
         val result = StringBuilder()
-        generateUiRepresentation(this.elements, result)
+        this.elements.traverse().forEach { element ->
+            result.appendLine(getMinifiedElementDescription(element))
+        }
         return result.toString()
     }
 
-    override val allElements: List<AppUIElementSnapshot>
-        get() = TODO("Not yet implemented")
+    override val allElements = this.elements.traverse().map { AppUIElementSnapshotAndroid(it) }
+}
+
+class AppUIElementSnapshotAndroid(element: UiObject2) : AppUIElementSnapshot {
+    override val type: ElementType = when (element.className.split(".").last()) {
+        "EditText" -> ElementType.TextField
+        "Text", "Label" -> ElementType.TextView
+        "Button" -> ElementType.Button
+        "CheckBox" -> ElementType.CheckBox
+        "View" -> ElementType.View
+        "Spinner" -> ElementType.Picker
+        "Image" -> ElementType.Image
+        "ScrollView" -> ElementType.ScrollView
+        "RadioButton" -> ElementType.RadioButton
+        "RadioGroup" -> ElementType.RadioGroup
+        else -> ElementType.Unknown
+    }
+
+    override val label: String = element.contentDescription
 }

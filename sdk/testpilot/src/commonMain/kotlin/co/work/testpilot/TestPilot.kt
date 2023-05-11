@@ -42,7 +42,9 @@ object TestPilot {
                 throw TestAutomationException.CompletionRequestFailed(err)
             }
 
-            persistenceManager.recordStep(result)
+            if (shouldRecordSteps) {
+                persistenceManager.recordStep(result)
+            }
             serializer.decodeFromString(result)
         }
     }
