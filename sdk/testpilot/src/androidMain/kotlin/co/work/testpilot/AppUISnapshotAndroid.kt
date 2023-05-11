@@ -60,5 +60,5 @@ class AppUIElementSnapshotAndroid(element: UiObject2) : AppUIElementSnapshot {
         else -> ElementType.Unknown
     }
 
-    override val label: String = element.contentDescription
+    override val label: String = element.contentDescription ?: element.text ?: ""
 }
