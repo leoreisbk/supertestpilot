@@ -14,15 +14,13 @@ public extension XCTestCase {
     func automate(
         config: Config,
         objective: String,
-        bundleId: String?,
-        shouldRecordSteps: Bool = false
+        bundleId: String?
     ) async throws {
         try await TestPilotIOS.shared.automate(
             test: self,
             config: config,
             objective: objective,
-            bundleId: bundleId,
-            shouldRecordSteps: shouldRecordSteps
+            bundleId: bundleId
         )
     }
 }

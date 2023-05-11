@@ -12,7 +12,6 @@ object TestPilotAndroid {
         context: Context,
         config: Config,
         objective: String,
-        shouldRecordSteps: Boolean = false,
     ) {
         TestPilot.automate(
             app = TestableAppAndroid(),
@@ -20,7 +19,6 @@ object TestPilotAndroid {
             config = config,
             objective = objective,
             persistenceManager = PersistenceManagerAndroid(context, objective),
-            shouldRecordSteps = shouldRecordSteps,
         )
     }
 }

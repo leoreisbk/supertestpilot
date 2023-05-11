@@ -4,25 +4,11 @@ import platform.Foundation.NSUserDefaults
 
 class PersistenceManagerIOS(private val objective: String) : PersistenceManager {
     private var currentSteps: MutableList<String?> = mutableListOf()
+    private val objectiveMap get() = NSUserDefaults.standardUserDefaults.objectForKey(
+        Constants.userDefaultsKey
+    ) as? Map<String, List<String?>> ?: emptyMap()
 
-    private val knownStepsForObjective: List<String?>
-        get() {
-            val allTests = NSUserDefaults.standardUserDefaults.objectForKey(Constants.userDefaultsKey) as? Map<String, List<String?>>
-            return allTests?.get(objective) ?: emptyList()
-        }
-
-    init {
-        addObjectiveIfRequired()
-    }
-
-    private fun addObjectiveIfRequired() {
-        val userDefaults = NSUserDefaults.standardUserDefaults
-        val existingDict = userDefaults.objectForKey(Constants.userDefaultsKey) as? Map<String, List<String?>>
-
-        if (existingDict == null) {
-            userDefaults.setObject(mapOf(objective to listOf<String?>()), forKey = Constants.userDefaultsKey)
-        }
-    }
+    private val knownStepsForObjective: List<String?> get() = objectiveMap[objective] ?: emptyList()
 
     override fun getStep(index: Int): String? {
         val steps = knownStepsForObjective
@@ -39,14 +25,23 @@ class PersistenceManagerIOS(private val objective: String) : PersistenceManager 
     }
 
     override fun persistSteps() {
-        val allTests = NSUserDefaults.standardUserDefaults.objectForKey(Constants.userDefaultsKey) as? Map<String, List<String?>>
-        if (allTests != null && currentSteps.isNotEmpty()) {
+        if (currentSteps.isNotEmpty()) {
             NSUserDefaults.standardUserDefaults.setObject(
-                allTests + mapOf(objective to currentSteps),
+                objectiveMap + mapOf(objective to currentSteps),
                 forKey = Constants.userDefaultsKey
             )
         }
     }
+
+    override fun clear() {
+        currentSteps.clear()
+        NSUserDefaults.standardUserDefaults.setObject(
+            objectiveMap.filterKeys { it != this.objective },
+            forKey = Constants.userDefaultsKey
+        )
+    }
+
+    override fun isEmpty() = knownStepsForObjective.isEmpty()
 }
 
 private object Constants {

@@ -55,6 +55,42 @@ object TestPilot {
         config: Config,
         objective: String,
         persistenceManager: PersistenceManager,
+    ) {
+        if (!persistenceManager.isEmpty()) {
+            try {
+                // If we have pre-recorded steps, try running them first
+                runSession(
+                    app = app,
+                    actor = actor,
+                    config = config,
+                    objective = objective,
+                    persistenceManager = persistenceManager,
+                    shouldRecordSteps = false,
+                )
+                // If pre-recorded session succeeds, no need to run another session.
+                return
+            } catch (err: Throwable) {
+                // If pre-recorded steps fail, clear it before trying to run a fresh session
+                persistenceManager.clear()
+            }
+        }
+
+        runSession(
+            app = app,
+            actor = actor,
+            config = config,
+            objective = objective,
+            persistenceManager = persistenceManager,
+            shouldRecordSteps = true,
+        )
+    }
+
+    suspend fun <Snapshot: AppUISnapshot, App: TestableApp<Snapshot>> runSession(
+        app: App,
+        actor: TestActor<Snapshot, App>,
+        config: Config,
+        objective: String,
+        persistenceManager: PersistenceManager,
         shouldRecordSteps: Boolean,
     ) {
         if (shouldRecordSteps) {
@@ -94,7 +130,9 @@ object TestPilot {
                     delay((instruction.seconds * 1000).roundToLong())
                 }
                 is Instruction.Done -> {
-                    persistenceManager.persistSteps()
+                    if (shouldRecordSteps) {
+                        persistenceManager.persistSteps()
+                    }
                     return
                 }
                 is Instruction.Actionable -> actor.performInstruction(

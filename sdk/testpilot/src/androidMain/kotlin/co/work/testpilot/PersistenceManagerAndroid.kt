@@ -41,6 +41,15 @@ class PersistenceManagerAndroid(
                 .commit()
         }
     }
+
+    override fun clear() {
+        currentSteps.clear()
+        sharedPreferences.edit()
+            .remove(objective)
+            .commit()
+    }
+
+    override fun isEmpty() = knownStepsForObjective.isEmpty()
 }
 
 private object Constants {
