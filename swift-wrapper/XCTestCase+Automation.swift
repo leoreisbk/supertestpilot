@@ -11,11 +11,7 @@ import XCTest
 
 @MainActor
 public extension XCTestCase {
-    func automate(
-        config: Config,
-        objective: String,
-        bundleId: String?
-    ) async throws {
+    func automate(config: Config, objective: String, bundleId: String? = nil) async throws {
         try await TestPilotIOS.shared.automate(
             test: self,
             config: config,

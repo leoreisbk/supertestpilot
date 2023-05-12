@@ -12,6 +12,7 @@ DerivedData/
 *.xcuserdatad
 *.xcuserdatad/
 .env*
+*.def
 
 ## compatibility with Xcode 8 and earlier (ignoring not required starting Xcode 9)
 *.xcscmblueprint
@@ -48,3 +49,4 @@ local.properties
 .idea
 sdk/testpilot/build
 sdk/build
+build/

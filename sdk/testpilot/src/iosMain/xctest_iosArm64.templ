@@ -1,0 +1,6 @@
+language = Objective-C
+package = platform.XCTest
+depends = UIKit
+modules = XCTest
+linkerOpts= -weak_framework XCTest -L${XCODE_PATH}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/UIKit.framework -F${XCODE_PATH}/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/
+compilerOpts= -weak_framework XCTest -F${XCODE_PATH}/Platforms/MacOSX.platform/Developer/Library/Frameworks/
