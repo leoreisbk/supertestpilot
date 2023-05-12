@@ -1,5 +1,6 @@
 package co.work.testpilot
 
+import androidx.test.uiautomator.Until
 import co.work.testpilot.runtime.ElementType
 import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.runtime.Runner
@@ -44,6 +45,18 @@ class TestActorAndroid : TestActor<AppUISnapshotAndroid, TestableAppAndroid> {
         label: String,
         app: TestableAppAndroid
     ) {
-        TODO("Not yet implemented")
+        val matchingElement = uiSnapshot.allElements.firstOrNull {
+            it.type == type && it.label == label
+        } ?: throw TestAutomationException.ElementNotFound.WithLabel(label)
+
+        val isClickable = matchingElement.element.wait(
+            Until.clickable(true),
+            10000L
+        )
+        if (!isClickable) {
+            throw TestAutomationException.ElementNotFound.WithLabel(label)
+        }
+
+        Logging.info("Element of type ($type) and label ($label) is visible and hittable")
     }
 }

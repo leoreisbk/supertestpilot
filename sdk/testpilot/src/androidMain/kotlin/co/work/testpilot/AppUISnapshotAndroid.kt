@@ -45,7 +45,7 @@ class AppUISnapshotAndroid(private val elements: List<UiObject2>) : AppUISnapsho
     override val allElements = this.elements.traverse().map { AppUIElementSnapshotAndroid(it) }
 }
 
-class AppUIElementSnapshotAndroid(element: UiObject2) : AppUIElementSnapshot {
+class AppUIElementSnapshotAndroid(val element: UiObject2) : AppUIElementSnapshot {
     override val type: ElementType = when (element.className.split(".").last()) {
         "EditText" -> ElementType.TextField
         "Text", "Label" -> ElementType.TextView
