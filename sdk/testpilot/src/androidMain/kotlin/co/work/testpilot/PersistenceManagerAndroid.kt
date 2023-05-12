@@ -2,6 +2,7 @@ package co.work.testpilot
 
 import android.content.Context
 import android.content.SharedPreferences
+import co.work.testpilot.runtime.Instruction
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -19,14 +20,11 @@ class PersistenceManagerAndroid(
         return objectiveStepsJson?.let(serializer::decodeFromString) ?: emptyList()
     }
 
-    override fun getStep(index: Int): String? {
+    override fun getStep(index: Int): Instruction? {
         val steps = knownStepsForObjective
+        val stepString = steps.getOrNull(index) ?: return null
 
-        return if (steps.isNotEmpty() && steps.size > index) {
-            steps[index]
-        } else {
-            null
-        }
+        return serializer.decodeFromString(stepString)
     }
 
     override fun recordStep(value: String?) {

@@ -27,13 +27,13 @@ object TestPilot {
         val serializer = Json { ignoreUnknownKeys = true }
 
         // Try retrieving a recorded step first
-        val recordedInstruction: String? = if (!shouldRecordSteps) {
+        val recordedInstruction = if (!shouldRecordSteps) {
             persistenceManager.getStep(stepIndex)
         } else null
 
         return if (recordedInstruction != null) {
             // If there is a recorded step at this position, return it.
-            serializer.decodeFromString(recordedInstruction)
+            recordedInstruction
         } else {
             // If we don't have a recorded step, use inference
             val result = try {
