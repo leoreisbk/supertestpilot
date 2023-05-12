@@ -55,6 +55,7 @@ object TestPilot {
         config: Config,
         objective: String,
         persistenceManager: PersistenceManager,
+        fallbackToAPIOnErrors: Boolean = true,
     ) {
         if (!persistenceManager.isEmpty()) {
             try {
@@ -70,6 +71,9 @@ object TestPilot {
                 // If pre-recorded session succeeds, no need to run another session.
                 return
             } catch (err: Throwable) {
+                if (!fallbackToAPIOnErrors) {
+                    throw err
+                }
                 // If pre-recorded steps fail, clear it before trying to run a fresh session
                 persistenceManager.clear()
             }

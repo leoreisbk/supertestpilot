@@ -18,6 +18,7 @@ object TestPilotIOS {
         config: Config, 
         objective: String, 
         bundleId: String? = null,
+        fallbackToAPIOnErrors: Boolean = true,
     ) {
         TestPilot.automate(
             app = TestableAppIOS(bundleId),
@@ -25,6 +26,7 @@ object TestPilotIOS {
             config = config,
             objective = objective,
             persistenceManager = PersistenceManagerIOS(objective),
+            fallbackToAPIOnErrors = fallbackToAPIOnErrors,
         )
     }
 }

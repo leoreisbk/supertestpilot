@@ -12,6 +12,7 @@ object TestPilotAndroid {
         context: Context,
         config: Config,
         objective: String,
+        fallbackToAPIOnErrors: Boolean = true,
     ) {
         TestPilot.automate(
             app = TestableAppAndroid(),
@@ -19,6 +20,7 @@ object TestPilotAndroid {
             config = config,
             objective = objective,
             persistenceManager = PersistenceManagerAndroid(context, objective),
+            fallbackToAPIOnErrors = fallbackToAPIOnErrors,
         )
     }
 }
