@@ -20,7 +20,8 @@ public extension XCTestCase {
             test: self,
             config: config,
             objective: objective,
-            bundleId: bundleId
+            bundleId: bundleId,
+            fallbackToAPIOnErrors: true
         )
     }
 }

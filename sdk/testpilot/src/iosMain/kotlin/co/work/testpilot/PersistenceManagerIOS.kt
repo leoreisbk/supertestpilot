@@ -1,5 +1,8 @@
 package co.work.testpilot
 
+import co.work.testpilot.runtime.Instruction
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import platform.Foundation.NSUserDefaults
 
 class PersistenceManagerIOS(private val objective: String) : PersistenceManager {
@@ -9,15 +12,13 @@ class PersistenceManagerIOS(private val objective: String) : PersistenceManager 
     ) as? Map<String, List<String?>> ?: emptyMap()
 
     private val knownStepsForObjective: List<String?> get() = objectiveMap[objective] ?: emptyList()
+    private val serializer = Json { ignoreUnknownKeys = true }
 
-    override fun getStep(index: Int): String? {
+    override fun getStep(index: Int): Instruction? {
         val steps = knownStepsForObjective
+        val stepString = steps.getOrNull(index) ?: return null
 
-        return if (steps.isNotEmpty() && steps.size > index) {
-            steps[index]
-        } else {
-            null
-        }
+        return serializer.decodeFromString(stepString)
     }
 
     override fun recordStep(value: String?) {
