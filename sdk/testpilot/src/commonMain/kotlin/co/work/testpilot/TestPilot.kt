@@ -12,10 +12,6 @@ import kotlinx.serialization.json.Json
 import kotlin.math.roundToLong
 
 object TestPilot {
-    init {
-        Logging.start()
-    }
-
     private suspend fun getPersistableInstruction(
         persistenceManager: PersistenceManager,
         shouldRecordSteps: Boolean,

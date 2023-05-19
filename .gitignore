@@ -1,5 +1,5 @@
 # Swift PM
-/.build
+.build/
 /Packages
 /*.xcodeproj
 xcuserdata/

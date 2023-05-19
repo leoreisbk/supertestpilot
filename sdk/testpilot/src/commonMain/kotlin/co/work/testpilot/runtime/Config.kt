@@ -1,7 +1,5 @@
 package co.work.testpilot.runtime
 
-import co.work.testpilot.Environment
-import co.work.testpilot.parsedHeaders
 import co.work.testpilot.throwables.ConfigurationException
 import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
@@ -72,10 +70,10 @@ class ConfigBuilder {
     }
 
     fun build(): Config = Config(
-        apiKey = apiKey ?: Environment.apiKey ?: throw ConfigurationException.ApiKeyRequired(),
-        apiHost = apiHost ?: Environment.openAIHost,
-        apiOrg = apiOrg ?: Environment.openAIOrg,
-        apiHeaders = apiHeaders + Environment.parsedHeaders,
+        apiKey = apiKey ?: throw ConfigurationException.ApiKeyRequired(),
+        apiHost = apiHost,
+        apiOrg = apiOrg,
+        apiHeaders = apiHeaders,
         maxTokens = maxTokens,
         temperature = temperature,
         maxSteps = maxSteps
