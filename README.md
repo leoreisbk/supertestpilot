@@ -3,115 +3,80 @@ TestPilot
 
 Automated end-to-end tests for mobile apps using GPT-4.
 
-https://user-images.githubusercontent.com/1066295/227050296-9e616a41-ef9e-411c-8c14-03b396d2d0df.mp4
-
 # Installation
-You can install `testpilot` using Homebrew:
 
-```sh
-$ brew tap workco/testpilot
-$ brew install testpilot
-```
+TestPilot is a Kotlin Multiplatform project available for iOS and Android. The bulk of the framework is identical for both platforms, however there are some helper files that provide some syntax sugar and remove some of the KMM quirks for a more native feel.
+
+Refer to the [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) documentation for instructions for building and importing TestPilot.
 
 # Usage
-Write your test cases in plain natural language. The CLI scans the given directory for files using the `.testpilot` extension, then run each as an individual test case.
-
-There are no rules for writing tests. Below are examples using a step-by-step approach where the test describes which elements must be interacted with, and another example that has just an objective, which GPT-4 will try to figure out how to achieve
+Write your test cases in plain natural language. There are no rules for writing tests. Below are examples using a step-by-step approach where the test describes which elements must be interacted with, and another example that has just an objective, which GPT-4 will try to figure out how to achieve
 
 ### Examples for [Apple's Fruta app](https://developer.apple.com/documentation/swiftui/fruta_building_a_feature-rich_app_with_swiftui):
 ```
-# searchAndBuy.testpilot
 Search for 'Tropical Blue' and navigate to that item. Add it to favorites.
 Buy with Apple Pay from the Favorites tab
 ```
 ```
-# manageFavorites.testpilot
 Scroll up, go to Sailor Man. then add it to Favorites. Go back to the Menu and then into "That's a Smore!".
 Add that to favorites. Go to the Favorites tab and then back to the root.
 Go to Sailor Man and remove it from favorites
 ```
 ```
-# buyWithApplePay.testpilot
 Buy my favorite beverage
 ```
 
-## Before running tests - Start the logging server
-
-Host the websocket logging server available on `ws-logging-server/`, in order to see the steps being executed by the test runner. This is required due to [limitation around Xcode test targets](https://developer.apple.com/forums/thread/727620). See the [server's documentation](./ws-logging-server/README.md) for running instructions.
-
 ## Running the tests
 
-Now you can just run `testpilot` providing the path to the test files, the bundle identifier for the app you are testing, and your OpenAI key:
-```sh
-$ testpilot [<tests-path> | .] -o <open-ai-key> --bundle-id 'your.bundle.id'
-```
+TestPilot provides and `automate()` function that receives a Config object that should contain your OpenAI API Key, as well as a String objective.
 
-The key can also be defined as an environment variable named `OPEN_AI_KEY`
+### Swift
+```swift
+import TestPilotKit
 
-## Recording test steps
-
-Test steps are automatically recorded and stored in user defaults, the first time they are executed. If a pre-recorded session fails, they will be cleared from local storage and a fresh session will run.
-
-### Test device
-
-You can preemptively specify which device should be used for testing with the `--device` option. When using that option, you must also provide which platform that device uses:
-
-```sh
-$ testpilot --device 'platform=iOS Simulator,UDID=53D7B166-09AC-4A9B-9815-6264EC2552AD'
-```
-> Note that `UDID` need to be all caps following this exacly pattern.
-
-If you don't send the `--device` option, `testpilot` will halt and ask you which device you'd like to use. Enter the number of the desired device from the given list:
-
-```sh
-$ testpilot
-
-Found 1 test file:
-1. Sample test
-
-0: iPad 16.2 53D7B166-09AC-4A9B-9815-6264EC2552AD
-1: iPad Air 16.2 9ADC85CC-6826-40F5-BC44-43CBAFE76D60
-2: iPad Pro 16.2 1BEFFE89-5BDA-403C-9479-D20497FA52E8
-
-Enter the device number (ex. 12):
-2
-```
-
-## Config File
-
-Since the arguments sent to `testpilot` can grow to an extensive list, you can define these in a JSON config file and use that by default. By default, `testpilot` looks for a file named `testpilot.config.json` in the current directly. Alternatively, you can send the path to the config file as an argument:
-
-You need to provide the teamID, bundleID and the provisioning profile in order to run `testpilot` using phisical devices.
-
-In case you'd like to use a local version of the TestPilotKit library for development and testing, add `testpilot-kit-path` with its value containing the full path of the local instance, to the config file.
-
-```json
-// testpilot.config.json
-{
-  "bundle-id": "tested.app.bundle.id",  // This is the bundle identifier for the app you're testing. Ex.: com.apple.Fitness
-  "logging-server": "ws://loggingserver.domain",
-  "device": "platform=iOS Simulator,UDID=[UDID]", 
-  "team-id": "[TEAM-ID]",
-  "runner-bundle-id": "[RUNNER_TEST_BUNDLE_ID]", // This bundle identifier must match the provisioning profile
-  "provisioning-profile": "[PROVISIONING-PROFILE-NAME]",
-  "testpilot-kit-path": "/Users/me/libraries/TestPilotKit_Path", // For development ONLY
-  "open-ai-key": "[OPEN_AI_KEY]",
-  "open-ai-org": "[OPEN_AI_ORG]",
-  "open-ai-host": "[OPEN_AI_HOST]", // If omitted, will default to OpenAI's official API.
-  "open-ai-headers": {
-      "User-Agent": "TestPilot"
-  },
+final class SomeTestClass: XCTestCase {
+  func testSomeUnitTest() async throws {
+    try await automate(
+      config: Config(apiKey: "YOUR_API_KEY"),
+      objective: "some objective to be fulfilled"
+    )
+  }
 }
 ```
 
+### Kotlin
+```kotlin
+import co.work.testpilot.TestPilotAndroid
+import co.work.testpilot.runtime.Config
+
+@HiltAndroidTest
+class SomeTestClass {
+  @Test
+  fun testSomeUnitTest() = runTest {
+      TestPilotAndroid.automate(
+          config = Config(apiKey: "YOUR_API_KEY"),
+          objective = "some objective"
+      )
+  }
+}
+```
+
+## Caching test steps
+
+Test steps are automatically cached and stored in the test device the first time they are executed. If a pre-recorded session fails, by default, TestPilot will try to re-execute the objective as if the cache was empty. This behavior can be disabled and cause the tests to fail as soon as a cached step fails.
+
+If desired, caching can be disabled altogether, which will cause every test to hit the OpenAI API for each step of the execution.
+
+
 # Capabilities
-`testpilot` relies on accessibility labels to "see" and interact with your app. Currently, it can interact using the following commands. We're expanding its capabilities, but keep this in mind when writing your tests for now:
+`TestPilot` relies on accessibility labels to "see" and interact with your app. Currently, it can interact using the following commands. We're expanding its capabilities, but keep this in mind when writing your tests for now:
 - Tapping on elements
 - Typing texts into elements
 - Scrolling up and down
 - Waiting (useful if you need to load something)
+- Checking if a view exists and is visible
 
-A test is considered successful if `testpilot` was capable of executing all steps to completion.
+A test is considered successful if `TestPilot` was capable of executing all steps to completion.
 
 # OpenAI API Data and Usage
 
