@@ -11,6 +11,7 @@ import co.work.testpilot.runtime.prompts.SimplifyPromptInput
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.EmbeddingElement
 import co.work.testpilot.utils.EmbeddingUtils
+import co.work.testpilot.utils.StringSimilarity
 import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.logging.LogLevel
 import com.aallam.openai.api.model.ModelId
@@ -45,7 +46,7 @@ class Runner(private val config: Config) {
 
     suspend fun searchEmbeddings(items: List<String>, query: String, n: Int = 1): List<String> {
         val client = openAIForEmbeddings
-            ?: throw UnsupportedOperationException("Embedding search requires the OpenAI provider")
+            ?: return StringSimilarity.search(items, query, n)
 
         val texts = items.filter { it.isNotBlank() }
         val embeddingModelId = ModelId("text-embedding-ada-002")
