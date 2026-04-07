@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PLATFORM=""
+APP_NAME=""
+OBJECTIVE=""
+API_KEY="${TESTPILOT_API_KEY:-}"
+PROVIDER="${TESTPILOT_PROVIDER:-anthropic}"
+MAX_STEPS=20
+OUTPUT="./report.html"
+
+COMMAND="${1:-}"
+if [[ "$COMMAND" != "analyze" ]]; then
+  echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
+  exit 1
+fi
+shift
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --platform)  PLATFORM="$2";   shift 2 ;;
+    --app)       APP_NAME="$2";   shift 2 ;;
+    --objective) OBJECTIVE="$2";  shift 2 ;;
+    --api-key)   API_KEY="$2";    shift 2 ;;
+    --provider)  PROVIDER="$2";   shift 2 ;;
+    --max-steps) MAX_STEPS="$2";  shift 2 ;;
+    --output)    OUTPUT="$2";     shift 2 ;;
+    *) echo "Unknown flag: $1"; exit 1 ;;
+  esac
+done
+
+# Load .env
+if [[ -f ".env" ]]; then
+  set -a; source .env; set +a
+  API_KEY="${TESTPILOT_API_KEY:-$API_KEY}"
+  PROVIDER="${TESTPILOT_PROVIDER:-$PROVIDER}"
+fi
+
+[[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios or android)"; exit 1; }
+[[ -z "$APP_NAME" ]]  && { echo "Error: --app required"; exit 1; }
+[[ -z "$OBJECTIVE" ]] && { echo "Error: --objective required"; exit 1; }
+[[ -z "$API_KEY" ]]   && { echo "Error: API key required (--api-key or TESTPILOT_API_KEY in .env)"; exit 1; }
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ "$PLATFORM" == "ios" ]]; then
+  command -v xcrun >/dev/null 2>&1 || { echo "Error: xcrun not found — install Xcode command line tools"; exit 1; }
+
+  BOOTED=$(xcrun simctl list devices | grep "(Booted)" | head -1)
+  [[ -z "$BOOTED" ]] && { echo "Error: No booted iOS simulator. Boot one in Xcode or: xcrun simctl boot <UDID>"; exit 1; }
+
+  echo "Resolving bundle ID for \"$APP_NAME\"..."
+  BUNDLE_ID=$(xcrun simctl list apps booted --json 2>/dev/null \
+    | python3 -c "
+import json, sys
+apps = json.load(sys.stdin)
+name_lower = '${APP_NAME}'.lower()
+matches = [(bid, info.get('CFBundleDisplayName', bid)) for bid, info in apps.items()
+           if name_lower in (info.get('CFBundleDisplayName', '') or '').lower()
+           or name_lower in bid.lower()]
+if len(matches) == 0:
+    print('ERROR:no_match', end='')
+elif len(matches) == 1:
+    print(matches[0][0], end='')
+else:
+    print('MULTIPLE:' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
+")
+
+  if [[ "$BUNDLE_ID" == ERROR:* ]]; then
+    echo "Error: No app matching \"$APP_NAME\" found."
+    echo "Installed apps:"
+    xcrun simctl list apps booted --json 2>/dev/null \
+      | python3 -c "import json,sys; [print(f'  {info.get(\"CFBundleDisplayName\",bid)} ({bid})') for bid,info in json.load(sys.stdin).items()]" \
+      | sort
+    exit 1
+  fi
+
+  if [[ "$BUNDLE_ID" == MULTIPLE:* ]]; then
+    echo "Multiple matches. Pick one:"
+    IFS=',' read -ra CHOICES <<< "${BUNDLE_ID#MULTIPLE:}"
+    select choice in "${CHOICES[@]}"; do BUNDLE_ID="${choice%%=*}"; break; done
+  fi
+
+  echo "Found: $BUNDLE_ID"
+  echo "Building SDK..."
+  (cd "$SCRIPT_DIR" && scripts/build_ios_sdk.sh) >/dev/null 2>&1 \
+    || { echo "Error: SDK build failed. Run scripts/build_ios_sdk.sh manually for details."; exit 1; }
+
+  TMP_PROJ=$(mktemp -d)
+  trap 'rm -rf "$TMP_PROJ"' EXIT
+
+  cat > "$TMP_PROJ/AnalystRunner.swift" <<SWIFT
+import XCTest
+import TestPilotShared
+
+class AnalystRunner: XCTestCase {
+    func testAnalyze() async throws {
+        let config = ConfigBuilder()
+            .provider(AIProvider.companion.fromString(ProcessInfo.processInfo.environment["TESTPILOT_PROVIDER"] ?? "anthropic"))
+            .apiKey(ProcessInfo.processInfo.environment["TESTPILOT_API_KEY"] ?? "")
+            .maxSteps(Int32(ProcessInfo.processInfo.environment["TESTPILOT_MAX_STEPS"].flatMap(Int.init) ?? 20))
+            .build()
+
+        let analyst = AnalystIOS(config: config)
+        let _ = try await analyst.run(
+            objective: ProcessInfo.processInfo.environment["TESTPILOT_OBJECTIVE"] ?? ""
+        )
+    }
+}
+SWIFT
+
+  echo "Running analysis..."
+  LOG=$(TESTPILOT_API_KEY="$API_KEY" \
+        TESTPILOT_PROVIDER="$PROVIDER" \
+        TESTPILOT_OBJECTIVE="$OBJECTIVE" \
+        TESTPILOT_MAX_STEPS="$MAX_STEPS" \
+        xcodebuild test \
+          -scheme AnalystRunner \
+          -destination "platform=iOS Simulator,name=iPhone 15" \
+          -derivedDataPath "$TMP_PROJ/derived" \
+          2>&1 || true)
+
+  REPORT_SIM_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//')
+
+  if [[ -z "$REPORT_SIM_PATH" ]]; then
+    echo "Warning: Could not find report path in test output. Checking default location..."
+    TMPDIR_SIM=$(xcrun simctl spawn booted sh -c 'echo $TMPDIR' 2>/dev/null || echo "")
+    REPORT_SIM_PATH="${TMPDIR_SIM}testpilot_report.html"
+  fi
+
+  echo "Copying report..."
+  xcrun simctl spawn booted sh -c "cat '$REPORT_SIM_PATH'" > "$OUTPUT" \
+    || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_SIM_PATH"; exit 1; }
+
+  echo "Report written to: $OUTPUT"
+  open "$OUTPUT"
+
+elif [[ "$PLATFORM" == "android" ]]; then
+  command -v adb >/dev/null 2>&1 || { echo "Error: adb not found — install Android SDK Platform Tools"; exit 1; }
+
+  DEVICES=$(adb devices | grep -v "^List" | grep -c "device$" || true)
+  [[ "$DEVICES" == "0" ]] && { echo "Error: No Android device/emulator connected."; exit 1; }
+
+  echo "Resolving package for \"$APP_NAME\"..."
+  PACKAGE=$(adb shell pm list packages -3 2>/dev/null | sed 's/package://' | grep -i "$APP_NAME" | head -1 | tr -d '\r')
+  [[ -z "$PACKAGE" ]] && { echo "Error: No package matching \"$APP_NAME\". Run: adb shell pm list packages -3"; exit 1; }
+  echo "Found: $PACKAGE"
+
+  echo "Building SDK..."
+  (cd "$SCRIPT_DIR/sdk" && ./gradlew testpilot:assembleDebug) >/dev/null 2>&1 \
+    || { echo "Error: AAR build failed."; exit 1; }
+
+  echo "Running analysis..."
+  adb shell am instrument \
+    -e class "co.work.testpilot.analyst.AnalystAndroid" \
+    -e TESTPILOT_API_KEY "$API_KEY" \
+    -e TESTPILOT_OBJECTIVE "$OBJECTIVE" \
+    -e TESTPILOT_MAX_STEPS "$MAX_STEPS" \
+    -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner"
+
+  echo "Pulling report..."
+  adb pull /sdcard/testpilot_report.html "$OUTPUT" \
+    || { echo "Error: Could not pull report from device."; exit 1; }
+
+  echo "Report written to: $OUTPUT"
+  open "$OUTPUT" 2>/dev/null || echo "Open $OUTPUT in your browser."
+
+else
+  echo "Error: Unknown platform \"$PLATFORM\". Use ios or android."
+  exit 1
+fi
