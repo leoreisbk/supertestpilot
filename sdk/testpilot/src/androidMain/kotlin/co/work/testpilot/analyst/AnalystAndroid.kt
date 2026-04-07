@@ -15,8 +15,9 @@ import java.io.File
 
 class AnalystAndroid(private val config: Config) {
 
+    private val httpClient = HttpClient(CIO)
+
     suspend fun run(objective: String): String {
-        val httpClient = HttpClient(CIO)
         val aiClient = when (config.provider) {
             AIProvider.Anthropic -> AnthropicChatClient(
                 apiKey = config.apiKey,
