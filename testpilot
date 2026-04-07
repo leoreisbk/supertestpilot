@@ -66,7 +66,7 @@ else:
     print('MULTIPLE:' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
 ")
 
-  if [[ "$BUNDLE_ID" == ERROR:* ]]; then
+  if [[ "$BUNDLE_ID" == ERROR* ]]; then
     echo "Error: No app matching \"$APP_NAME\" found."
     echo "Installed apps:"
     xcrun simctl list apps booted --json 2>/dev/null \
@@ -75,7 +75,7 @@ else:
     exit 1
   fi
 
-  if [[ "$BUNDLE_ID" == MULTIPLE:* ]]; then
+  if [[ "$BUNDLE_ID" == MULTIPLE* ]]; then
     echo "Multiple matches. Pick one:"
     IFS=',' read -ra CHOICES <<< "${BUNDLE_ID#MULTIPLE:}"
     select choice in "${CHOICES[@]}"; do BUNDLE_ID="${choice%%=*}"; break; done
@@ -128,6 +128,13 @@ SWIFT
     REPORT_SIM_PATH="${TMPDIR_SIM}testpilot_report.html"
   fi
 
+  if [[ -z "$REPORT_SIM_PATH" ]]; then
+    echo "Error: Analysis produced no report. Check that AnalystIOS ran successfully."
+    echo "Full xcodebuild output:"
+    echo "$LOG"
+    exit 1
+  fi
+
   echo "Copying report..."
   xcrun simctl spawn booted sh -c "cat '$REPORT_SIM_PATH'" > "$OUTPUT" \
     || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_SIM_PATH"; exit 1; }
@@ -151,12 +158,19 @@ elif [[ "$PLATFORM" == "android" ]]; then
     || { echo "Error: AAR build failed."; exit 1; }
 
   echo "Running analysis..."
-  adb shell am instrument \
+  INSTRUMENT_OUTPUT=$(adb shell am instrument \
     -e class "co.work.testpilot.analyst.AnalystAndroid" \
     -e TESTPILOT_API_KEY "$API_KEY" \
+    -e TESTPILOT_PROVIDER "$PROVIDER" \
     -e TESTPILOT_OBJECTIVE "$OBJECTIVE" \
     -e TESTPILOT_MAX_STEPS "$MAX_STEPS" \
-    -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner"
+    -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)
+
+  if echo "$INSTRUMENT_OUTPUT" | grep -q "FAILURES\|Error"; then
+    echo "Error: Analysis failed. Output:"
+    echo "$INSTRUMENT_OUTPUT"
+    exit 1
+  fi
 
   echo "Pulling report..."
   adb pull /sdcard/testpilot_report.html "$OUTPUT" \
