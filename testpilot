@@ -49,70 +49,6 @@ if [[ "$PLATFORM" == "ios" ]]; then
   BOOTED=$(xcrun simctl list devices | grep "(Booted)" | head -1)
   [[ -z "$BOOTED" ]] && { echo "Error: No booted iOS simulator. Boot one in Xcode or: xcrun simctl boot <UDID>"; exit 1; }
 
-  echo "Resolving bundle ID for \"$APP_NAME\"..."
-  BUNDLE_ID=$(xcrun simctl list apps booted --json 2>/dev/null \
-    | python3 -c "
-import json, sys
-apps = json.load(sys.stdin)
-name_lower = '${APP_NAME}'.lower()
-matches = [(bid, info.get('CFBundleDisplayName', bid)) for bid, info in apps.items()
-           if name_lower in (info.get('CFBundleDisplayName', '') or '').lower()
-           or name_lower in bid.lower()]
-if len(matches) == 0:
-    print('ERROR:no_match', end='')
-elif len(matches) == 1:
-    print(matches[0][0], end='')
-else:
-    print('MULTIPLE:' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
-")
-
-  if [[ "$BUNDLE_ID" == ERROR* ]]; then
-    echo "Error: No app matching \"$APP_NAME\" found."
-    echo "Installed apps:"
-    xcrun simctl list apps booted --json 2>/dev/null \
-      | python3 -c "import json,sys; [print(f'  {info.get(\"CFBundleDisplayName\",bid)} ({bid})') for bid,info in json.load(sys.stdin).items()]" \
-      | sort
-    exit 1
-  fi
-
-  if [[ "$BUNDLE_ID" == MULTIPLE* ]]; then
-    echo "Multiple matches. Pick one:"
-    IFS=',' read -ra CHOICES <<< "${BUNDLE_ID#MULTIPLE:}"
-    select choice in "${CHOICES[@]}"; do BUNDLE_ID="${choice%%=*}"; break; done
-  fi
-
-  echo "Found: $BUNDLE_ID"
-  echo "Building SDK..."
-  (cd "$SCRIPT_DIR" && scripts/build_ios_sdk.sh) >/dev/null 2>&1 \
-    || { echo "Error: SDK build failed. Run scripts/build_ios_sdk.sh manually for details."; exit 1; }
-
-  TMP_PROJ=$(mktemp -d)
-  trap 'rm -rf "$TMP_PROJ"' EXIT
-
-  cat > "$TMP_PROJ/AnalystRunner.swift" <<SWIFT
-import XCTest
-import TestPilotShared
-
-class AnalystRunner: XCTestCase {
-    func testAnalyze() async throws {
-        let providerStr = ProcessInfo.processInfo.environment["TESTPILOT_PROVIDER"] ?? "anthropic"
-        let provider: AIProvider = providerStr == "openai" ? .openAI : .anthropic
-        let config = ConfigBuilder()
-            .provider(provider)
-            .apiKey(ProcessInfo.processInfo.environment["TESTPILOT_API_KEY"] ?? "")
-            .maxSteps(Int32(ProcessInfo.processInfo.environment["TESTPILOT_MAX_STEPS"].flatMap(Int.init) ?? 20))
-            .build()
-
-        let bundleId = ProcessInfo.processInfo.environment["TESTPILOT_BUNDLE_ID"]
-        let analyst = AnalystIOS(config: config)
-        let _ = try await analyst.run(
-            objective: ProcessInfo.processInfo.environment["TESTPILOT_OBJECTIVE"] ?? "",
-            bundleId: bundleId
-        )
-    }
-}
-SWIFT
-
   BOOTED_UDID=$(xcrun simctl list devices --json | python3 -c "
 import json, sys
 devs = json.load(sys.stdin)
@@ -122,31 +58,121 @@ for runtime, devices in devs.get('devices', {}).items():
             print(d['udid'])
             exit()
 ")
+  [[ -z "$BOOTED_UDID" ]] && { echo "Error: Could not determine booted simulator UDID."; exit 1; }
 
-  echo "Running analysis..."
-  LOG=$(TESTPILOT_API_KEY="$API_KEY" \
-        TESTPILOT_PROVIDER="$PROVIDER" \
-        TESTPILOT_OBJECTIVE="$OBJECTIVE" \
-        TESTPILOT_MAX_STEPS="$MAX_STEPS" \
-        TESTPILOT_BUNDLE_ID="$BUNDLE_ID" \
-        xcodebuild test \
-          -scheme AnalystRunner \
-          -destination "platform=iOS Simulator,id=$BOOTED_UDID" \
-          -derivedDataPath "$TMP_PROJ/derived" \
-          2>&1 || true)
+  echo "Resolving bundle ID for \"$APP_NAME\"..."
+  # xcrun simctl listapps outputs NeXTSTEP/ASCII plist — parse with Python regex
+  export TP_APP_NAME="$APP_NAME"
+  BUNDLE_ID=$(xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
+    | python3 -c "
+import sys, re, os
+text = sys.stdin.read()
+name_lower = os.environ['TP_APP_NAME'].lower()
+matches = []
+blocks = re.split(r'\"([^\"]+)\"\s*=\s*\{', text)
+i = 1
+while i < len(blocks) - 1:
+    bid = blocks[i]; body = blocks[i+1]; i += 2
+    if '.' not in bid: continue
+    dm = re.search(r'CFBundleDisplayName\s*=\s*\"([^\"]*)\"', body)
+    nm = re.search(r'CFBundleName\s*=\s*\"([^\"]*)\"', body)
+    display = dm.group(1) if dm else (nm.group(1) if nm else bid)
+    if name_lower in display.lower() or name_lower in bid.lower():
+        matches.append((bid, display))
+if len(matches) == 0:
+    print('ERROR_no_match', end='')
+elif len(matches) == 1:
+    print(matches[0][0], end='')
+else:
+    print('MULTIPLE_' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
+")
 
-  REPORT_SIM_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//')
-
-  if [[ -z "$REPORT_SIM_PATH" ]]; then
-    echo "Warning: Could not find report path in test output. Checking default location..."
-    TMPDIR_SIM=$(xcrun simctl spawn booted sh -c 'echo $TMPDIR' 2>/dev/null || echo "")
-    REPORT_SIM_PATH="${TMPDIR_SIM}testpilot_report.html"
+  if [[ "$BUNDLE_ID" == ERROR* ]]; then
+    echo "Error: No app matching \"$APP_NAME\" found."
+    echo "Installed apps:"
+    xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
+      | python3 -c "
+import sys, re
+text = sys.stdin.read()
+blocks = re.split(r'\"([^\"]+)\"\s*=\s*\{', text)
+i = 1; rows = []
+while i < len(blocks) - 1:
+    bid = blocks[i]; body = blocks[i+1]; i += 2
+    if '.' not in bid: continue
+    m = re.search(r'CFBundleDisplayName\s*=\s*\"([^\"]*)\"', body)
+    n = re.search(r'CFBundleName\s*=\s*\"([^\"]*)\"', body)
+    name = m.group(1) if m else (n.group(1) if n else bid)
+    rows.append(f'  {name} ({bid})')
+for r in sorted(rows): print(r)
+"
+    exit 1
   fi
 
+  if [[ "$BUNDLE_ID" == MULTIPLE* ]]; then
+    echo "Multiple matches. Pick one:"
+    IFS=',' read -ra CHOICES <<< "${BUNDLE_ID#MULTIPLE_}"
+    select choice in "${CHOICES[@]}"; do BUNDLE_ID="${choice%%=*}"; break; done
+  fi
+
+  echo "Found: $BUNDLE_ID"
+  echo "Building SDK..."
+  (cd "$SCRIPT_DIR" && scripts/build_ios_sdk.sh) >/dev/null 2>&1 \
+    || { echo "Error: SDK build failed. Run scripts/build_ios_sdk.sh manually for details."; exit 1; }
+
+  DERIVED_DATA=$(mktemp -d)
+  TEST_SWIFT="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift"
+  TEST_SWIFT_BACKUP="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift.bak"
+  cp "$TEST_SWIFT" "$TEST_SWIFT_BACKUP"
+  trap 'cp "$TEST_SWIFT_BACKUP" "$TEST_SWIFT"; rm -f "$TEST_SWIFT_BACKUP"; [[ -f "$DERIVED_DATA/xcodebuild.log" ]] && cp "$DERIVED_DATA/xcodebuild.log" /tmp/testpilot_last_xcodebuild.log; rm -rf "$DERIVED_DATA"' EXIT
+
+  # Escape Swift string special chars in values
+  _swift_esc() { echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+  API_KEY_ESC=$(_swift_esc "$API_KEY")
+  PROVIDER_ESC=$(_swift_esc "$PROVIDER")
+  OBJECTIVE_ESC=$(_swift_esc "$OBJECTIVE")
+  BUNDLE_ID_OPT="nil"
+  [[ -n "$BUNDLE_ID" ]] && BUNDLE_ID_OPT="\"$(_swift_esc "$BUNDLE_ID")\""
+
+  cat > "$TEST_SWIFT" <<SWIFT
+// This file is overwritten by the testpilot CLI before each run.
+// Do not edit manually.
+import XCTest
+import TestPilotShared
+
+class AnalystTests: XCTestCase {
+    func testAnalyze() async throws {
+        let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : .anthropic
+        let config = ConfigBuilder()
+            .provider(provider: provider)
+            .apiKey(key: "$API_KEY_ESC")
+            .maxSteps(steps: $MAX_STEPS)
+            .build()
+        let analyst = AnalystIOS(config: config)
+        let _ = try await analyst.run(
+            objective: "$OBJECTIVE_ESC",
+            bundleId: $BUNDLE_ID_OPT
+        )
+    }
+}
+SWIFT
+
+  echo "Running analysis..."
+  XCODE_LOG="$DERIVED_DATA/xcodebuild.log"
+  LOG=$(xcodebuild test \
+          -project "$SCRIPT_DIR/harness/Harness.xcodeproj" \
+          -scheme AnalystTests \
+          -destination "platform=iOS Simulator,id=$BOOTED_UDID" \
+          -derivedDataPath "$DERIVED_DATA" \
+          2>&1 || true)
+  echo "$LOG" > "$XCODE_LOG"
+
+  REPORT_SIM_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//' || true)
+
   if [[ -z "$REPORT_SIM_PATH" ]]; then
-    echo "Error: Analysis produced no report. Check that AnalystIOS ran successfully."
-    echo "Full xcodebuild output:"
-    echo "$LOG"
+    echo "Error: Analysis produced no report. Test likely failed."
+    echo "Xcodebuild log saved to: $XCODE_LOG"
+    echo "--- Key lines ---"
+    grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
     exit 1
   fi
 

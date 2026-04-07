@@ -3,6 +3,8 @@ package co.work.testpilot.analyst
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.cValue
 import kotlinx.cinterop.readBytes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import platform.CoreGraphics.CGVector
 import platform.XCTest.XCUIApplication
 import platform.XCTest.XCUIGestureVelocitySlow
@@ -11,20 +13,20 @@ import platform.XCTest.XCUIScreen
 @OptIn(ExperimentalForeignApi::class)
 class AnalystDriverIOS(private val xcApp: XCUIApplication) : AnalystDriver {
 
-    override suspend fun screenshotPng(): ByteArray {
+    override suspend fun screenshotPng(): ByteArray = withContext(Dispatchers.Main) {
         val screenshot = XCUIScreen.mainScreen.screenshot()
         val data = screenshot.PNGRepresentation
-        val bytes = data.bytes ?: return ByteArray(0)
-        return bytes.readBytes(data.length.toInt())
+        val bytes = data.bytes ?: return@withContext ByteArray(0)
+        bytes.readBytes(data.length.toInt())
     }
 
-    override suspend fun tap(x: Double, y: Double) {
+    override suspend fun tap(x: Double, y: Double) = withContext(Dispatchers.Main) {
         val vector = cValue<CGVector> { dx = x; dy = y }
         val coord = xcApp.coordinateWithNormalizedOffset(vector)
         coord.tap()
     }
 
-    override suspend fun scroll(direction: String) {
+    override suspend fun scroll(direction: String) = withContext(Dispatchers.Main) {
         if (direction == "up") {
             xcApp.swipeUpWithVelocity(XCUIGestureVelocitySlow)
         } else {
@@ -32,7 +34,7 @@ class AnalystDriverIOS(private val xcApp: XCUIApplication) : AnalystDriver {
         }
     }
 
-    override suspend fun type(x: Double, y: Double, text: String) {
+    override suspend fun type(x: Double, y: Double, text: String) = withContext(Dispatchers.Main) {
         val vector = cValue<CGVector> { dx = x; dy = y }
         val coord = xcApp.coordinateWithNormalizedOffset(vector)
         coord.tap()

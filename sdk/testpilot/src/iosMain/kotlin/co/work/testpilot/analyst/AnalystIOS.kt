@@ -10,8 +10,11 @@ import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.darwin.*
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
@@ -24,9 +27,10 @@ class AnalystIOS(private val config: Config) {
 
     suspend fun run(objective: String, bundleId: String? = null): String {
         val xcApp = if (bundleId != null) XCUIApplication(bundleId) else XCUIApplication()
-        xcApp.launch()
+        withContext(Dispatchers.Main) { xcApp.launch() }
+        delay(2000) // wait for app to fully load before first screenshot
 
-        val httpClient = HttpClient(CIO)
+        val httpClient = HttpClient(Darwin)
         val aiClient = when (config.provider) {
             AIProvider.Anthropic -> AnthropicChatClient(
                 apiKey = config.apiKey,

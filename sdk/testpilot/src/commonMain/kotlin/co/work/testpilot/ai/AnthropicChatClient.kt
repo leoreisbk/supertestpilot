@@ -79,6 +79,10 @@ class AnthropicChatClient(
         Logging.info("=====\nCHAT RESPONSE (Anthropic):\n=====\n$responseText")
 
         val parsed = json.decodeFromString<AnthropicResponse>(responseText)
+        if (parsed.type == "error") {
+            val msg = parsed.error?.message ?: responseText
+            throw IllegalStateException("Anthropic API error: $msg")
+        }
         return parsed.content.firstOrNull { it.type == "text" }?.text
             ?: throw IllegalStateException("Empty response from Anthropic: $responseText")
     }
@@ -120,8 +124,13 @@ class AnthropicChatClient(
 
     @Serializable
     private data class AnthropicResponse(
-        val content: List<AnthropicResponseContent>,
+        val type: String = "",
+        val content: List<AnthropicResponseContent> = emptyList(),
+        val error: AnthropicErrorBody? = null,
     )
+
+    @Serializable
+    private data class AnthropicErrorBody(val type: String = "", val message: String = "")
 
     @Serializable
     private data class AnthropicResponseContent(
