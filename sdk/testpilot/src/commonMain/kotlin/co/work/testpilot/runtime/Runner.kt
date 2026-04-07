@@ -74,6 +74,9 @@ private fun createAIClient(config: Config): AIClient = when (config.provider) {
     AIProvider.OpenAI -> OpenAIChatClient(
         openAI = buildOpenAIClient(config),
         modelId = config.modelId ?: AIProviderDefaults.openAIModel,
+        httpClient = HttpClient(CIO),
+        apiKey = config.apiKey,
+        apiHost = config.apiHost ?: "https://api.openai.com",
     )
     AIProvider.Anthropic -> AnthropicChatClient(
         apiKey = config.apiKey,

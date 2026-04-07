@@ -2,7 +2,6 @@ package co.work.testpilot.ai
 
 import co.work.testpilot.Logging
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -10,6 +9,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class AnthropicChatClient(
     private val apiKey: String,
@@ -22,20 +23,38 @@ class AnthropicChatClient(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    @OptIn(ExperimentalEncodingApi::class)
     override suspend fun chatCompletion(
         messages: List<ChatMessage>,
         maxTokens: Int,
         temperature: Double,
+        imageBytes: ByteArray?,
     ): String {
-        // Anthropic requires system prompts as a top-level field, not a message role
         val systemContent = messages
             .filter { it.role == ChatMessage.ROLE_SYSTEM }
             .joinToString("\n") { it.content }
             .takeIf { it.isNotEmpty() }
 
-        val userMessages = messages
-            .filter { it.role != ChatMessage.ROLE_SYSTEM }
-            .map { AnthropicMessage(role = it.role, content = it.content) }
+        val nonSystemMessages = messages.filter { it.role != ChatMessage.ROLE_SYSTEM }
+
+        val userMessages = nonSystemMessages.mapIndexed { index, msg ->
+            val isLast = index == nonSystemMessages.lastIndex
+            val contentBlocks: List<AnthropicContentBlock> = if (isLast && imageBytes != null) {
+                listOf(
+                    AnthropicContentBlock.Image(
+                        source = AnthropicImageSource(
+                            type = "base64",
+                            mediaType = "image/png",
+                            data = Base64.encode(imageBytes),
+                        )
+                    ),
+                    AnthropicContentBlock.Text(text = msg.content),
+                )
+            } else {
+                listOf(AnthropicContentBlock.Text(text = msg.content))
+            }
+            AnthropicMessage(role = msg.role, content = contentBlocks)
+        }
 
         val request = AnthropicRequest(
             model = modelId,
@@ -76,16 +95,34 @@ class AnthropicChatClient(
     @Serializable
     private data class AnthropicMessage(
         val role: String,
-        val content: String,
+        val content: List<AnthropicContentBlock>,
+    )
+
+    @Serializable
+    private sealed class AnthropicContentBlock {
+        @Serializable
+        @SerialName("text")
+        data class Text(val text: String) : AnthropicContentBlock()
+
+        @Serializable
+        @SerialName("image")
+        data class Image(val source: AnthropicImageSource) : AnthropicContentBlock()
+    }
+
+    @Serializable
+    private data class AnthropicImageSource(
+        val type: String,
+        @SerialName("media_type") val mediaType: String,
+        val data: String,
     )
 
     @Serializable
     private data class AnthropicResponse(
-        val content: List<AnthropicContent>,
+        val content: List<AnthropicResponseContent>,
     )
 
     @Serializable
-    private data class AnthropicContent(
+    private data class AnthropicResponseContent(
         val type: String,
         val text: String = "",
     )

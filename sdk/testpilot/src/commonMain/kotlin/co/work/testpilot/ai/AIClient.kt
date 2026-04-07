@@ -5,6 +5,7 @@ interface AIClient {
         messages: List<ChatMessage>,
         maxTokens: Int,
         temperature: Double,
+        imageBytes: ByteArray? = null,
     ): String
 }
 
