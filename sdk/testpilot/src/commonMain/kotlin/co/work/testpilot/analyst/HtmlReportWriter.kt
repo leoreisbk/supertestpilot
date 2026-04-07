@@ -10,7 +10,7 @@ object HtmlReportWriter {
         val stepsHtml = report.steps.mapIndexed { index, step ->
             val base64 = Base64.encode(step.screenshotData)
             val obsHtml = step.observation
-                ?.let { "<p class=\"obs\">$it</p>" }
+                ?.let { "<p class=\"obs\">${it.htmlEscape()}</p>" }
                 ?: ""
             val coordHtml = step.coordinates
                 ?.let { (x, y) -> "<span class=\"coord\">(${fmtCoord(x)}, ${fmtCoord(y)})</span>" }
@@ -19,7 +19,7 @@ object HtmlReportWriter {
             <div class="step">
               <div class="step-header">
                 <span class="step-num">Step ${index + 1}</span>
-                <span class="action">${step.action}</span>
+                <span class="action">${step.action.htmlEscape()}</span>
                 $coordHtml
               </div>
               <img src="data:image/png;base64,$base64" alt="Step ${index + 1}" />
@@ -68,12 +68,12 @@ object HtmlReportWriter {
         <body>
         <div class="header">
           <h1>TestPilot Analysis Report</h1>
-          <div class="objective">${report.objective}</div>
+          <div class="objective">${report.objective.htmlEscape()}</div>
           <div class="meta">${report.stepCount} steps &middot; $durationText</div>
         </div>
         <div class="summary-box">
           <h2>Summary</h2>
-          <p>${report.summary}</p>
+          <p>${report.summary.htmlEscape()}</p>
         </div>
         <div class="steps">
           <h2>Step-by-step</h2>
@@ -83,6 +83,12 @@ object HtmlReportWriter {
         </html>
         """.trimIndent()
     }
+
+    private fun String.htmlEscape(): String = this
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
 
     private fun fmtDuration(ms: Long): String {
         val sec = ms / 1000
