@@ -11,6 +11,7 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
+import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 
 class AnalystAndroid(private val config: Config) {
@@ -48,10 +49,14 @@ class AnalystAndroid(private val config: Config) {
         val report = analyst.run(objective)
         val html = HtmlReportWriter.generate(report)
 
-        val reportPath = "/sdcard/testpilot_report.html"
-        File(reportPath).writeText(html)
+        val reportDir = InstrumentationRegistry.getInstrumentation().targetContext
+            .getExternalFilesDir(null)
+            ?: throw IllegalStateException("External files dir not available")
+        val reportFile = java.io.File(reportDir, "testpilot_report.html")
+        reportFile.writeText(html)
+        val reportPath = reportFile.absolutePath
 
-        println("TESTPILOT_REPORT_PATH=$reportPath")
-        return reportPath
+        println("TESTPILOT_REPORT_PATH=${reportFile.absolutePath}")
+        return reportFile.absolutePath
     }
 }

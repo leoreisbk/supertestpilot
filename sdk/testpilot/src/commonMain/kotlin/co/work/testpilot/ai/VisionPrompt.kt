@@ -52,11 +52,15 @@ class VisionPrompt(
 
         val response = aiClient.chatCompletion(
             messages = messages,
-            maxTokens = config.maxTokens,
+            maxTokens = maxOf(config.maxTokens, 1024),
             temperature = config.temperature,
             imageBytes = screenshotPng,
         )
 
-        return AnalysisAction.parse(response)
+        return try {
+            AnalysisAction.parse(response)
+        } catch (e: Exception) {
+            AnalysisAction.Done(observation = "Could not parse AI response: ${e.message}")
+        }
     }
 }

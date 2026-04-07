@@ -22,8 +22,8 @@ import platform.XCTest.XCUIApplication
 
 class AnalystIOS(private val config: Config) {
 
-    suspend fun run(objective: String): String {
-        val xcApp = XCUIApplication()
+    suspend fun run(objective: String, bundleId: String? = null): String {
+        val xcApp = if (bundleId != null) XCUIApplication(bundleId) else XCUIApplication()
         xcApp.launch()
 
         val httpClient = HttpClient(CIO)

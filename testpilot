@@ -95,28 +95,43 @@ import TestPilotShared
 
 class AnalystRunner: XCTestCase {
     func testAnalyze() async throws {
+        let providerStr = ProcessInfo.processInfo.environment["TESTPILOT_PROVIDER"] ?? "anthropic"
+        let provider: AIProvider = providerStr == "openai" ? .openAI : .anthropic
         let config = ConfigBuilder()
-            .provider(AIProvider.companion.fromString(ProcessInfo.processInfo.environment["TESTPILOT_PROVIDER"] ?? "anthropic"))
+            .provider(provider)
             .apiKey(ProcessInfo.processInfo.environment["TESTPILOT_API_KEY"] ?? "")
             .maxSteps(Int32(ProcessInfo.processInfo.environment["TESTPILOT_MAX_STEPS"].flatMap(Int.init) ?? 20))
             .build()
 
+        let bundleId = ProcessInfo.processInfo.environment["TESTPILOT_BUNDLE_ID"]
         let analyst = AnalystIOS(config: config)
         let _ = try await analyst.run(
-            objective: ProcessInfo.processInfo.environment["TESTPILOT_OBJECTIVE"] ?? ""
+            objective: ProcessInfo.processInfo.environment["TESTPILOT_OBJECTIVE"] ?? "",
+            bundleId: bundleId
         )
     }
 }
 SWIFT
+
+  BOOTED_UDID=$(xcrun simctl list devices --json | python3 -c "
+import json, sys
+devs = json.load(sys.stdin)
+for runtime, devices in devs.get('devices', {}).items():
+    for d in devices:
+        if d.get('state') == 'Booted':
+            print(d['udid'])
+            exit()
+")
 
   echo "Running analysis..."
   LOG=$(TESTPILOT_API_KEY="$API_KEY" \
         TESTPILOT_PROVIDER="$PROVIDER" \
         TESTPILOT_OBJECTIVE="$OBJECTIVE" \
         TESTPILOT_MAX_STEPS="$MAX_STEPS" \
+        TESTPILOT_BUNDLE_ID="$BUNDLE_ID" \
         xcodebuild test \
           -scheme AnalystRunner \
-          -destination "platform=iOS Simulator,name=iPhone 15" \
+          -destination "platform=iOS Simulator,id=$BOOTED_UDID" \
           -derivedDataPath "$TMP_PROJ/derived" \
           2>&1 || true)
 
@@ -173,7 +188,7 @@ elif [[ "$PLATFORM" == "android" ]]; then
   fi
 
   echo "Pulling report..."
-  adb pull /sdcard/testpilot_report.html "$OUTPUT" \
+  adb pull "/sdcard/Android/data/$PACKAGE/files/testpilot_report.html" "$OUTPUT" \
     || { echo "Error: Could not pull report from device."; exit 1; }
 
   echo "Report written to: $OUTPUT"

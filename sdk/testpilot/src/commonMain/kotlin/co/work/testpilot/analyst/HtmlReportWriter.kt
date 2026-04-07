@@ -97,8 +97,9 @@ object HtmlReportWriter {
     }
 
     private fun fmtCoord(v: Double): String {
-        val intPart = v.toInt()
-        val decPart = ((v - intPart) * 100).toInt()
+        val rounded = kotlin.math.round(v * 100).toInt()
+        val intPart = rounded / 100
+        val decPart = rounded % 100
         return "$intPart.${decPart.toString().padStart(2, '0')}"
     }
 }
