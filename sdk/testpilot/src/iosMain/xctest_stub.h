@@ -108,6 +108,7 @@ typedef double XCUIGestureVelocity;
 // ---------------------------------------------------------------------------
 @class XCUIElement;
 @class XCUIElementQuery;
+@class XCUICoordinate;
 
 // ---------------------------------------------------------------------------
 // XCUIElementSnapshot - read-only snapshot data for a UI element
@@ -158,6 +159,7 @@ typedef double XCUIGestureVelocity;
 - (void)swipeUpWithVelocity:(XCUIGestureVelocity)velocity;
 - (void)swipeDownWithVelocity:(XCUIGestureVelocity)velocity;
 - (XCUIElementQuery *)descendantsMatchingType:(XCUIElementType)type;
+- (XCUICoordinate *)coordinateWithNormalizedOffset:(CGVector)normalizedOffset;
 @end
 
 // ---------------------------------------------------------------------------
@@ -173,6 +175,37 @@ typedef double XCUIGestureVelocity;
 // XCTestCase
 // ---------------------------------------------------------------------------
 @interface XCTestCase : NSObject
+@end
+
+// ---------------------------------------------------------------------------
+// CGVector (CoreGraphics struct — redeclare here since we don't import CG)
+// ---------------------------------------------------------------------------
+#ifndef CGVECTOR_DEFINED
+typedef struct CGVector { CGFloat dx; CGFloat dy; } CGVector;
+#define CGVECTOR_DEFINED 1
+#endif
+
+// ---------------------------------------------------------------------------
+// XCUICoordinate — represents a coordinate on screen, supports gestures
+// ---------------------------------------------------------------------------
+@interface XCUICoordinate : NSObject
+- (void)tap;
+- (void)typeText:(NSString *)text;
+@end
+
+// ---------------------------------------------------------------------------
+// XCUIScreenshot — screenshot data returned by XCUIScreen
+// ---------------------------------------------------------------------------
+@interface XCUIScreenshot : NSObject
+@property (nonatomic, readonly) NSData *PNGRepresentation;
+@end
+
+// ---------------------------------------------------------------------------
+// XCUIScreen — physical screen; main is the device's primary screen
+// ---------------------------------------------------------------------------
+@interface XCUIScreen : NSObject
+@property (class, nonatomic, readonly) XCUIScreen *mainScreen;
+- (XCUIScreenshot *)screenshot;
 @end
 
 NS_ASSUME_NONNULL_END
