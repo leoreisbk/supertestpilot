@@ -99,6 +99,8 @@ class AnthropicChatClient(
     )
 
     @Serializable
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.json.JsonClassDiscriminator("type")
     private sealed class AnthropicContentBlock {
         @Serializable
         @SerialName("text")

@@ -78,7 +78,8 @@ class OpenAIChatClient(
             Logging.info("=====\nCHAT RESPONSE (OpenAI vision):\n=====\n$responseText")
 
             val parsed = json.decodeFromString<OpenAIVisionResponse>(responseText)
-            return parsed.choices.firstOrNull()?.message?.content ?: ""
+            return parsed.choices.firstOrNull()?.message?.content
+                ?: throw IllegalStateException("Empty response from OpenAI: $responseText")
         }
 
         val request = ChatCompletionRequest(
@@ -124,6 +125,8 @@ class OpenAIChatClient(
     )
 
     @Serializable
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.json.JsonClassDiscriminator("type")
     private sealed class OpenAIContentBlock {
         @Serializable
         @SerialName("text")

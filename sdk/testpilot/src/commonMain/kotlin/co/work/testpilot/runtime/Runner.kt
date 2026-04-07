@@ -70,21 +70,24 @@ class Runner(private val config: Config) {
     }
 }
 
-private fun createAIClient(config: Config): AIClient = when (config.provider) {
-    AIProvider.OpenAI -> OpenAIChatClient(
-        openAI = buildOpenAIClient(config),
-        modelId = config.modelId ?: AIProviderDefaults.openAIModel,
-        httpClient = HttpClient(CIO),
-        apiKey = config.apiKey,
-        apiHost = config.apiHost ?: "https://api.openai.com",
-    )
-    AIProvider.Anthropic -> AnthropicChatClient(
-        apiKey = config.apiKey,
-        modelId = config.modelId ?: AIProviderDefaults.anthropicModel,
-        httpClient = HttpClient(CIO),
-        apiHost = config.apiHost ?: "https://api.anthropic.com",
-        extraHeaders = config.apiHeaders,
-    )
+private fun createAIClient(config: Config): AIClient {
+    val httpClient = HttpClient(CIO)
+    return when (config.provider) {
+        AIProvider.OpenAI -> OpenAIChatClient(
+            openAI = buildOpenAIClient(config),
+            modelId = config.modelId ?: AIProviderDefaults.openAIModel,
+            httpClient = httpClient,
+            apiKey = config.apiKey,
+            apiHost = config.apiHost ?: "https://api.openai.com",
+        )
+        AIProvider.Anthropic -> AnthropicChatClient(
+            apiKey = config.apiKey,
+            modelId = config.modelId ?: AIProviderDefaults.anthropicModel,
+            httpClient = httpClient,
+            apiHost = config.apiHost ?: "https://api.anthropic.com",
+            extraHeaders = config.apiHeaders,
+        )
+    }
 }
 
 private fun buildOpenAIClient(config: Config) = OpenAI(
