@@ -39,7 +39,7 @@ class TestActorIOS(val testCase: XCTestCase) : TestActor<AppUISnapshotIOS, Testa
             is Instruction.ScrollUp -> xcApp.swipeDownWithVelocity(XCUIGestureVelocitySlow)
             is Instruction.ScrollDown -> xcApp.swipeUpWithVelocity(XCUIGestureVelocitySlow)
             is Instruction.GoBack -> {
-                val match = xcApp.navigationBars.buttons.elementBoundByIndex(0)
+                val match = xcApp.navigationBars.buttons.elementBoundByIndex(0.toULong())
                 match.tap()
             }
         }

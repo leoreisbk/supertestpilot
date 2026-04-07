@@ -2,12 +2,12 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.serialization") version "1.8.10"
+    kotlin("plugin.serialization") version "2.1.20"
     id("com.android.library")
 }
 
 kotlin {
-    android {
+    androidTarget {
         compilations.all {
             kotlinOptions {
                 jvmTarget = "1.8"
@@ -25,6 +25,14 @@ kotlin {
         main.cinterops.create("xctest") {
             defFile("src/iosMain/xctest_${it.name}.def")
         }
+        it.compilations.all {
+            kotlinOptions {
+                freeCompilerArgs += listOf(
+                    "-opt-in=kotlinx.cinterop.ExperimentalForeignApi",
+                    "-opt-in=kotlin.experimental.ExperimentalNativeApi",
+                )
+            }
+        }
 
         it.binaries.framework {
             baseName = "TestPilotShared"
@@ -39,7 +47,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation("com.aallam.openai:openai-client:3.1.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("io.ktor:ktor-client-websockets:$ktorVersion")
                 implementation("io.ktor:ktor-client-cio:$ktorVersion")
