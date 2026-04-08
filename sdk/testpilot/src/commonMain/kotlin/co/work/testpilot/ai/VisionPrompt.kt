@@ -11,6 +11,7 @@ class VisionPrompt(
         objective: String,
         screenshotPng: ByteArray,
         observationsSoFar: List<String>,
+        stuckCount: Int = 0,
     ): AnalysisAction {
         val observationsText = if (observationsSoFar.isEmpty()) {
             "None yet."
@@ -18,31 +19,56 @@ class VisionPrompt(
             observationsSoFar.mapIndexed { i, obs -> "${i + 1}. $obs" }.joinToString("\n")
         }
 
+        val languageInstruction = if (config.language == "en") "" else
+            "All observations, reasons, and summaries must be written in ${config.language}."
+
         val systemPrompt = """
-            You are a UX analyst for mobile apps. You receive a screenshot and reason about usability, friction, and clarity.
-            Respond ONLY with a single JSON object — no explanation, no markdown, no extra text.
+            You are an expert mobile UX analyst. Your job is to explore a live app, gather usability evidence, and identify friction points.
+
+            Rules:
+            - Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.
+            - Each observation must be a unique, specific insight. Never repeat or rephrase an observation already listed.
+            - Observations should name concrete UX issues (e.g. low contrast, missing feedback, confusing label) or positives — not generic statements.
+            - Navigate actively: tap into flows, open menus, go deeper. One screen is never enough.
+            - If you are on a detail or sub-screen, navigate back to explore other areas of the app.
+            - Do not tap the same element twice in a row.
+            $languageInstruction
         """.trimIndent()
+
+        val screensSeen = observationsSoFar.size
+
+        val stuckNote = when {
+            stuckCount >= 3 -> "WARNING: You have been on this exact screen for $stuckCount steps in a row. You MUST navigate away — tap a back button, swipe, or scroll to a different screen. Do not repeat the same action."
+            stuckCount >= 1 -> "You appear to be on the same screen as the previous step. Try a different action to move forward."
+            else -> ""
+        }
+
+        val explorationNote = if (screensSeen < 5)
+            "You have visited $screensSeen screen(s). Keep exploring — open menus, tap list items, go into sub-flows. Do NOT use \"done\" until you have visited at least 5 distinct screens."
+        else
+            "You have visited $screensSeen screens. Call \"done\" only after covering the main flows."
 
         val userPrompt = """
             Objective: $objective
 
-            Observations so far:
+            Observations already recorded (do NOT repeat or rephrase these):
             $observationsText
+
+            $stuckNote
+            $explorationNote
 
             Look at the screenshot and decide what to do next.
 
-            Respond with a JSON object with these fields:
-            - action: "tap", "scroll", "type", or "done"
-            - x, y: relative screen coordinates (0.0–1.0) for tap or type actions (omit for scroll/done)
-            - direction: "up" or "down" for scroll actions (omit otherwise)
-            - text: string to type for type actions (omit otherwise)
-            - observation: a single sentence about something notable you see on this screen related to UX quality (can be null if nothing notable)
-            - reason: why you are taking this action
+            Respond with a JSON object:
+            - action: "tap" | "scroll" | "type" | "done"
+            - x, y: normalized coordinates 0.0–1.0 (tap/type only)
+            - direction: "up" | "down" (scroll only)
+            - text: string to type (type only)
+            - observation: one specific UX insight about this screen, or null if nothing new to note
+            - reason: brief explanation of your action
 
-            Use "done" when the objective is complete or you have gathered enough observations.
-
-            Example response:
-            {"action":"tap","x":0.5,"y":0.72,"observation":"The checkout button has low contrast and may be hard to spot","reason":"proceeding to checkout"}
+            Example:
+            {"action":"tap","x":0.5,"y":0.72,"observation":"CTA button blends into background — low contrast ratio","reason":"navigating to checkout to inspect payment flow"}
         """.trimIndent()
 
         val messages = listOf(

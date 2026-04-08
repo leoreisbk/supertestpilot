@@ -5,8 +5,37 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 
 object HtmlReportWriter {
 
+    private data class Labels(
+        val htmlLang: String,
+        val title: String,
+        val summary: String,
+        val stepByStep: String,
+        val step: String,
+        val steps: String,
+    )
+
+    private fun labelsFor(language: String): Labels = when (language) {
+        "pt-BR", "pt" -> Labels(
+            htmlLang = "pt-BR",
+            title = "Relatório de Análise TestPilot",
+            summary = "Resumo",
+            stepByStep = "Passo a passo",
+            step = "Passo",
+            steps = "passos",
+        )
+        else -> Labels(
+            htmlLang = "en",
+            title = "TestPilot Analysis Report",
+            summary = "Summary",
+            stepByStep = "Step-by-step",
+            step = "Step",
+            steps = "steps",
+        )
+    }
+
     @OptIn(ExperimentalEncodingApi::class)
-    fun generate(report: AnalysisReport): String {
+    fun generate(report: AnalysisReport, language: String = "en"): String {
+        val lbl = labelsFor(language)
         val stepsHtml = report.steps.mapIndexed { index, step ->
             val base64 = Base64.encode(step.screenshotData)
             val obsHtml = step.observation
@@ -18,11 +47,11 @@ object HtmlReportWriter {
             """
             <div class="step">
               <div class="step-header">
-                <span class="step-num">Step ${index + 1}</span>
+                <span class="step-num">${lbl.step} ${index + 1}</span>
                 <span class="action">${step.action.htmlEscape()}</span>
                 $coordHtml
               </div>
-              <img src="data:image/png;base64,$base64" alt="Step ${index + 1}" />
+              <img src="data:image/png;base64,$base64" alt="${lbl.step} ${index + 1}" />
               $obsHtml
             </div>
             """.trimIndent()
@@ -32,11 +61,11 @@ object HtmlReportWriter {
 
         return """
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="${lbl.htmlLang}">
         <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>TestPilot Analysis Report</title>
+        <title>${lbl.title}</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -67,16 +96,16 @@ object HtmlReportWriter {
         </head>
         <body>
         <div class="header">
-          <h1>TestPilot Analysis Report</h1>
+          <h1>${lbl.title}</h1>
           <div class="objective">${report.objective.htmlEscape()}</div>
-          <div class="meta">${report.stepCount} steps &middot; $durationText</div>
+          <div class="meta">${report.stepCount} ${lbl.steps} &middot; $durationText</div>
         </div>
         <div class="summary-box">
-          <h2>Summary</h2>
+          <h2>${lbl.summary}</h2>
           <p>${report.summary.htmlEscape()}</p>
         </div>
         <div class="steps">
-          <h2>Step-by-step</h2>
+          <h2>${lbl.stepByStep}</h2>
           $stepsHtml
         </div>
         </body>

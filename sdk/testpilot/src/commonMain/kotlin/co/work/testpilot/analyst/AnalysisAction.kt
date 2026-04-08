@@ -1,6 +1,5 @@
 package co.work.testpilot.analyst
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -59,7 +58,11 @@ sealed class AnalysisAction {
                 .removeSuffix("```")
                 .trim()
 
-            val raw = json.decodeFromString<RawAction>(clean)
+            val raw = try {
+                json.decodeFromString<RawAction>(clean)
+            } catch (_: Exception) {
+                json.decodeFromString<RawAction>(repairTruncatedJson(clean))
+            }
             return when (raw.action) {
                 "tap" -> Tap(
                     x = raw.x ?: 0.5,
@@ -81,6 +84,33 @@ sealed class AnalysisAction {
                 )
                 "done" -> Done(observation = raw.observation)
                 else -> Done(observation = "Unknown action: ${raw.action}")
+            }
+        }
+
+        // Closes a truncated JSON object by dropping the last incomplete field
+        // and appending the missing closing brace. E.g.:
+        //   {"action":"tap","x":0.5,"observation":"Some unfinished
+        //   → {"action":"tap","x":0.5}
+        private fun repairTruncatedJson(s: String): String {
+            if (s.endsWith("}")) return s
+            var depth = 0
+            var inString = false
+            var escaped = false
+            var lastSafeComma = -1
+            for (i in s.indices) {
+                val c = s[i]
+                if (escaped) { escaped = false; continue }
+                if (c == '\\' && inString) { escaped = true; continue }
+                if (c == '"') { inString = !inString; continue }
+                if (inString) continue
+                if (c == '{') depth++
+                if (c == '}') depth--
+                if (c == ',' && depth == 1) lastSafeComma = i
+            }
+            return if (lastSafeComma != -1) {
+                s.substring(0, lastSafeComma) + "}"
+            } else {
+                s.substringBefore(",") + "}"
             }
         }
     }

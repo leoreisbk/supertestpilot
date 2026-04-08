@@ -11,17 +11,39 @@ class Analyst(
     private val aiClient: AIClient,
     private val config: Config,
 ) {
+    // Lightweight fingerprint: sample every 200th byte to detect identical screens.
+    private fun fingerprint(png: ByteArray): Int {
+        var sum = 0
+        var i = 0
+        while (i < png.size) { sum += png[i].toInt(); i += 200 }
+        return sum
+    }
+
     suspend fun run(objective: String): AnalysisReport {
         val mark = TimeSource.Monotonic.markNow()
         val steps = mutableListOf<AnalysisStep>()
         val visionPrompt = VisionPrompt(aiClient, config)
         var done = false
+        var stuckCount = 0
+        var lastFingerprint = Int.MIN_VALUE
 
         for (i in 0 until config.maxSteps) {
             if (done) break
             val screenshot = driver.screenshotPng()
+            val fp = fingerprint(screenshot)
+
+            stuckCount = if (fp == lastFingerprint) stuckCount + 1 else 0
+            lastFingerprint = fp
+
+            // Hard recovery: force a scroll back after 5 consecutive identical screens.
+            if (stuckCount >= 5) {
+                driver.scroll("up")
+                stuckCount = 0
+                continue
+            }
+
             val observationsSoFar = steps.mapNotNull { it.observation }
-            val action = visionPrompt(objective, screenshot, observationsSoFar)
+            val action = visionPrompt(objective, screenshot, observationsSoFar, stuckCount)
 
             steps.add(
                 AnalysisStep(
@@ -53,8 +75,11 @@ class Analyst(
     }
 
     private suspend fun generateSummary(objective: String, steps: List<AnalysisStep>): String {
-        val observations = steps.mapNotNull { it.observation }
+        val observations = steps.mapNotNull { it.observation }.distinct()
         if (observations.isEmpty()) return "No observations recorded."
+
+        val languageInstruction = if (config.language == "en") "" else
+            "Write your response in ${config.language}."
 
         val prompt = """
             You analyzed a mobile app with the following objective: "$objective"
@@ -64,6 +89,7 @@ class Analyst(
 
             Write a concise 2–4 sentence summary of the overall UX quality based on these observations.
             Focus on the most important friction points and positive aspects.
+            $languageInstruction
         """.trimIndent()
 
         return aiClient.chatCompletion(

@@ -169,6 +169,7 @@ typedef double XCUIGestureVelocity;
 - (instancetype)init;
 - (instancetype)initWithBundleIdentifier:(NSString *)bundleIdentifier;
 - (void)launch;
+- (void)activate;
 @end
 
 // ---------------------------------------------------------------------------

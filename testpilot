@@ -8,6 +8,7 @@ API_KEY="${TESTPILOT_API_KEY:-}"
 PROVIDER="${TESTPILOT_PROVIDER:-anthropic}"
 MAX_STEPS=20
 OUTPUT="./report.html"
+LANG_CODE="en"
 DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omitted)
 TEAM_ID=""       # Apple Developer Team ID (required for physical device)
 
@@ -15,7 +16,7 @@ COMMAND="${1:-}"
 if [[ "$COMMAND" != "analyze" ]]; then
   echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
   echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
-  echo "       [--api-key <key>] [--max-steps <n>] [--output <path>]"
+  echo "       [--api-key <key>] [--max-steps <n>] [--output <path>] [--lang en|pt-BR]"
   exit 1
 fi
 shift
@@ -29,6 +30,7 @@ while [[ $# -gt 0 ]]; do
     --provider)  PROVIDER="$2";     shift 2 ;;
     --max-steps) MAX_STEPS="$2";    shift 2 ;;
     --output)    OUTPUT="$2";       shift 2 ;;
+    --lang)      LANG_CODE="$2";    shift 2 ;;
     --device)    DEVICE_UDID="$2";  shift 2 ;;
     --team-id)   TEAM_ID="$2";      shift 2 ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
@@ -115,9 +117,9 @@ i = 1
 while i < len(blocks) - 1:
     bid = blocks[i]; body = blocks[i+1]; i += 2
     if '.' not in bid: continue
-    dm = re.search(r'CFBundleDisplayName\s*=\s*\"([^\"]*)\"', body)
-    nm = re.search(r'CFBundleName\s*=\s*\"([^\"]*)\"', body)
-    display = dm.group(1) if dm else (nm.group(1) if nm else bid)
+    dm = re.search(r'CFBundleDisplayName\s*=\s*(?:\"([^\"]*)\"|([A-Za-z0-9 _\-]+))\s*;', body)
+    nm = re.search(r'CFBundleName\s*=\s*(?:\"([^\"]*)\"|([A-Za-z0-9 _\-]+))\s*;', body)
+    display = (dm.group(1) or dm.group(2)) if dm else ((nm.group(1) or nm.group(2)) if nm else bid)
     if name_lower in display.lower() or name_lower in bid.lower():
         matches.append((bid, display))
 if len(matches) == 0:
@@ -158,6 +160,7 @@ else:
   API_KEY_ESC=$(_swift_esc "$API_KEY")
   PROVIDER_ESC=$(_swift_esc "$PROVIDER")
   OBJECTIVE_ESC=$(_swift_esc "$OBJECTIVE")
+  LANG_ESC=$(_swift_esc "$LANG_CODE")
   BUNDLE_ID_OPT="nil"
   [[ -n "$BUNDLE_ID" ]] && BUNDLE_ID_OPT="\"$(_swift_esc "$BUNDLE_ID")\""
 
@@ -174,6 +177,7 @@ class AnalystTests: XCTestCase {
             .provider(provider: provider)
             .apiKey(key: "$API_KEY_ESC")
             .maxSteps(steps: $MAX_STEPS)
+            .language(lang: "$LANG_ESC")
             .build()
         let analyst = AnalystIOS(config: config)
         let _ = try await analyst.run(

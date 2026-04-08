@@ -26,6 +26,7 @@ data class Config(
     val maxTokens: Int,
     val temperature: Double,
     val maxSteps: Int,
+    val language: String = "en",
 )
 
 object ConfigDefaults {
@@ -45,6 +46,7 @@ class ConfigBuilder {
     var maxTokens: Int = ConfigDefaults.maxTokens
     var temperature: Double = ConfigDefaults.temperature
     var maxSteps: Int = ConfigDefaults.maxSteps
+    var language: String = "en"
 
     fun provider(provider: AIProvider): ConfigBuilder {
         this.provider = provider
@@ -94,6 +96,12 @@ class ConfigBuilder {
         return this
     }
 
+    @ObjCName("language")
+    fun language(lang: String): ConfigBuilder {
+        this.language = lang
+        return this
+    }
+
     fun build(): Config = Config(
         provider = provider,
         apiKey = apiKey ?: throw ConfigurationException.ApiKeyRequired(),
@@ -104,5 +112,6 @@ class ConfigBuilder {
         maxTokens = maxTokens,
         temperature = temperature,
         maxSteps = maxSteps,
+        language = language,
     )
 }

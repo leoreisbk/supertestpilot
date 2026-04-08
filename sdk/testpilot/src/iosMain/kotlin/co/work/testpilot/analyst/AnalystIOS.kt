@@ -28,7 +28,7 @@ class AnalystIOS(private val config: Config) {
 
     suspend fun run(objective: String, bundleId: String? = null): String {
         val xcApp = if (bundleId != null) XCUIApplication(bundleId) else XCUIApplication()
-        withContext(Dispatchers.Main) { xcApp.launch() }
+        withContext(Dispatchers.Main) { xcApp.activate() }
         delay(2000) // wait for app to fully load before first screenshot
 
         val httpClient = HttpClient(Darwin)
@@ -66,7 +66,7 @@ class AnalystIOS(private val config: Config) {
         val driver = AnalystDriverIOS(xcApp)
         val analyst = Analyst(driver, aiClient, config)
         val report = analyst.run(objective)
-        val html = HtmlReportWriter.generate(report)
+        val html = HtmlReportWriter.generate(report, config.language)
 
         val reportPath = NSTemporaryDirectory() + "testpilot_report.html"
         @OptIn(ExperimentalForeignApi::class)
