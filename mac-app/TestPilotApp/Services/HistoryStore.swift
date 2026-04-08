@@ -37,6 +37,7 @@ final class HistoryStore {
         let dir = fileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         guard let data = try? JSONEncoder().encode(records) else { return }
+        // Intentional: silent failure — history loss on disk error is acceptable for this MVP
         try? data.write(to: fileURL, options: .atomic)
     }
 }
