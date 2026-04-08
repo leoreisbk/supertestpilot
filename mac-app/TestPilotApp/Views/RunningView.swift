@@ -22,7 +22,7 @@ struct RunningView: View {
             // State-driven content
             switch runner.state {
             case .running(let statusLine):
-                RobotAnimationView()
+                NeuralOrbView()
                 Text(statusLine)
                     .font(.caption)
                     .foregroundStyle(.secondary)
