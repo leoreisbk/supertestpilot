@@ -141,7 +141,7 @@ import TestPilotShared
 
 class AnalystTests: XCTestCase {
     func testAnalyze() async throws {
-        let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : .anthropic
+        let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
         let config = ConfigBuilder()
             .provider(provider: provider)
             .apiKey(key: "$API_KEY_ESC")

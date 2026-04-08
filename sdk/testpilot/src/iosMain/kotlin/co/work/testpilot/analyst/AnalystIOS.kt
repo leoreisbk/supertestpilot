@@ -1,6 +1,7 @@
 package co.work.testpilot.analyst
 
 import co.work.testpilot.ai.AnthropicChatClient
+import co.work.testpilot.ai.GeminiChatClient
 import co.work.testpilot.ai.OpenAIChatClient
 import co.work.testpilot.runtime.AIProvider
 import co.work.testpilot.runtime.AIProviderDefaults
@@ -38,6 +39,12 @@ class AnalystIOS(private val config: Config) {
                 httpClient = httpClient,
                 apiHost = config.apiHost ?: "https://api.anthropic.com",
                 extraHeaders = config.apiHeaders,
+            )
+            AIProvider.Gemini -> GeminiChatClient(
+                apiKey = config.apiKey,
+                modelId = config.modelId ?: AIProviderDefaults.geminiModel,
+                httpClient = httpClient,
+                apiHost = config.apiHost ?: "https://generativelanguage.googleapis.com",
             )
             AIProvider.OpenAI -> OpenAIChatClient(
                 openAI = OpenAI(

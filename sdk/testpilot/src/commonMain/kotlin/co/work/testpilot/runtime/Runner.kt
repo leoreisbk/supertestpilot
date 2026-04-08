@@ -3,6 +3,7 @@ package co.work.testpilot.runtime
 import co.work.testpilot.AppUISnapshot
 import co.work.testpilot.ai.AIClient
 import co.work.testpilot.ai.AnthropicChatClient
+import co.work.testpilot.ai.GeminiChatClient
 import co.work.testpilot.ai.OpenAIChatClient
 import co.work.testpilot.runtime.prompts.InstructPrompt
 import co.work.testpilot.runtime.prompts.InstructPromptInput
@@ -29,7 +30,7 @@ class Runner(private val config: Config) {
     // null when provider is not OpenAI; fuzzy matching degrades gracefully.
     private val openAIForEmbeddings: OpenAI? = when (config.provider) {
         AIProvider.OpenAI -> buildOpenAIClient(config)
-        AIProvider.Anthropic -> null
+        AIProvider.Anthropic, AIProvider.Gemini -> null
     }
 
     private val simplifyPrompt = SimplifyPrompt(aiClient, config)
@@ -86,6 +87,12 @@ private fun createAIClient(config: Config): AIClient {
             httpClient = httpClient,
             apiHost = config.apiHost ?: "https://api.anthropic.com",
             extraHeaders = config.apiHeaders,
+        )
+        AIProvider.Gemini -> GeminiChatClient(
+            apiKey = config.apiKey,
+            modelId = config.modelId ?: AIProviderDefaults.geminiModel,
+            httpClient = httpClient,
+            apiHost = config.apiHost ?: "https://generativelanguage.googleapis.com",
         )
     }
 }

@@ -7,11 +7,13 @@ import kotlin.native.ObjCName
 enum class AIProvider {
     OpenAI,
     Anthropic,
+    Gemini,
 }
 
 object AIProviderDefaults {
     const val openAIModel = "gpt-4o"
     const val anthropicModel = "claude-sonnet-4-6"
+    const val geminiModel = "gemini-2.0-flash"
 }
 
 data class Config(
