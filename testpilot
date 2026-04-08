@@ -240,7 +240,7 @@ SWIFT
       --source "$REPORT_RELATIVE" \
       --destination "$OUTPUT" \
       --domain-type appDataContainer \
-      --domain-identifier "co.work.testpilot.harness.tests" \
+      --domain-identifier "co.work.testpilot.harness.tests.xctrunner" \
       || { echo "Error: Could not copy report from device. Tried: $REPORT_RELATIVE"; exit 1; }
   else
     cp "$REPORT_PATH" "$OUTPUT" \
