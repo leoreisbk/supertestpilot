@@ -14,6 +14,8 @@
 		5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */; };
 		78421CB2880D4DD6B7A09871 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2394908B8A714FE44470FD9 /* SettingsStoreTests.swift */; };
 		7A8B9C0D1E2F3A4B5C6D7E8F /* RobotAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B9C0D1E2F3A4B5C6D7E8F9A /* RobotAnimationView.swift */; };
+		A9B0C1D2E3F4A5B6C7D8E9F0 /* RunningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C1D2E3F4A5B6C7D8E9F0A1 /* RunningView.swift */; };
+		AA01BB02CC03DD04EE05FF06 /* RunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB01CC02DD03EE04FF05AA06 /* RunView.swift */; };
 		90D55D309C2BD8B48DB40010 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69990ABFADC8F4F410613BF /* HistoryStore.swift */; };
 		B3A64E585130DFD47FBB0E74 /* RunConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */; };
 		CBCBDD4B9C0BA4F331C16506 /* DeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FCEC884526EE789C0F69614 /* DeviceInfo.swift */; };
@@ -41,6 +43,8 @@
 		4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisRunner.swift; sourceTree = "<group>"; };
 		6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		8B9C0D1E2F3A4B5C6D7E8F9A /* RobotAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RobotAnimationView.swift; sourceTree = "<group>"; };
+		B0C1D2E3F4A5B6C7D8E9F0A1 /* RunningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningView.swift; sourceTree = "<group>"; };
+		BB01CC02DD03EE04FF05AA06 /* RunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunView.swift; sourceTree = "<group>"; };
 		6467E336163CC33E741CC71E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunConfigTests.swift; sourceTree = "<group>"; };
 		AA1E78161672973DB2730F12 /* project.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = project.yml; sourceTree = "<group>"; };
@@ -120,6 +124,8 @@
 			isa = PBXGroup;
 			children = (
 				2A3B4C5D6E7F8A9B0C1D2E3F /* ContentView.swift */,
+				BB01CC02DD03EE04FF05AA06 /* RunView.swift */,
+				B0C1D2E3F4A5B6C7D8E9F0A1 /* RunningView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -240,6 +246,7 @@
 				3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */,
 				5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */,
 				7A8B9C0D1E2F3A4B5C6D7E8F /* RobotAnimationView.swift in Sources */,
+				A9B0C1D2E3F4A5B6C7D8E9F0 /* RunningView.swift in Sources */,
 				CD0C57B26980DE05A0FD9EBD /* RunConfig.swift in Sources */,
 				05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */,
 				4A5EF25384470A19F0008425 /* SettingsStore.swift in Sources */,
