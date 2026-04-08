@@ -37,11 +37,20 @@ final class AnalysisRunner {
 
         let outputPath = NSString(string: config.outputPath).expandingTildeInPath
 
+        let filledParams = config.parameters.filter { !$0.key.isEmpty && !$0.value.isEmpty }
+        let effectiveObjective: String
+        if filledParams.isEmpty {
+            effectiveObjective = config.objective
+        } else {
+            let lines = filledParams.map { "- \($0.key): \($0.value)" }.joined(separator: "\n")
+            effectiveObjective = config.objective + "\n\nTest parameters:\n" + lines
+        }
+
         var args: [String] = [
             "analyze",
             "--platform", config.platform.rawValue,
             "--app",      config.appName,
-            "--objective", config.objective,
+            "--objective", effectiveObjective,
             "--lang",     config.language.rawValue,
             "--max-steps", "\(config.maxSteps)",
             "--output",   outputPath

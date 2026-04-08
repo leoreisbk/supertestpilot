@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 
 enum Platform: String, Codable, CaseIterable, Identifiable {
@@ -20,6 +21,17 @@ enum Language: String, CaseIterable, Identifiable {
     var displayName: String { self == .en ? "English" : "Português (BR)" }
 }
 
+struct RunParameter: Identifiable {
+    let id = UUID()
+    var key: String = ""
+    var value: String = ""
+    /// True when the key looks like a secret — renders a SecureField.
+    var isSecret: Bool {
+        let k = key.lowercased()
+        return k.contains("password") || k.contains("secret") || k.contains("token")
+    }
+}
+
 @Observable
 final class RunConfig {
     var platform: Platform = .ios
@@ -31,6 +43,7 @@ final class RunConfig {
     // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
     var providerOverride: AIProvider? = nil
+    var parameters: [RunParameter] = []
 
     var isValid: Bool {
         selectedDevice != nil
