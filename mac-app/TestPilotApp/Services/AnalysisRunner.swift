@@ -14,11 +14,24 @@ enum AnalysisState: Equatable {
 final class AnalysisRunner {
     private(set) var state: AnalysisState = .idle
     private var process: Process?
+    private var lastStdoutLine: String = ""
 
     func run(config: RunConfig, settings: SettingsStore) {
         guard case .idle = state else { return }
-        guard let scriptURL = Bundle.main.url(forResource: "testpilot", withExtension: nil) else {
-            state = .failed(error: "testpilot script not found in app bundle")
+
+        if settings.apiKey.isEmpty {
+            state = .failed(error: "API key not set — open Settings and enter your API key")
+            return
+        }
+
+        let scriptURL: URL
+        if !settings.scriptPath.isEmpty {
+            let expanded = NSString(string: settings.scriptPath).expandingTildeInPath
+            scriptURL = URL(fileURLWithPath: expanded)
+        } else if let bundled = Bundle.main.url(forResource: "testpilot", withExtension: nil) {
+            scriptURL = bundled
+        } else {
+            state = .failed(error: "testpilot script not found — set the script path in Settings")
             return
         }
 
@@ -68,7 +81,10 @@ final class AnalysisRunner {
                     .trimmingCharacters(in: .whitespacesAndNewlines),
                   !line.isEmpty
             else { return }
-            DispatchQueue.main.async { self?.state = .running(statusLine: line) }
+            DispatchQueue.main.async {
+                self?.lastStdoutLine = line
+                self?.state = .running(statusLine: line)
+            }
         }
 
         p.terminationHandler = { [weak self] proc in
@@ -83,14 +99,16 @@ final class AnalysisRunner {
                 if proc.terminationStatus == 0 {
                     self?.state = .completed(reportPath: outputPath)
                 } else {
-                    let msg = lastStderr.isEmpty
-                        ? "Analysis failed (exit \(proc.terminationStatus))"
-                        : lastStderr
+                    let fallback = self?.lastStdoutLine ?? ""
+                    let msg = !lastStderr.isEmpty ? lastStderr
+                            : !fallback.isEmpty    ? fallback
+                            : "Analysis failed (exit \(proc.terminationStatus))"
                     self?.state = .failed(error: msg)
                 }
             }
         }
 
+        lastStdoutLine = ""
         state = .running(statusLine: "Starting analysis…")
         process = p
 

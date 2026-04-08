@@ -89,23 +89,55 @@ final class DeviceDetector {
 
     // MARK: - Shell helper
 
+    /// Runs an executable and returns its stdout as a String, or nil on error.
+    /// Uses readabilityHandler to drain the pipe continuously, preventing the
+    /// 64 KB pipe-buffer deadlock that occurs with large outputs (e.g. simctl).
     private nonisolated func shell(_ executable: String, args: [String]) async -> String? {
         await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let p = Process()
-                p.executableURL = URL(fileURLWithPath: executable)
-                p.arguments = args
-                let pipe = Pipe()
-                p.standardOutput = pipe
-                p.standardError = Pipe()
-                do {
-                    try p.run()
-                    p.waitUntilExit()
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    continuation.resume(returning: String(data: data, encoding: .utf8))
-                } catch {
-                    continuation.resume(returning: nil)
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: executable)
+            p.arguments = args
+
+            let outPipe = Pipe()
+            let errPipe = Pipe()
+            p.standardOutput = outPipe
+            p.standardError = errPipe
+
+            var outData = Data()
+            let lock = NSLock()
+
+            outPipe.fileHandleForReading.readabilityHandler = { handle in
+                let chunk = handle.availableData
+                if !chunk.isEmpty {
+                    lock.lock()
+                    outData.append(chunk)
+                    lock.unlock()
                 }
+            }
+            // Drain stderr so it never blocks
+            errPipe.fileHandleForReading.readabilityHandler = { handle in
+                _ = handle.availableData
+            }
+
+            p.terminationHandler = { proc in
+                outPipe.fileHandleForReading.readabilityHandler = nil
+                errPipe.fileHandleForReading.readabilityHandler = nil
+                // Flush any remaining bytes after EOF
+                let tail = outPipe.fileHandleForReading.readDataToEndOfFile()
+                lock.lock()
+                outData.append(tail)
+                let captured = outData
+                lock.unlock()
+                let stdout = String(data: captured, encoding: .utf8) ?? ""
+                continuation.resume(returning: stdout.isEmpty ? nil : stdout)
+            }
+
+            do {
+                try p.run()
+            } catch {
+                outPipe.fileHandleForReading.readabilityHandler = nil
+                errPipe.fileHandleForReading.readabilityHandler = nil
+                continuation.resume(returning: nil)
             }
         }
     }

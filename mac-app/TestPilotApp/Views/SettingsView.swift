@@ -32,6 +32,31 @@ struct SettingsView: View {
             }
 
             Section {
+                HStack {
+                    TextField("testpilot script path", text: $store.scriptPath)
+                        .onChange(of: store.scriptPath) { _, _ in store.save() }
+                    Button("Browse…") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseFiles = true
+                        panel.canChooseDirectories = false
+                        panel.allowsMultipleSelection = false
+                        panel.title = "Select testpilot script"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            store.scriptPath = url.path
+                            store.save()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } header: {
+                Text("Script")
+            } footer: {
+                Text("Path to the testpilot script in your repo (e.g. ~/Projects/testpilot/testpilot). Auto-detected if left empty.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 DisclosureGroup(".env file  (~/.testpilot/.env)", isExpanded: $showRawEnv) {
                     TextEditor(text: $rawEnvText)
                         .font(.system(.body, design: .monospaced))
