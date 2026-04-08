@@ -161,7 +161,14 @@ else:
   cp "$TEST_SWIFT" "$TEST_SWIFT_BACKUP"
   trap 'cp "$TEST_SWIFT_BACKUP" "$TEST_SWIFT"; rm -f "$TEST_SWIFT_BACKUP"; [[ -f "$DERIVED_DATA/xcodebuild.log" ]] && cp "$DERIVED_DATA/xcodebuild.log" /tmp/testpilot_last_xcodebuild.log; rm -rf "$DERIVED_DATA"' EXIT
 
-  _swift_esc() { echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+  _swift_esc() {
+    local s="$1"
+    s="${s//\\/\\\\}"    # backslash → \\
+    s="${s//\"/\\\"}"    # " → \"
+    s="${s//$'\n'/\\n}"  # newline → \n (keeps Swift string on one line)
+    s="${s//$'\r'/}"     # strip carriage returns
+    printf '%s' "$s"
+  }
   API_KEY_ESC=$(_swift_esc "$API_KEY")
   PROVIDER_ESC=$(_swift_esc "$PROVIDER")
   OBJECTIVE_ESC=$(_swift_esc "$OBJECTIVE")
