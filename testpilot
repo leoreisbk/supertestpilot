@@ -84,12 +84,16 @@ for runtime, devices in devs.get('devices', {}).items():
   export TP_APP_NAME="$APP_NAME"
 
   if [[ "$USE_DEVICE" == "true" ]]; then
-    # Physical device: list apps via devicectl
-    BUNDLE_ID=$(xcrun devicectl device info apps --device "$DEVICE_UDID" --json-output /dev/stdout 2>/dev/null \
-      | python3 -c "
+    # Physical device: list apps via devicectl.
+    # devicectl writes a text table to stdout AND JSON to --json-output;
+    # using /dev/stdout for both corrupts the JSON stream, so we use a temp file.
+    _APPS_JSON=$(mktemp /tmp/tp_apps_XXXXXX.json)
+    xcrun devicectl device info apps --device "$DEVICE_UDID" --json-output "$_APPS_JSON" >/dev/null 2>&1 || true
+    BUNDLE_ID=$(python3 -c "
 import json, sys, os
 name_lower = os.environ['TP_APP_NAME'].lower()
-data = json.load(sys.stdin)
+with open('$_APPS_JSON') as f:
+    data = json.load(f)
 apps = data.get('result', {}).get('apps', [])
 matches = []
 for app in apps:
@@ -103,7 +107,8 @@ elif len(matches) == 1:
     print(matches[0][0], end='')
 else:
     print('MULTIPLE_' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
-" || echo "ERROR_no_match")
+" 2>/dev/null || echo "ERROR_no_match")
+    rm -f "$_APPS_JSON"
   else
     # Simulator: parse ASCII plist from simctl listapps
     BUNDLE_ID=$(xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
