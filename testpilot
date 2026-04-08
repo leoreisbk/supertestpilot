@@ -8,23 +8,29 @@ API_KEY="${TESTPILOT_API_KEY:-}"
 PROVIDER="${TESTPILOT_PROVIDER:-anthropic}"
 MAX_STEPS=20
 OUTPUT="./report.html"
+DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omitted)
+TEAM_ID=""       # Apple Developer Team ID (required for physical device)
 
 COMMAND="${1:-}"
 if [[ "$COMMAND" != "analyze" ]]; then
   echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
+  echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
+  echo "       [--api-key <key>] [--max-steps <n>] [--output <path>]"
   exit 1
 fi
 shift
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --platform)  PLATFORM="$2";   shift 2 ;;
-    --app)       APP_NAME="$2";   shift 2 ;;
-    --objective) OBJECTIVE="$2";  shift 2 ;;
-    --api-key)   API_KEY="$2";    shift 2 ;;
-    --provider)  PROVIDER="$2";   shift 2 ;;
-    --max-steps) MAX_STEPS="$2";  shift 2 ;;
-    --output)    OUTPUT="$2";     shift 2 ;;
+    --platform)  PLATFORM="$2";     shift 2 ;;
+    --app)       APP_NAME="$2";     shift 2 ;;
+    --objective) OBJECTIVE="$2";    shift 2 ;;
+    --api-key)   API_KEY="$2";      shift 2 ;;
+    --provider)  PROVIDER="$2";     shift 2 ;;
+    --max-steps) MAX_STEPS="$2";    shift 2 ;;
+    --output)    OUTPUT="$2";       shift 2 ;;
+    --device)    DEVICE_UDID="$2";  shift 2 ;;
+    --team-id)   TEAM_ID="$2";      shift 2 ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
 done
@@ -34,6 +40,7 @@ if [[ -f ".env" ]]; then
   set -a; source .env; set +a
   API_KEY="${TESTPILOT_API_KEY:-$API_KEY}"
   PROVIDER="${TESTPILOT_PROVIDER:-$PROVIDER}"
+  TEAM_ID="${TESTPILOT_TEAM_ID:-$TEAM_ID}"
 fi
 
 [[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios or android)"; exit 1; }
@@ -46,10 +53,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "$PLATFORM" == "ios" ]]; then
   command -v xcrun >/dev/null 2>&1 || { echo "Error: xcrun not found — install Xcode command line tools"; exit 1; }
 
-  BOOTED=$(xcrun simctl list devices | grep "(Booted)" | head -1)
-  [[ -z "$BOOTED" ]] && { echo "Error: No booted iOS simulator. Boot one in Xcode or: xcrun simctl boot <UDID>"; exit 1; }
+  # ── Determine target: physical device or simulator ──────────────────────────
+  USE_DEVICE=false
+  if [[ -n "$DEVICE_UDID" ]]; then
+    USE_DEVICE=true
+    [[ -z "$TEAM_ID" ]] && { echo "Error: --team-id required when targeting a physical device (or set TESTPILOT_TEAM_ID in .env)"; exit 1; }
+    DESTINATION="platform=iOS,id=$DEVICE_UDID"
+    echo "Targeting physical device: $DEVICE_UDID"
+  else
+    BOOTED=$(xcrun simctl list devices | grep "(Booted)" | head -1)
+    [[ -z "$BOOTED" ]] && { echo "Error: No booted iOS simulator. Boot one in Xcode or with: xcrun simctl boot <UDID>"; exit 1; }
 
-  BOOTED_UDID=$(xcrun simctl list devices --json | python3 -c "
+    BOOTED_UDID=$(xcrun simctl list devices --json | python3 -c "
 import json, sys
 devs = json.load(sys.stdin)
 for runtime, devices in devs.get('devices', {}).items():
@@ -58,13 +73,39 @@ for runtime, devices in devs.get('devices', {}).items():
             print(d['udid'])
             exit()
 ")
-  [[ -z "$BOOTED_UDID" ]] && { echo "Error: Could not determine booted simulator UDID."; exit 1; }
+    [[ -z "$BOOTED_UDID" ]] && { echo "Error: Could not determine booted simulator UDID."; exit 1; }
+    DESTINATION="platform=iOS Simulator,id=$BOOTED_UDID"
+  fi
 
+  # ── Resolve bundle ID ────────────────────────────────────────────────────────
   echo "Resolving bundle ID for \"$APP_NAME\"..."
-  # xcrun simctl listapps outputs NeXTSTEP/ASCII plist — parse with Python regex
   export TP_APP_NAME="$APP_NAME"
-  BUNDLE_ID=$(xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
-    | python3 -c "
+
+  if [[ "$USE_DEVICE" == "true" ]]; then
+    # Physical device: list apps via devicectl
+    BUNDLE_ID=$(xcrun devicectl device info apps --device "$DEVICE_UDID" --json-output /dev/stdout 2>/dev/null \
+      | python3 -c "
+import json, sys, os
+name_lower = os.environ['TP_APP_NAME'].lower()
+data = json.load(sys.stdin)
+apps = data.get('result', {}).get('apps', [])
+matches = []
+for app in apps:
+    bid = app.get('bundleID', '')
+    name = app.get('name', bid)
+    if name_lower in name.lower() or name_lower in bid.lower():
+        matches.append((bid, name))
+if len(matches) == 0:
+    print('ERROR_no_match', end='')
+elif len(matches) == 1:
+    print(matches[0][0], end='')
+else:
+    print('MULTIPLE_' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
+" || echo "ERROR_no_match")
+  else
+    # Simulator: parse ASCII plist from simctl listapps
+    BUNDLE_ID=$(xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
+      | python3 -c "
 import sys, re, os
 text = sys.stdin.read()
 name_lower = os.environ['TP_APP_NAME'].lower()
@@ -86,25 +127,10 @@ elif len(matches) == 1:
 else:
     print('MULTIPLE_' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
 ")
+  fi
 
   if [[ "$BUNDLE_ID" == ERROR* ]]; then
-    echo "Error: No app matching \"$APP_NAME\" found."
-    echo "Installed apps:"
-    xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
-      | python3 -c "
-import sys, re
-text = sys.stdin.read()
-blocks = re.split(r'\"([^\"]+)\"\s*=\s*\{', text)
-i = 1; rows = []
-while i < len(blocks) - 1:
-    bid = blocks[i]; body = blocks[i+1]; i += 2
-    if '.' not in bid: continue
-    m = re.search(r'CFBundleDisplayName\s*=\s*\"([^\"]*)\"', body)
-    n = re.search(r'CFBundleName\s*=\s*\"([^\"]*)\"', body)
-    name = m.group(1) if m else (n.group(1) if n else bid)
-    rows.append(f'  {name} ({bid})')
-for r in sorted(rows): print(r)
-"
+    echo "Error: No app matching \"$APP_NAME\" found on the target device."
     exit 1
   fi
 
@@ -115,17 +141,19 @@ for r in sorted(rows): print(r)
   fi
 
   echo "Found: $BUNDLE_ID"
+
+  # ── Build SDK ────────────────────────────────────────────────────────────────
   echo "Building SDK..."
   (cd "$SCRIPT_DIR" && scripts/build_ios_sdk.sh) >/dev/null 2>&1 \
     || { echo "Error: SDK build failed. Run scripts/build_ios_sdk.sh manually for details."; exit 1; }
 
+  # ── Prepare test file ────────────────────────────────────────────────────────
   DERIVED_DATA=$(mktemp -d)
   TEST_SWIFT="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift"
   TEST_SWIFT_BACKUP="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift.bak"
   cp "$TEST_SWIFT" "$TEST_SWIFT_BACKUP"
   trap 'cp "$TEST_SWIFT_BACKUP" "$TEST_SWIFT"; rm -f "$TEST_SWIFT_BACKUP"; [[ -f "$DERIVED_DATA/xcodebuild.log" ]] && cp "$DERIVED_DATA/xcodebuild.log" /tmp/testpilot_last_xcodebuild.log; rm -rf "$DERIVED_DATA"' EXIT
 
-  # Escape Swift string special chars in values
   _swift_esc() { echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
   API_KEY_ESC=$(_swift_esc "$API_KEY")
   PROVIDER_ESC=$(_swift_esc "$PROVIDER")
@@ -156,19 +184,27 @@ class AnalystTests: XCTestCase {
 }
 SWIFT
 
+  # ── Run xcodebuild ───────────────────────────────────────────────────────────
   echo "Running analysis..."
   XCODE_LOG="$DERIVED_DATA/xcodebuild.log"
+
+  XCODE_EXTRA_ARGS=()
+  if [[ "$USE_DEVICE" == "true" ]]; then
+    XCODE_EXTRA_ARGS+=(-allowProvisioningUpdates "DEVELOPMENT_TEAM=$TEAM_ID")
+  fi
+
   LOG=$(xcodebuild test \
           -project "$SCRIPT_DIR/harness/Harness.xcodeproj" \
           -scheme AnalystTests \
-          -destination "platform=iOS Simulator,id=$BOOTED_UDID" \
+          -destination "$DESTINATION" \
           -derivedDataPath "$DERIVED_DATA" \
+          "${XCODE_EXTRA_ARGS[@]}" \
           2>&1 || true)
   echo "$LOG" > "$XCODE_LOG"
 
-  REPORT_SIM_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//' || true)
+  REPORT_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//' || true)
 
-  if [[ -z "$REPORT_SIM_PATH" ]]; then
+  if [[ -z "$REPORT_PATH" ]]; then
     echo "Error: Analysis produced no report. Test likely failed."
     echo "Xcodebuild log saved to: $XCODE_LOG"
     echo "--- Key lines ---"
@@ -176,9 +212,18 @@ SWIFT
     exit 1
   fi
 
+  # ── Copy report to host ──────────────────────────────────────────────────────
   echo "Copying report..."
-  xcrun simctl spawn booted sh -c "cat '$REPORT_SIM_PATH'" > "$OUTPUT" \
-    || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_SIM_PATH"; exit 1; }
+  if [[ "$USE_DEVICE" == "true" ]]; then
+    xcrun devicectl device copy off \
+      --device "$DEVICE_UDID" \
+      --source "$REPORT_PATH" \
+      --destination "$OUTPUT" \
+      || { echo "Error: Could not copy report from device. Path tried: $REPORT_PATH"; exit 1; }
+  else
+    xcrun simctl spawn booted sh -c "cat '$REPORT_PATH'" > "$OUTPUT" \
+      || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_PATH"; exit 1; }
+  fi
 
   echo "Report written to: $OUTPUT"
   open "$OUTPUT"
