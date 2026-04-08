@@ -1,0 +1,115 @@
+import Foundation
+import AppKit
+import Observation
+
+enum AnalysisState: Equatable {
+    case idle
+    case running(statusLine: String)
+    case completed(reportPath: String)
+    case failed(error: String)
+}
+
+@MainActor
+@Observable
+final class AnalysisRunner {
+    private(set) var state: AnalysisState = .idle
+    private var process: Process?
+
+    func run(config: RunConfig, settings: SettingsStore) {
+        guard let scriptURL = Bundle.main.url(forResource: "testpilot", withExtension: nil) else {
+            state = .failed(error: "testpilot script not found in app bundle")
+            return
+        }
+
+        let outputPath = NSString(string: config.outputPath).expandingTildeInPath
+
+        var args: [String] = [
+            "analyze",
+            "--platform", config.platform.rawValue,
+            "--app",      config.appName,
+            "--objective", config.objective,
+            "--lang",     config.language.rawValue,
+            "--max-steps", "\(config.maxSteps)",
+            "--output",   outputPath
+        ]
+
+        if let device = config.selectedDevice, device.isPhysical {
+            args += ["--device", device.id]
+            if !settings.teamId.isEmpty {
+                args += ["--team-id", settings.teamId]
+            }
+        }
+
+        let provider = config.providerOverride ?? settings.provider
+        args += ["--provider", provider.rawValue]
+
+        var env = ProcessInfo.processInfo.environment
+        env["TESTPILOT_API_KEY"]  = settings.apiKey
+        env["TESTPILOT_PROVIDER"] = provider.rawValue
+        if !settings.teamId.isEmpty {
+            env["TESTPILOT_TEAM_ID"] = settings.teamId
+        }
+
+        let p = Process()
+        p.executableURL = scriptURL
+        p.arguments = args
+        p.environment = env
+
+        let stdout = Pipe()
+        let stderr = Pipe()
+        p.standardOutput = stdout
+        p.standardError  = stderr
+
+        var lastStderr = ""
+
+        stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty,
+                  let line = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !line.isEmpty
+            else { return }
+            DispatchQueue.main.async { self?.state = .running(statusLine: line) }
+        }
+
+        stderr.fileHandleForReading.readabilityHandler = { handle in
+            if let s = String(data: handle.availableData, encoding: .utf8), !s.isEmpty {
+                lastStderr = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+
+        p.terminationHandler = { [weak self] proc in
+            stdout.fileHandleForReading.readabilityHandler = nil
+            stderr.fileHandleForReading.readabilityHandler = nil
+            DispatchQueue.main.async {
+                if proc.terminationStatus == 0 {
+                    self?.state = .completed(reportPath: outputPath)
+                } else {
+                    let msg = lastStderr.isEmpty
+                        ? "Analysis failed (exit \(proc.terminationStatus))"
+                        : lastStderr
+                    self?.state = .failed(error: msg)
+                }
+            }
+        }
+
+        state = .running(statusLine: "Starting analysis…")
+        process = p
+
+        do {
+            try p.run()
+        } catch {
+            state = .failed(error: error.localizedDescription)
+        }
+    }
+
+    func cancel() {
+        process?.terminate()
+        process = nil
+        state = .idle
+    }
+
+    func reset() {
+        state = .idle
+    }
+}
