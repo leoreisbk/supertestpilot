@@ -231,11 +231,17 @@ SWIFT
   # ── Copy report to host ──────────────────────────────────────────────────────
   echo "Copying report..."
   if [[ "$USE_DEVICE" == "true" ]]; then
-    xcrun devicectl device copy off \
+    # REPORT_PATH is an absolute on-device path like
+    # /var/mobile/Containers/Data/Application/<UUID>/tmp/testpilot_report.html
+    # devicectl copy from needs a path relative to the app data container root.
+    REPORT_RELATIVE=$(basename "$(dirname "$REPORT_PATH")")/$(basename "$REPORT_PATH")
+    xcrun devicectl device copy from \
       --device "$DEVICE_UDID" \
-      --source "$REPORT_PATH" \
+      --source "$REPORT_RELATIVE" \
       --destination "$OUTPUT" \
-      || { echo "Error: Could not copy report from device. Path tried: $REPORT_PATH"; exit 1; }
+      --domain-type appDataContainer \
+      --domain-identifier "co.work.testpilot.harness.tests" \
+      || { echo "Error: Could not copy report from device. Tried: $REPORT_RELATIVE"; exit 1; }
   else
     cp "$REPORT_PATH" "$OUTPUT" \
       || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_PATH"; exit 1; }
