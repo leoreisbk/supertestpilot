@@ -2,6 +2,7 @@ import Foundation
 import Security
 import Observation
 
+@MainActor
 @Observable
 final class SettingsStore {
     var provider: AIProvider = .anthropic
@@ -29,6 +30,8 @@ final class SettingsStore {
     var rawEnv: String {
         get { SettingsStore.buildEnv(apiKey: apiKey, provider: provider, teamId: teamId) }
         set {
+            // Note: only TESTPILOT_API_KEY, TESTPILOT_PROVIDER, TESTPILOT_TEAM_ID are parsed.
+            // Other keys in the .env file are not preserved on round-trip.
             let parsed = SettingsStore.parseEnv(newValue)
             if let k = parsed.apiKey { apiKey = k }
             if let p = parsed.provider { provider = p }
@@ -76,7 +79,7 @@ final class SettingsStore {
         var teamId: String?
     }
 
-    static func parseEnv(_ raw: String) -> ParsedEnv {
+    nonisolated static func parseEnv(_ raw: String) -> ParsedEnv {
         var result = ParsedEnv()
         for line in raw.split(separator: "\n", omittingEmptySubsequences: true) {
             let parts = line.split(separator: "=", maxSplits: 1)
@@ -93,7 +96,7 @@ final class SettingsStore {
         return result
     }
 
-    static func buildEnv(apiKey: String, provider: AIProvider, teamId: String) -> String {
+    nonisolated static func buildEnv(apiKey: String, provider: AIProvider, teamId: String) -> String {
         var lines: [String] = []
         if !apiKey.isEmpty  { lines.append("TESTPILOT_API_KEY=\(apiKey)") }
         lines.append("TESTPILOT_PROVIDER=\(provider.rawValue)")
@@ -119,12 +122,16 @@ final class SettingsStore {
     }
 
     private func keychainSave(_ value: String) {
-        let data = Data(value.utf8)
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
             kSecAttrAccount as String: keychainAccount
         ]
+        if value.isEmpty {
+            SecItemDelete(query as CFDictionary)
+            return
+        }
+        let data = Data(value.utf8)
         let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if status == errSecItemNotFound {
             var addQuery = query
