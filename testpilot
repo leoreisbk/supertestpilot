@@ -228,21 +228,21 @@ SWIFT
     exit 1
   fi
 
-  # ── Copy report to host ──────────────────────────────────────────────────────
-  echo "Copying report..."
+  # ── Extract report from log ──────────────────────────────────────────────────
+  # The SDK prints the HTML inline between TESTPILOT_REPORT_START/END markers.
+  # For physical devices this is more reliable than devicectl file transfer.
+  echo "Extracting report..."
   if [[ "$USE_DEVICE" == "true" ]]; then
-    # REPORT_PATH is an absolute on-device path like
-    # /var/mobile/Containers/Data/Application/<UUID>/Documents/testpilot_report.html
-    # devicectl copy from needs a path relative to the app data container root.
-    # Strip everything up to and including the UUID segment.
-    REPORT_RELATIVE=$(echo "$REPORT_PATH" | grep -oE "(Documents|tmp|Library)/.*$" || echo "Documents/testpilot_report.html")
-    xcrun devicectl device copy from \
-      --device "$DEVICE_UDID" \
-      --source "$REPORT_RELATIVE" \
-      --destination "$OUTPUT" \
-      --domain-type appDataContainer \
-      --domain-identifier "co.work.testpilot.harness.tests.xctrunner" \
-      || { echo "Error: Could not copy report from device. Tried: $REPORT_RELATIVE"; exit 1; }
+    python3 -c "
+import sys
+log = open('$XCODE_LOG').read()
+start = log.find('TESTPILOT_REPORT_START\n')
+end   = log.find('\nTESTPILOT_REPORT_END', start)
+if start == -1 or end == -1:
+    sys.exit(1)
+html = log[start + len('TESTPILOT_REPORT_START\n'):end]
+open('$OUTPUT', 'w').write(html)
+" || { echo "Error: Could not extract report from xcodebuild log."; exit 1; }
   else
     cp "$REPORT_PATH" "$OUTPUT" \
       || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_PATH"; exit 1; }

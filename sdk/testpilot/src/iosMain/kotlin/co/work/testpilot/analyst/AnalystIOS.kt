@@ -71,6 +71,12 @@ class AnalystIOS(private val config: Config) {
         val report = analyst.run(objective)
         val html = HtmlReportWriter.generate(report, config.language)
 
+        // Emit the report inline so the CLI can extract it from xcodebuild stdout
+        // without needing devicectl file transfer (which is unreliable on physical devices).
+        println("TESTPILOT_REPORT_START")
+        println(html)
+        println("TESTPILOT_REPORT_END")
+
         val docsDir = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
             .firstOrNull() as? String ?: NSTemporaryDirectory()
         val reportPath = "$docsDir/testpilot_report.html"
