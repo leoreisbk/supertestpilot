@@ -131,6 +131,7 @@
 				BB01CC02DD03EE04FF05AA06 /* RunView.swift */,
 				B0C1D2E3F4A5B6C7D8E9F0A1 /* RunningView.swift */,
 				DD03EE04FF05AA06BB01CC02 /* SettingsView.swift */,
+				FF04AA05BB06CC07DD08EE03 /* HistoryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -257,6 +258,7 @@
 				05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */,
 				4A5EF25384470A19F0008425 /* SettingsStore.swift in Sources */,
 				CC02DD03EE04FF05AA06BB01 /* SettingsView.swift in Sources */,
+			EE03FF04AA05BB06CC07DD08 /* HistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
