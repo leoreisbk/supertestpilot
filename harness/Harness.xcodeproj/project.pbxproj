@@ -11,6 +11,8 @@
 		AA0001000000000000000002 /* AnalystTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0002000000000000000002 /* AnalystTests.swift */; };
 		AA0001000000000000000003 /* TestPilotShared.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0002000000000000000003 /* TestPilotShared.xcframework */; };
 		AA0001000000000000000004 /* TestPilotShared.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA0002000000000000000003 /* TestPilotShared.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0001000000000000000005 /* TestPilotShared.xcframework in Frameworks (Tests) */ = {isa = PBXBuildFile; fileRef = AA0002000000000000000003 /* TestPilotShared.xcframework */; };
+		AA0001000000000000000006 /* TestPilotShared.xcframework in Embed Frameworks (Tests) */ = {isa = PBXBuildFile; fileRef = AA0002000000000000000003 /* TestPilotShared.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -21,6 +23,17 @@
 			dstSubfolderSpec = 10;
 			files = (
 				AA0001000000000000000004 /* TestPilotShared.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0003000000000000000002 /* Embed Frameworks (Tests) */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				AA0001000000000000000006 /* TestPilotShared.xcframework in Embed Frameworks (Tests) */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -50,6 +63,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0001000000000000000005 /* TestPilotShared.xcframework in Frameworks (Tests) */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +141,7 @@
 			buildPhases = (
 				AA0007000000000000000002 /* Sources */,
 				AA0004000000000000000002 /* Frameworks */,
+				AA0003000000000000000002 /* Embed Frameworks (Tests) */,
 			);
 			buildRules = (
 			);
