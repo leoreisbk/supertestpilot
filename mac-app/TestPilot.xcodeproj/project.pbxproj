@@ -8,8 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2986E6861809CDB1FFBDF4B /* RunRecord.swift */; };
+		1A2B3C4D5E6F7A8B9C0D1E2F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3B4C5D6E7F8A9B0C1D2E3F /* ContentView.swift */; };
+		3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */; };
 		4A5EF25384470A19F0008425 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */; };
+		5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */; };
 		78421CB2880D4DD6B7A09871 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2394908B8A714FE44470FD9 /* SettingsStoreTests.swift */; };
+		7A8B9C0D1E2F3A4B5C6D7E8F /* RobotAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B9C0D1E2F3A4B5C6D7E8F9A /* RobotAnimationView.swift */; };
 		90D55D309C2BD8B48DB40010 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69990ABFADC8F4F410613BF /* HistoryStore.swift */; };
 		B3A64E585130DFD47FBB0E74 /* RunConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */; };
 		CBCBDD4B9C0BA4F331C16506 /* DeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FCEC884526EE789C0F69614 /* DeviceInfo.swift */; };
@@ -30,9 +34,13 @@
 
 /* Begin PBXFileReference section */
 		1B0C2EE0BEFFCAA035A7B658 /* TestPilotApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestPilotApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A3B4C5D6E7F8A9B0C1D2E3F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2D306AA7749FB7349331046E /* HistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStoreTests.swift; sourceTree = "<group>"; };
 		2FCEC884526EE789C0F69614 /* DeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceInfo.swift; sourceTree = "<group>"; };
 		455406A00A4451D3B4D4C190 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisRunner.swift; sourceTree = "<group>"; };
+		6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
+		8B9C0D1E2F3A4B5C6D7E8F9A /* RobotAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RobotAnimationView.swift; sourceTree = "<group>"; };
 		6467E336163CC33E741CC71E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunConfigTests.swift; sourceTree = "<group>"; };
 		AA1E78161672973DB2730F12 /* project.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = project.yml; sourceTree = "<group>"; };
@@ -72,6 +80,8 @@
 				6467E336163CC33E741CC71E /* Info.plist */,
 				93C6286D63729F5F12BA7BC4 /* Models */,
 				C0F8AE27B217BAC396A003F3 /* Services */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* Views */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* Animations */,
 			);
 			path = TestPilotApp;
 			sourceTree = "<group>";
@@ -98,10 +108,28 @@
 		C0F8AE27B217BAC396A003F3 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */,
+				6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */,
 				D69990ABFADC8F4F410613BF /* HistoryStore.swift */,
 				B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2A3B4C5D6E7F8A9B0C1D2E3F /* ContentView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* Animations */ = {
+			isa = PBXGroup;
+			children = (
+				8B9C0D1E2F3A4B5C6D7E8F9A /* RobotAnimationView.swift */,
+			);
+			path = Animations;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -206,8 +234,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				E76E19FC75F0850114430131 /* App.swift in Sources */,
+				1A2B3C4D5E6F7A8B9C0D1E2F /* ContentView.swift in Sources */,
 				CBCBDD4B9C0BA4F331C16506 /* DeviceInfo.swift in Sources */,
 				90D55D309C2BD8B48DB40010 /* HistoryStore.swift in Sources */,
+				3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */,
+				5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */,
+				7A8B9C0D1E2F3A4B5C6D7E8F /* RobotAnimationView.swift in Sources */,
 				CD0C57B26980DE05A0FD9EBD /* RunConfig.swift in Sources */,
 				05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */,
 				4A5EF25384470A19F0008425 /* SettingsStore.swift in Sources */,

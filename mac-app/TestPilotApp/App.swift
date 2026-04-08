@@ -4,7 +4,9 @@ import SwiftUI
 struct TestPilotApp: App {
     var body: some Scene {
         WindowGroup {
-            Text("TestPilot")
+            ContentView()
         }
+        .defaultSize(width: 760, height: 540)
+        .windowResizability(.contentMinSize)
     }
 }
