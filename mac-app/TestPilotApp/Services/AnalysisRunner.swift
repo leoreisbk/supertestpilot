@@ -16,6 +16,7 @@ final class AnalysisRunner {
     private var process: Process?
 
     func run(config: RunConfig, settings: SettingsStore) {
+        guard case .idle = state else { return }
         guard let scriptURL = Bundle.main.url(forResource: "testpilot", withExtension: nil) else {
             state = .failed(error: "testpilot script not found in app bundle")
             return
@@ -60,8 +61,6 @@ final class AnalysisRunner {
         p.standardOutput = stdout
         p.standardError  = stderr
 
-        var lastStderr = ""
-
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty,
@@ -72,22 +71,21 @@ final class AnalysisRunner {
             DispatchQueue.main.async { self?.state = .running(statusLine: line) }
         }
 
-        stderr.fileHandleForReading.readabilityHandler = { handle in
-            if let s = String(data: handle.availableData, encoding: .utf8), !s.isEmpty {
-                lastStderr += s
-            }
-        }
-
         p.terminationHandler = { [weak self] proc in
             stdout.fileHandleForReading.readabilityHandler = nil
-            stderr.fileHandleForReading.readabilityHandler = nil
+            // Drain remaining stderr synchronously after process exits
+            let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
+            let lastStderr = String(data: stderrData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             DispatchQueue.main.async {
+                // Don't overwrite state if already reset by cancel()
+                guard case .running = self?.state else { return }
                 if proc.terminationStatus == 0 {
                     self?.state = .completed(reportPath: outputPath)
                 } else {
                     let msg = lastStderr.isEmpty
                         ? "Analysis failed (exit \(proc.terminationStatus))"
-                        : lastStderr.trimmingCharacters(in: .whitespacesAndNewlines)
+                        : lastStderr
                     self?.state = .failed(error: msg)
                 }
             }

@@ -1,6 +1,7 @@
 import XCTest
 @testable import TestPilotApp
 
+@MainActor
 final class HistoryStoreTests: XCTestCase {
     var tempURL: URL!
 

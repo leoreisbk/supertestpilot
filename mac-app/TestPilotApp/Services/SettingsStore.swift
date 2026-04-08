@@ -132,11 +132,12 @@ final class SettingsStore {
             return
         }
         let data = Data(value.utf8)
-        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-        if status == errSecItemNotFound {
+        let updateStatus = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if updateStatus == errSecItemNotFound {
             var addQuery = query
             addQuery[kSecValueData as String] = data
             SecItemAdd(addQuery as CFDictionary, nil)
         }
+        // Note: other SecItemUpdate errors (e.g. errSecInteractionNotAllowed) are silently ignored for MVP
     }
 }
