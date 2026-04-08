@@ -198,7 +198,7 @@ SWIFT
           -scheme AnalystTests \
           -destination "$DESTINATION" \
           -derivedDataPath "$DERIVED_DATA" \
-          "${XCODE_EXTRA_ARGS[@]}" \
+          ${XCODE_EXTRA_ARGS[@]+"${XCODE_EXTRA_ARGS[@]}"} \
           2>&1 || true)
   echo "$LOG" > "$XCODE_LOG"
 
@@ -221,7 +221,7 @@ SWIFT
       --destination "$OUTPUT" \
       || { echo "Error: Could not copy report from device. Path tried: $REPORT_PATH"; exit 1; }
   else
-    xcrun simctl spawn booted sh -c "cat '$REPORT_PATH'" > "$OUTPUT" \
+    cp "$REPORT_PATH" "$OUTPUT" \
       || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_PATH"; exit 1; }
   fi
 

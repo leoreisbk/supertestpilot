@@ -13,7 +13,7 @@ enum class AIProvider {
 object AIProviderDefaults {
     const val openAIModel = "gpt-4o"
     const val anthropicModel = "claude-sonnet-4-6"
-    const val geminiModel = "gemini-2.0-flash"
+    const val geminiModel = "gemini-2.5-flash"
 }
 
 data class Config(
