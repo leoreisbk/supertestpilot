@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2986E6861809CDB1FFBDF4B /* RunRecord.swift */; };
+		B3A64E585130DFD47FBB0E74 /* RunConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */; };
+		CBCBDD4B9C0BA4F331C16506 /* DeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FCEC884526EE789C0F69614 /* DeviceInfo.swift */; };
+		CD0C57B26980DE05A0FD9EBD /* RunConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9DA46D3EB26AC76D7038824 /* RunConfig.swift */; };
+		E76E19FC75F0850114430131 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455406A00A4451D3B4D4C190 /* App.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A8B142DA614B6F72373F109D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -18,15 +26,21 @@
 
 /* Begin PBXFileReference section */
 		1B0C2EE0BEFFCAA035A7B658 /* TestPilotApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestPilotApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2FCEC884526EE789C0F69614 /* DeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceInfo.swift; sourceTree = "<group>"; };
+		455406A00A4451D3B4D4C190 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		6467E336163CC33E741CC71E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunConfigTests.swift; sourceTree = "<group>"; };
 		AA1E78161672973DB2730F12 /* project.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = project.yml; sourceTree = "<group>"; };
+		C2986E6861809CDB1FFBDF4B /* RunRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRecord.swift; sourceTree = "<group>"; };
 		F1434C82709D4731BF99F5EF /* TestPilotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestPilotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F9DA46D3EB26AC76D7038824 /* RunConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunConfig.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		1AD8EB0A00FFF4AA5980062E /* TestPilotTests */ = {
 			isa = PBXGroup;
 			children = (
+				87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */,
 			);
 			path = TestPilotTests;
 			sourceTree = "<group>";
@@ -44,9 +58,21 @@
 		89BFF18EFCFD563002A72A2B /* TestPilotApp */ = {
 			isa = PBXGroup;
 			children = (
+				455406A00A4451D3B4D4C190 /* App.swift */,
 				6467E336163CC33E741CC71E /* Info.plist */,
+				93C6286D63729F5F12BA7BC4 /* Models */,
 			);
 			path = TestPilotApp;
+			sourceTree = "<group>";
+		};
+		93C6286D63729F5F12BA7BC4 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2FCEC884526EE789C0F69614 /* DeviceInfo.swift */,
+				F9DA46D3EB26AC76D7038824 /* RunConfig.swift */,
+				C2986E6861809CDB1FFBDF4B /* RunRecord.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		B792A27713503EE584075466 /* Products */ = {
@@ -159,6 +185,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E76E19FC75F0850114430131 /* App.swift in Sources */,
+				CBCBDD4B9C0BA4F331C16506 /* DeviceInfo.swift in Sources */,
+				CD0C57B26980DE05A0FD9EBD /* RunConfig.swift in Sources */,
+				05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -166,6 +196,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3A64E585130DFD47FBB0E74 /* RunConfigTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,6 +353,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -357,6 +389,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
