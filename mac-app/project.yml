@@ -1,0 +1,41 @@
+name: TestPilot
+options:
+  bundleIdPrefix: com.workco
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15"
+fileGroups:
+  - project.yml
+targets:
+  TestPilotApp:
+    type: application
+    platform: macOS
+    sources:
+      - TestPilotApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.workco.testpilot
+        SWIFT_VERSION: 5.9
+        INFOPLIST_FILE: TestPilotApp/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_APP_SANDBOX: NO
+    postBuildScripts:
+      - name: Copy and chmod testpilot script
+        script: |
+          SCRIPT_SRC="${SRCROOT}/../testpilot"
+          DEST="${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/testpilot"
+          mkdir -p "$(dirname "$DEST")"
+          cp "$SCRIPT_SRC" "$DEST"
+          chmod +x "$DEST"
+        outputFiles:
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/testpilot
+  TestPilotTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - TestPilotTests
+    dependencies:
+      - target: TestPilotApp
+    settings:
+      base:
+        SWIFT_VERSION: 5.9
