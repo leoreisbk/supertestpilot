@@ -97,7 +97,7 @@ with open('$_APPS_JSON') as f:
 apps = data.get('result', {}).get('apps', [])
 matches = []
 for app in apps:
-    bid = app.get('bundleID', '')
+    bid = app.get('bundleIdentifier', app.get('bundleID', ''))
     name = app.get('name', bid)
     if name_lower in name.lower() or name_lower in bid.lower():
         matches.append((bid, name))

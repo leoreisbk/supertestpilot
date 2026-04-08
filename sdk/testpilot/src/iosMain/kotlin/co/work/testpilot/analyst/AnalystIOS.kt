@@ -32,7 +32,7 @@ class AnalystIOS(private val config: Config) {
     suspend fun run(objective: String, bundleId: String? = null): String {
         val xcApp = if (bundleId != null) XCUIApplication(bundleId) else XCUIApplication()
         withContext(Dispatchers.Main) { xcApp.activate() }
-        delay(2000) // wait for app to fully load before first screenshot
+        delay(5000) // wait for app to fully load before first screenshot
 
         val httpClient = HttpClient(Darwin)
         val aiClient = when (config.provider) {
