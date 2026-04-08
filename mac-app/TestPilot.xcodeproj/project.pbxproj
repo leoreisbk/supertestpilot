@@ -140,6 +140,7 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/../testpilot",
 			);
 			name = "Copy and chmod testpilot script";
 			outputFileListPaths = (
@@ -149,7 +150,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "SCRIPT_SRC=\"${SRCROOT}/../testpilot\"\nDEST=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/testpilot\"\nmkdir -p \"$(dirname \"$DEST\")\"\ncp \"$SCRIPT_SRC\" \"$DEST\"\nchmod +x \"$DEST\"\n";
+			shellScript = "set -euo pipefail\nSCRIPT_SRC=\"${SRCROOT}/../testpilot\"\nif [ ! -f \"$SCRIPT_SRC\" ]; then\n  echo \"error: testpilot script not found at ${SCRIPT_SRC}\" >&2\n  exit 1\nfi\nDEST=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/testpilot\"\nmkdir -p \"$(dirname \"$DEST\")\"\ncp \"$SCRIPT_SRC\" \"$DEST\"\nchmod +x \"$DEST\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

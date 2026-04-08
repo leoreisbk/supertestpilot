@@ -4,6 +4,9 @@ options:
   deploymentTarget:
     macOS: "14.0"
   xcodeVersion: "15"
+  settings:
+    base:
+      SWIFT_VERSION: "5.9"
 fileGroups:
   - project.yml
 targets:
@@ -21,14 +24,21 @@ targets:
         ENABLE_APP_SANDBOX: NO
     postBuildScripts:
       - name: Copy and chmod testpilot script
+        inputFiles:
+          - $(SRCROOT)/../testpilot
+        outputFiles:
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/testpilot
         script: |
+          set -euo pipefail
           SCRIPT_SRC="${SRCROOT}/../testpilot"
+          if [ ! -f "$SCRIPT_SRC" ]; then
+            echo "error: testpilot script not found at ${SCRIPT_SRC}" >&2
+            exit 1
+          fi
           DEST="${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/testpilot"
           mkdir -p "$(dirname "$DEST")"
           cp "$SCRIPT_SRC" "$DEST"
           chmod +x "$DEST"
-        outputFiles:
-          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/testpilot
   TestPilotTests:
     type: bundle.unit-test
     platform: macOS
