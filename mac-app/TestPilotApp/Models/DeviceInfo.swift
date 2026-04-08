@@ -1,6 +1,6 @@
 import Foundation
 
-enum DeviceType {
+enum DeviceType: Hashable {
     case simulator, physical, androidEmulator, androidDevice
 }
 

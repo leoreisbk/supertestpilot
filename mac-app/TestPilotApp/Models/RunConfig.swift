@@ -1,6 +1,6 @@
 import Observation
 
-enum Platform: String, CaseIterable, Identifiable {
+enum Platform: String, Codable, CaseIterable, Identifiable {
     case ios = "ios"
     case android = "android"
     var id: String { rawValue }
@@ -28,6 +28,7 @@ final class RunConfig {
     var objective: String = ""
     var language: Language = .en
     var maxSteps: Int = 20
+    // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
     var providerOverride: AIProvider? = nil
 
