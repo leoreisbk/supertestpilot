@@ -67,6 +67,12 @@ final class AnalysisRunner {
         args += ["--provider", provider.rawValue]
 
         var env = ProcessInfo.processInfo.environment
+        // Augment PATH with Homebrew and common tool locations that are present in
+        // a developer's shell but absent from the minimal launchd environment.
+        let extraPaths = ["/opt/homebrew/bin", "/opt/homebrew/sbin",
+                          "/usr/local/bin", "/usr/local/sbin"]
+        let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        env["PATH"] = extraPaths.joined(separator: ":") + ":" + currentPath
         env["TESTPILOT_API_KEY"]  = settings.apiKey
         env["TESTPILOT_PROVIDER"] = provider.rawValue
         if !settings.teamId.isEmpty {
