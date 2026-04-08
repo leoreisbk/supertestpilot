@@ -19,7 +19,10 @@ import kotlinx.coroutines.withContext
 import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
+import platform.Foundation.NSUserDomainMask
 import platform.Foundation.dataUsingEncoding
 import platform.Foundation.writeToFile
 import platform.XCTest.XCUIApplication
@@ -68,7 +71,9 @@ class AnalystIOS(private val config: Config) {
         val report = analyst.run(objective)
         val html = HtmlReportWriter.generate(report, config.language)
 
-        val reportPath = NSTemporaryDirectory() + "testpilot_report.html"
+        val docsDir = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
+            .firstOrNull() as? String ?: NSTemporaryDirectory()
+        val reportPath = "$docsDir/testpilot_report.html"
         @OptIn(ExperimentalForeignApi::class)
         val data: NSData? = (html as NSString).dataUsingEncoding(NSUTF8StringEncoding)
         data?.writeToFile(path = reportPath, atomically = true)

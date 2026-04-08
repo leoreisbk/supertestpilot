@@ -232,9 +232,10 @@ SWIFT
   echo "Copying report..."
   if [[ "$USE_DEVICE" == "true" ]]; then
     # REPORT_PATH is an absolute on-device path like
-    # /var/mobile/Containers/Data/Application/<UUID>/tmp/testpilot_report.html
+    # /var/mobile/Containers/Data/Application/<UUID>/Documents/testpilot_report.html
     # devicectl copy from needs a path relative to the app data container root.
-    REPORT_RELATIVE=$(basename "$(dirname "$REPORT_PATH")")/$(basename "$REPORT_PATH")
+    # Strip everything up to and including the UUID segment.
+    REPORT_RELATIVE=$(echo "$REPORT_PATH" | grep -oE "(Documents|tmp|Library)/.*$" || echo "Documents/testpilot_report.html")
     xcrun devicectl device copy from \
       --device "$DEVICE_UDID" \
       --source "$REPORT_RELATIVE" \
