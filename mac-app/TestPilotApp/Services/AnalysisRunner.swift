@@ -74,7 +74,7 @@ final class AnalysisRunner {
 
         stderr.fileHandleForReading.readabilityHandler = { handle in
             if let s = String(data: handle.availableData, encoding: .utf8), !s.isEmpty {
-                lastStderr = s.trimmingCharacters(in: .whitespacesAndNewlines)
+                lastStderr += s
             }
         }
 
@@ -87,7 +87,7 @@ final class AnalysisRunner {
                 } else {
                     let msg = lastStderr.isEmpty
                         ? "Analysis failed (exit \(proc.terminationStatus))"
-                        : lastStderr
+                        : lastStderr.trimmingCharacters(in: .whitespacesAndNewlines)
                     self?.state = .failed(error: msg)
                 }
             }
