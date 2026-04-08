@@ -43,7 +43,7 @@ private struct HistoryRowView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                Text(record.date, style: .relative)
+                Text(record.date, format: .dateTime.month(.abbreviated).day().hour().minute())
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
