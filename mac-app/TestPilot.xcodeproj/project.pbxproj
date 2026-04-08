@@ -241,6 +241,7 @@
 			files = (
 				E76E19FC75F0850114430131 /* App.swift in Sources */,
 				1A2B3C4D5E6F7A8B9C0D1E2F /* ContentView.swift in Sources */,
+				AA01BB02CC03DD04EE05FF06 /* RunView.swift in Sources */,
 				CBCBDD4B9C0BA4F331C16506 /* DeviceInfo.swift in Sources */,
 				90D55D309C2BD8B48DB40010 /* HistoryStore.swift in Sources */,
 				3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */,
