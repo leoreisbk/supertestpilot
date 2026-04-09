@@ -8,7 +8,6 @@ struct RunView: View {
     var runner: AnalysisRunner
 
     @State private var showAdvanced = false
-    private var showWebLoginSheet: Bool { runner.state == .webLoginPending }
 
     var body: some View {
         Form {
@@ -172,7 +171,7 @@ struct RunView: View {
         .navigationTitle(config.mode == .test ? "New Test" : "New Analysis")
         .sheet(isPresented: Binding(
             get: { runner.state == .webLoginPending },
-            set: { _ in }
+            set: { _ in } // dismissal handled by Save Session / Cancel buttons only
         )) {
             VStack(spacing: 20) {
                 Text("Log in to \(config.url)")

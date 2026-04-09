@@ -294,6 +294,8 @@ final class AnalysisRunner {
         guard case .webLoginPending = state else { return }
         if let stdin = process?.standardInput as? Pipe {
             stdin.fileHandleForWriting.write(Data([10])) // "\n"
+        } else {
+            state = .idle
         }
     }
 }
