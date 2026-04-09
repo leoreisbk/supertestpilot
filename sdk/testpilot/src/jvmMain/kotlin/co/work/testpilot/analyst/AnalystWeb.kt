@@ -1,15 +1,7 @@
 package co.work.testpilot.analyst
 
-import co.work.testpilot.ai.AnthropicChatClient
-import co.work.testpilot.ai.OpenAIChatClient
-import co.work.testpilot.runtime.AIProvider
-import co.work.testpilot.runtime.AIProviderDefaults
 import co.work.testpilot.runtime.Config
 import co.work.testpilot.runtime.ConfigBuilder
-import com.aallam.openai.api.logging.LogLevel
-import com.aallam.openai.client.OpenAI
-import com.aallam.openai.client.OpenAIConfig
-import com.aallam.openai.client.OpenAIHost
 import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Playwright
 import io.ktor.client.*
@@ -53,7 +45,7 @@ class AnalystWeb(private val config: Config) {
                         .maxSteps(5)
                         .language(config.language)
                         .build()
-                    Analyst(AnalystDriverWeb(loginPage), buildAIClient(loginConfig, httpClient), loginConfig)
+                    Analyst(AnalystDriverWeb(loginPage), buildWebAIClient(loginConfig, httpClient), loginConfig)
                         .run("Log in with username: $username and password: $password")
                     WebSession.saveSession(loginContext, url)
                 } finally {
@@ -65,7 +57,7 @@ class AnalystWeb(private val config: Config) {
             val page = withContext(Dispatchers.IO) { context.newPage() }
             withContext(Dispatchers.IO) { page.navigate(url) }
 
-            val report = Analyst(AnalystDriverWeb(page), buildAIClient(config, httpClient), config)
+            val report = Analyst(AnalystDriverWeb(page), buildWebAIClient(config, httpClient), config)
                 .run(objective)
             val html = HtmlReportWriter.generate(report, config.language)
 
@@ -83,28 +75,4 @@ class AnalystWeb(private val config: Config) {
         }
     }
 
-    private fun buildAIClient(cfg: Config, httpClient: HttpClient) = when (cfg.provider) {
-        AIProvider.Anthropic -> AnthropicChatClient(
-            apiKey = cfg.apiKey,
-            modelId = cfg.modelId ?: AIProviderDefaults.anthropicModel,
-            httpClient = httpClient,
-            apiHost = cfg.apiHost ?: "https://api.anthropic.com",
-            extraHeaders = cfg.apiHeaders,
-        )
-        AIProvider.OpenAI -> OpenAIChatClient(
-            openAI = OpenAI(config = OpenAIConfig(
-                token = cfg.apiKey,
-                organization = cfg.apiOrg,
-                headers = cfg.apiHeaders,
-                host = cfg.apiHost?.let { OpenAIHost(it) } ?: OpenAIHost.OpenAI,
-                logLevel = LogLevel.None,
-            )),
-            modelId = cfg.modelId ?: AIProviderDefaults.openAIModel,
-            httpClient = httpClient,
-            apiKey = cfg.apiKey,
-            apiHost = cfg.apiHost ?: "https://api.openai.com",
-        )
-        AIProvider.Gemini ->
-            throw IllegalArgumentException("Gemini is not supported on web platform. Use anthropic or openai.")
-    }
 }
