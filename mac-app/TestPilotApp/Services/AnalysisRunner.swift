@@ -46,27 +46,16 @@ final class AnalysisRunner {
 
         let outputPath = NSString(string: config.outputPath).expandingTildeInPath
 
-        let filledParams = config.parameters.filter { !$0.key.isEmpty && !$0.value.isEmpty }
-        let effectiveObjective: String
-        if filledParams.isEmpty {
-            effectiveObjective = config.objective
-        } else {
-            let lines = filledParams.map { "- \($0.key): \($0.value)" }.joined(separator: "\n")
-            effectiveObjective = config.objective + "\n\nTest parameters:\n" + lines
-        }
-
         var args: [String] = [
             config.mode.rawValue,
             "--platform",  config.platform.rawValue,
-            "--objective", effectiveObjective,
+            "--objective", config.objective,
             "--lang",      config.language.rawValue,
             "--max-steps", "\(config.maxSteps)",
         ]
 
         if config.platform == .web {
             args += ["--url", config.url]
-            if !config.username.isEmpty { args += ["--username", config.username] }
-            if !config.password.isEmpty { args += ["--password", config.password] }
         } else {
             args += ["--app", config.appName]
             if let device = config.selectedDevice, device.isPhysical {
@@ -76,6 +65,9 @@ final class AnalysisRunner {
                 }
             }
         }
+
+        if !config.username.isEmpty { args += ["--username", config.username] }
+        if !config.password.isEmpty { args += ["--password", config.password] }
 
         if config.mode == .analyze {
             args += ["--output", outputPath]

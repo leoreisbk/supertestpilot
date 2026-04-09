@@ -73,9 +73,10 @@ struct RunView: View {
                         .scrollContentBackground(.hidden)
                 }
 
+                TextField("Username (optional)", text: $config.username)
+                SecureField("Password (optional)", text: $config.password)
+
                 if config.platform == .web {
-                    TextField("Username (optional)", text: $config.username)
-                    SecureField("Password (optional)", text: $config.password)
                     Button("Manage Session…") {
                         runner.webLogin(config: config, settings: settings)
                     }
@@ -85,33 +86,6 @@ struct RunView: View {
                     .help("Open a browser to log in manually — useful for SSO or OAuth")
                     .disabled(config.url.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-            }
-
-            Section("Parameters") {
-                ForEach($config.parameters) { $param in
-                    HStack(spacing: 8) {
-                        TextField("Key", text: $param.key)
-                            .frame(maxWidth: 120)
-                        if param.isSecret {
-                            SecureField("Value", text: $param.value)
-                        } else {
-                            TextField("Value", text: $param.value)
-                        }
-                        Button(role: .destructive) {
-                            config.parameters.removeAll { $0.id == param.id }
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundStyle(.red.opacity(0.7))
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                }
-                Button {
-                    config.parameters.append(RunParameter())
-                } label: {
-                    Label("Add Parameter", systemImage: "plus.circle")
-                }
-                .buttonStyle(.borderless)
             }
 
             DisclosureGroup("Advanced Options", isExpanded: $showAdvanced) {
