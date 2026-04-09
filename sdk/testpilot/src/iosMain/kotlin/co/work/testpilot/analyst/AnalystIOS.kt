@@ -29,8 +29,12 @@ import platform.XCTest.XCUIApplication
 
 class AnalystIOS(private val config: Config) {
 
-    suspend fun run(objective: String, bundleId: String? = null): String {
-        val xcApp = if (bundleId != null) XCUIApplication(bundleId) else XCUIApplication()
+    // Primary entry point: accepts a pre-created XCUIApplication.
+    // Callers should create XCUIApplication outside the async test function body (e.g. in setUp())
+    // to avoid the XCTWaiter stack assertion introduced in Xcode 26 where
+    // XCUIApplication(bundleIdentifier:) internally calls XCUIWaitAndAssert, conflicting with
+    // the async test runner's outer waiter.
+    suspend fun run(objective: String, xcApp: XCUIApplication): String {
         withContext(Dispatchers.Main) { xcApp.activate() }
         delay(5000) // wait for app to fully load before first screenshot
 
@@ -86,5 +90,13 @@ class AnalystIOS(private val config: Config) {
 
         println("TESTPILOT_REPORT_PATH=$reportPath")
         return reportPath
+    }
+
+    // Convenience overload: creates XCUIApplication internally.
+    // Avoid calling this from an async throws XCTest function on Xcode 26+ — use the
+    // run(objective:xcApp:) overload and create XCUIApplication in setUp() instead.
+    suspend fun run(objective: String, bundleId: String? = null): String {
+        val xcApp = if (bundleId != null) XCUIApplication(bundleId) else XCUIApplication()
+        return run(objective, xcApp)
     }
 }

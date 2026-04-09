@@ -34,6 +34,7 @@ class AnthropicChatClient(
             .filter { it.role == ChatMessage.ROLE_SYSTEM }
             .joinToString("\n") { it.content }
             .takeIf { it.isNotEmpty() }
+            ?.let { listOf(AnthropicSystemBlock(text = it, cacheControl = AnthropicCacheControl())) }
 
         val nonSystemMessages = messages.filter { it.role != ChatMessage.ROLE_SYSTEM }
 
@@ -71,6 +72,7 @@ class AnthropicChatClient(
             contentType(ContentType.Application.Json)
             header("x-api-key", apiKey)
             header("anthropic-version", apiVersion)
+            header("anthropic-beta", "prompt-caching-2024-07-31")
             extraHeaders.forEach { (key, value) -> header(key, value) }
             setBody(body)
         }
@@ -92,8 +94,20 @@ class AnthropicChatClient(
         val model: String,
         @SerialName("max_tokens") val maxTokens: Int,
         val temperature: Double,
-        val system: String? = null,
+        val system: List<AnthropicSystemBlock>? = null,
         val messages: List<AnthropicMessage>,
+    )
+
+    @Serializable
+    private data class AnthropicSystemBlock(
+        val type: String = "text",
+        val text: String,
+        @SerialName("cache_control") val cacheControl: AnthropicCacheControl? = null,
+    )
+
+    @Serializable
+    private data class AnthropicCacheControl(
+        val type: String = "ephemeral",
     )
 
     @Serializable

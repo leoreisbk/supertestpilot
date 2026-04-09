@@ -176,6 +176,12 @@ else:
   BUNDLE_ID_OPT="nil"
   [[ -n "$BUNDLE_ID" ]] && BUNDLE_ID_OPT="\"$(_swift_esc "$BUNDLE_ID")\""
 
+  # XCUIApplication(bundleIdentifier:) calls XCUIWaitAndAssert internally on Xcode 26+,
+  # which conflicts with the async test runner's outer XCTWaiter. Creating it in the
+  # synchronous setUp() avoids this — setUp() runs before the async waiter is pushed.
+  XCAPP_INIT="XCUIApplication()"
+  [[ "$BUNDLE_ID_OPT" != "nil" ]] && XCAPP_INIT="XCUIApplication(bundleIdentifier: $BUNDLE_ID_OPT)"
+
   cat > "$TEST_SWIFT" <<SWIFT
 // This file is overwritten by the testpilot CLI before each run.
 // Do not edit manually.
@@ -183,7 +189,12 @@ import XCTest
 import TestPilotShared
 
 class AnalystTests: XCTestCase {
-    func testAnalyze() async throws {
+    var analyst: AnalystIOS!
+    var xcApp: XCUIApplication!
+
+    override func setUp() {
+        super.setUp()
+        xcApp = $XCAPP_INIT
         let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
         let config = ConfigBuilder()
             .provider(provider: provider)
@@ -191,10 +202,13 @@ class AnalystTests: XCTestCase {
             .maxSteps(steps: $MAX_STEPS)
             .language(lang: "$LANG_ESC")
             .build()
-        let analyst = AnalystIOS(config: config)
+        analyst = AnalystIOS(config: config)
+    }
+
+    func testAnalyze() async throws {
         let _ = try await analyst.run(
             objective: "$OBJECTIVE_ESC",
-            bundleId: $BUNDLE_ID_OPT
+            xcApp: xcApp
         )
     }
 }
