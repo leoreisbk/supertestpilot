@@ -22,6 +22,7 @@ enum AnalysisState: Equatable {
 @Observable
 final class AnalysisRunner {
     private(set) var state: AnalysisState = .idle
+    private(set) var analyzeSteps: [TestStep] = []
     private var process: Process?
     private var lastStdoutLine: String = ""
 
@@ -118,10 +119,14 @@ final class AnalysisRunner {
                         let cached = msg.hasPrefix("(cached)")
                         let clean = cached ? String(msg.dropFirst("(cached) ".count)) : msg
                         let step = TestStep(message: clean, cached: cached)
-                        if case .testRunning(let steps) = self.state {
+                        switch self.state {
+                        case .testRunning(let steps):
                             self.state = .testRunning(steps: steps + [step])
-                        } else {
-                            self.state = .testRunning(steps: [step])
+                        case .running:
+                            self.analyzeSteps.append(step)
+                            self.state = .running(statusLine: clean)
+                        default:
+                            break
                         }
                     } else if line.hasPrefix("TESTPILOT_RESULT: ") {
                         let payload = String(line.dropFirst("TESTPILOT_RESULT: ".count))
@@ -174,6 +179,7 @@ final class AnalysisRunner {
         }
 
         lastStdoutLine = ""
+        analyzeSteps = []
         if config.mode == .test {
             state = .testRunning(steps: [])
         } else {
@@ -191,10 +197,12 @@ final class AnalysisRunner {
     func cancel() {
         process?.terminate()
         process = nil
+        analyzeSteps = []
         state = .idle
     }
 
     func reset() {
+        analyzeSteps = []
         state = .idle
     }
 

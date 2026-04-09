@@ -297,7 +297,11 @@ SWIFT
 fi
 
   # ── Run xcodebuild ───────────────────────────────────────────────────────────
-  echo "Running analysis..."
+  if [[ "$TEST_MODE" == "true" ]]; then
+    echo "Running test..."
+  else
+    echo "Running analysis..."
+  fi
   XCODE_LOG="$DERIVED_DATA/xcodebuild.log"
 
   XCODE_EXTRA_ARGS=()
@@ -305,24 +309,22 @@ fi
     XCODE_EXTRA_ARGS+=(-allowProvisioningUpdates "DEVELOPMENT_TEAM=$TEAM_ID")
   fi
 
-  LOG=$(xcodebuild test \
-          -project "$SCRIPT_DIR/harness/Harness.xcodeproj" \
-          -scheme AnalystTests \
-          -destination "$DESTINATION" \
-          -derivedDataPath "$DERIVED_DATA" \
-          ${XCODE_EXTRA_ARGS[@]+"${XCODE_EXTRA_ARGS[@]}"} \
-          2>&1 || true)
-  echo "$LOG" > "$XCODE_LOG"
-
-  if [[ "$TEST_MODE" == "true" ]]; then
-    echo "Running test..."
-    while IFS= read -r line; do
-      if [[ "$line" == *"TESTPILOT_STEP: "* ]]; then
-        msg="${line#*TESTPILOT_STEP: }"
-        echo "  · $msg"
-      fi
-    done <<< "$LOG"
-  fi
+  # Stream xcodebuild output in real-time: emit TESTPILOT_STEP/RESULT markers as
+  # they appear so the macOS app can update its UI without waiting for completion.
+  xcodebuild test \
+      -project "$SCRIPT_DIR/harness/Harness.xcodeproj" \
+      -scheme AnalystTests \
+      -destination "$DESTINATION" \
+      -derivedDataPath "$DERIVED_DATA" \
+      ${XCODE_EXTRA_ARGS[@]+"${XCODE_EXTRA_ARGS[@]}"} \
+      2>&1 | tee "$XCODE_LOG" | while IFS= read -r line; do
+    if [[ "$line" == *"TESTPILOT_STEP: "* ]]; then
+      echo "TESTPILOT_STEP: ${line#*TESTPILOT_STEP: }"
+    elif [[ "$line" == *"TESTPILOT_RESULT: "* ]]; then
+      echo "TESTPILOT_RESULT: ${line#*TESTPILOT_RESULT: }"
+    fi
+  done || true
+  LOG=$(cat "$XCODE_LOG")
 
   if [[ "$TEST_MODE" == "true" ]]; then
     RESULT_LINE=$(echo "$LOG" | grep "TESTPILOT_RESULT: " | tail -1 | sed 's/.*TESTPILOT_RESULT: //' || true)

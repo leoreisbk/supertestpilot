@@ -19,7 +19,10 @@ class Analyst(
         return sum
     }
 
-    suspend fun run(objective: String): AnalysisReport {
+    suspend fun run(
+        objective: String,
+        onStep: ((String) -> Unit)? = null,
+    ): AnalysisReport {
         val mark = TimeSource.Monotonic.markNow()
         val steps = mutableListOf<AnalysisStep>()
         val visionPrompt = VisionPrompt(aiClient, config)
@@ -53,6 +56,7 @@ class Analyst(
                     coordinates = action.coordinates,
                 )
             )
+            action.observation?.let { onStep?.invoke(it) }
 
             when (action) {
                 is AnalysisAction.Done -> done = true

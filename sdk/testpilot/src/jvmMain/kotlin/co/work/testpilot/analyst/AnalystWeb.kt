@@ -58,7 +58,10 @@ class AnalystWeb(private val config: Config) {
             withContext(Dispatchers.IO) { page.navigate(url) }
 
             val report = Analyst(AnalystDriverWeb(page), buildWebAIClient(config, httpClient), config)
-                .run(objective)
+                .run(objective) { observation ->
+                    println("TESTPILOT_STEP: $observation")
+                    System.out.flush()
+                }
             val html = HtmlReportWriter.generate(report, config.language)
 
             val file = File(outputPath).also { it.parentFile?.mkdirs() }

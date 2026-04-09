@@ -135,7 +135,7 @@ TESTPILOT_PROVIDER=gemini
 ```
 
 O TestPilot funciona com três serviços de IA diferentes — escolha um:
-- **Google Gemini** → use `gemini` (apenas iOS e Android)
+- **Google Gemini** → use `gemini`
 - **Anthropic Claude** → use `anthropic`
 - **OpenAI (ChatGPT)** → use `openai`
 
@@ -309,7 +309,7 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 | `--password` | — | Senha para login automático (opcional; exige `--username`) |
 | `--max-steps` | `20` | Quantas ações a IA pode tomar antes de parar |
 | `--output` | `./report.html` | Onde salvar o relatório gerado (apenas `analyze`) |
-| `--provider` | via `.env` | Qual IA usar: `gemini` (apenas mobile), `anthropic` ou `openai` |
+| `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |
 | `--team-id` | — | Código de desenvolvedor Apple (obrigatório ao usar `--device`) |

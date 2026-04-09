@@ -78,7 +78,9 @@ class AnalystIOS(private val config: Config) {
         }
 
         val analyst = Analyst(driver, aiClient, config)
-        val report = analyst.run(objective)
+        val report = analyst.run(objective) { observation ->
+            println("TESTPILOT_STEP: $observation")
+        }
         val html = HtmlReportWriter.generate(report, config.language)
 
         // Emit the report inline so the CLI can extract it from xcodebuild stdout

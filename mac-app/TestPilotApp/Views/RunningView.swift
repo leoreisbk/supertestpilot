@@ -45,6 +45,9 @@ struct RunningView: View {
                     .transition(.scale.combined(with: .opacity))
                 Text("Analysis complete")
                     .font(.title3.weight(.medium))
+                if !runner.analyzeSteps.isEmpty {
+                    StepListView(steps: runner.analyzeSteps)
+                }
                 HStack(spacing: 16) {
                     Button("Open Report") {
                         NSWorkspace.shared.open(URL(fileURLWithPath: path))
