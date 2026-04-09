@@ -414,7 +414,7 @@ elif [[ "$PLATFORM" == "web" ]]; then
     || { echo "Error: JVM build failed."; exit 1; }
 
   # Install Playwright browsers on first run
-  if [[ ! -d "$HOME/.cache/ms-playwright" ]]; then
+  if [[ ! -d "$HOME/.cache/ms-playwright" && ! -d "$HOME/Library/Caches/ms-playwright" ]]; then
     echo "Installing Playwright browsers (first time only)..."
     (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:installPlaywrightBrowsers) \
       || { echo "Error: Could not install Playwright browsers."; exit 1; }

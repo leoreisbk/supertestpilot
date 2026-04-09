@@ -68,18 +68,17 @@ class TestAnalystWeb(private val config: Config) {
                 withContext(Dispatchers.IO) { page.navigate(url) }
 
                 val cacheDir = "${System.getProperty("user.home")}/.testpilot/cache"
-                var lastResponseCached = false
+                val lastResponseCached = java.util.concurrent.atomic.AtomicBoolean(false)
                 val aiClient = CachingAIClientJvm(
                     delegate = buildWebAIClient(config, httpClient),
                     cacheDir = cacheDir,
-                    onCacheHit = { lastResponseCached = true },
+                    onCacheHit = { lastResponseCached.set(true) },
                 )
 
                 val result = TestAnalyst(AnalystDriverWeb(page), aiClient, config).run(objective) { message ->
-                    val prefix = if (lastResponseCached) "(cached) " else ""
+                    val prefix = if (lastResponseCached.getAndSet(false)) "(cached) " else ""
                     println("TESTPILOT_STEP: $prefix$message")
                     System.out.flush()
-                    lastResponseCached = false
                 }
 
                 val verdict = if (result.passed) "PASS" else "FAIL"
