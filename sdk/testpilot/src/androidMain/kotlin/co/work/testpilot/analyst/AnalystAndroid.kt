@@ -45,6 +45,15 @@ class AnalystAndroid(private val config: Config) {
         }
 
         val driver = AnalystDriverAndroid()
+
+        val args = InstrumentationRegistry.getArguments()
+        val username = args.getString("TESTPILOT_USERNAME")?.takeIf { it.isNotEmpty() }
+        val password = args.getString("TESTPILOT_PASSWORD")?.takeIf { it.isNotEmpty() }
+        if (username != null && password != null) {
+            val loginConfig = config.copy(maxSteps = 5)
+            Analyst(driver, aiClient, loginConfig).run("Log in with username: $username and password: $password")
+        }
+
         val analyst = Analyst(driver, aiClient, config)
         val report = analyst.run(objective)
         val html = HtmlReportWriter.generate(report)

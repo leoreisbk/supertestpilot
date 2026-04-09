@@ -34,7 +34,7 @@ class AnalystIOS(private val config: Config) {
     // to avoid the XCTWaiter stack assertion introduced in Xcode 26 where
     // XCUIApplication(bundleIdentifier:) internally calls XCUIWaitAndAssert, conflicting with
     // the async test runner's outer waiter.
-    suspend fun run(objective: String, xcApp: XCUIApplication): String {
+    suspend fun run(objective: String, xcApp: XCUIApplication, username: String? = null, password: String? = null): String {
         withContext(Dispatchers.Main) { xcApp.activate() }
         delay(5000) // wait for app to fully load before first screenshot
 
@@ -71,6 +71,12 @@ class AnalystIOS(private val config: Config) {
         }
 
         val driver = AnalystDriverIOS(xcApp)
+
+        if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+            val loginConfig = config.copy(maxSteps = 5)
+            Analyst(driver, aiClient, loginConfig).run("Log in with username: $username and password: $password")
+        }
+
         val analyst = Analyst(driver, aiClient, config)
         val report = analyst.run(objective)
         val html = HtmlReportWriter.generate(report, config.language)
@@ -95,8 +101,8 @@ class AnalystIOS(private val config: Config) {
     // Convenience overload: creates XCUIApplication internally.
     // Avoid calling this from an async throws XCTest function on Xcode 26+ — use the
     // run(objective:xcApp:) overload and create XCUIApplication in setUp() instead.
-    suspend fun run(objective: String, bundleId: String? = null): String {
+    suspend fun run(objective: String, bundleId: String? = null, username: String? = null, password: String? = null): String {
         val xcApp = if (bundleId != null) XCUIApplication(bundleId) else XCUIApplication()
-        return run(objective, xcApp)
+        return run(objective, xcApp, username, password)
     }
 }

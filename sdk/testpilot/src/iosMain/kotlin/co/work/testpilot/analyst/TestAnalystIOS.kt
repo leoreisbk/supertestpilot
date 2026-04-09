@@ -23,7 +23,7 @@ import platform.XCTest.XCUIApplication
 
 class TestAnalystIOS(private val config: Config) {
 
-    suspend fun run(objective: String, xcApp: XCUIApplication): TestResult {
+    suspend fun run(objective: String, xcApp: XCUIApplication, username: String? = null, password: String? = null): TestResult {
         withContext(Dispatchers.Main) { xcApp.activate() }
         delay(5000)
 
@@ -71,6 +71,12 @@ class TestAnalystIOS(private val config: Config) {
         )
 
         val driver = AnalystDriverIOS(xcApp)
+
+        if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+            val loginConfig = config.copy(maxSteps = 5)
+            Analyst(driver, baseClient, loginConfig).run("Log in with username: $username and password: $password")
+        }
+
         val analyst = TestAnalyst(driver, aiClient, config)
 
         val result = analyst.run(objective) { message ->

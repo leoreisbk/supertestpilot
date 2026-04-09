@@ -213,6 +213,10 @@ else:
   LANG_ESC=$(_swift_esc "$LANG_CODE")
   BUNDLE_ID_OPT="nil"
   [[ -n "$BUNDLE_ID" ]] && BUNDLE_ID_OPT="\"$(_swift_esc "$BUNDLE_ID")\""
+  USERNAME_OPT="nil"
+  [[ -n "$USERNAME" ]] && USERNAME_OPT="\"$(_swift_esc "$USERNAME")\""
+  PASSWORD_OPT="nil"
+  [[ -n "$PASSWORD" ]] && PASSWORD_OPT="\"$(_swift_esc "$PASSWORD")\""
 
   # XCUIApplication(bundleIdentifier:) calls XCUIWaitAndAssert internally on Xcode 26+,
   # which conflicts with the async test runner's outer XCTWaiter. Creating it in the
@@ -247,7 +251,9 @@ class AnalystTests: XCTestCase {
     func testAnalyze() async throws {
         let _ = try await analyst.run(
             objective: "$OBJECTIVE_ESC",
-            xcApp: xcApp
+            xcApp: xcApp,
+            username: $USERNAME_OPT,
+            password: $PASSWORD_OPT
         )
     }
 }
@@ -279,7 +285,9 @@ class AnalystTests: XCTestCase {
     func testAnalyze() async throws {
         let _ = try await analyst.run(
             objective: "$OBJECTIVE_ESC",
-            xcApp: xcApp
+            xcApp: xcApp,
+            username: $USERNAME_OPT,
+            password: $PASSWORD_OPT
         )
     }
 }
@@ -391,6 +399,8 @@ elif [[ "$PLATFORM" == "android" ]]; then
     -e TESTPILOT_PROVIDER "$PROVIDER" \
     -e TESTPILOT_OBJECTIVE "$OBJECTIVE" \
     -e TESTPILOT_MAX_STEPS "$MAX_STEPS" \
+    -e TESTPILOT_USERNAME "$USERNAME" \
+    -e TESTPILOT_PASSWORD "$PASSWORD" \
     -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)
 
   if echo "$INSTRUMENT_OUTPUT" | grep -q "FAILURES\|Error"; then
