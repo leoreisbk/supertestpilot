@@ -263,12 +263,19 @@ final class AnalysisRunner {
             }
         }
 
-        p.terminationHandler = { [weak self] _ in
+        p.terminationHandler = { [weak self] proc in
             stdout.fileHandleForReading.readabilityHandler = nil
+            let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
+            let lastStderr = String(data: stderrData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             DispatchQueue.main.async {
                 guard let self else { return }
                 if case .webLoginPending = self.state {
                     self.state = .idle
+                } else if case .running = self.state {
+                    let msg = !lastStderr.isEmpty ? lastStderr
+                            : "web-login process exited unexpectedly (exit \(proc.terminationStatus))"
+                    self.state = .failed(error: msg)
                 }
             }
         }
