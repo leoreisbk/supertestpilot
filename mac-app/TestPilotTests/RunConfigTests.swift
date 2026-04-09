@@ -21,4 +21,21 @@ final class RunConfigTests: XCTestCase {
         config.objective = "   "
         XCTAssertFalse(config.isValid, "whitespace-only fields should be invalid")
     }
+
+    func testRunRecordDecodesLegacyJSON() throws {
+        // Old records have no "mode" or "testOutcome" fields.
+        let json = """
+        [{
+            "id": "00000000-0000-0000-0000-000000000001",
+            "appName": "MyApp",
+            "platform": "ios",
+            "objective": "explore",
+            "reportPath": "/tmp/report.html",
+            "date": 0
+        }]
+        """
+        let records = try JSONDecoder().decode([RunRecord].self, from: Data(json.utf8))
+        XCTAssertEqual(records.first?.mode, .analyze)
+        XCTAssertNil(records.first?.testOutcome)
+    }
 }

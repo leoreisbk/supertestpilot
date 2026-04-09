@@ -21,6 +21,13 @@ enum Language: String, CaseIterable, Identifiable {
     var displayName: String { self == .en ? "English" : "Português (BR)" }
 }
 
+enum RunMode: String, Codable, CaseIterable, Identifiable {
+    case analyze
+    case test
+    var id: String { rawValue }
+    var displayName: String { self == .analyze ? "Analyze" : "Test" }
+}
+
 struct RunParameter: Identifiable {
     let id = UUID()
     var key: String = ""
@@ -44,6 +51,7 @@ final class RunConfig {
     var outputPath: String = "~/Desktop/report.html"
     var providerOverride: AIProvider? = nil
     var parameters: [RunParameter] = []
+    var mode: RunMode = .analyze
 
     var isValid: Bool {
         selectedDevice != nil
