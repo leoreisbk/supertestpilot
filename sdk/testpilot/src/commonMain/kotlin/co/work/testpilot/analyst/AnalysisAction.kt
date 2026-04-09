@@ -31,12 +31,26 @@ sealed class AnalysisAction {
         override val observation: String?,
     ) : AnalysisAction()
 
+    data class Pass(
+        val reason: String,
+    ) : AnalysisAction() {
+        override val observation: String? get() = null
+    }
+
+    data class Fail(
+        val reason: String,
+    ) : AnalysisAction() {
+        override val observation: String? get() = null
+    }
+
     val actionName: String
         get() = when (this) {
             is Tap -> "tap"
             is Scroll -> "scroll"
             is Type -> "type"
             is Done -> "done"
+            is Pass -> "pass"
+            is Fail -> "fail"
         }
 
     val coordinates: Pair<Double, Double>?
@@ -50,7 +64,6 @@ sealed class AnalysisAction {
         private val json = Json { ignoreUnknownKeys = true }
 
         fun parse(jsonString: String): AnalysisAction {
-            // Strip markdown code fences if present
             val clean = jsonString
                 .trim()
                 .removePrefix("```json")
@@ -83,14 +96,12 @@ sealed class AnalysisAction {
                     reason = raw.reason,
                 )
                 "done" -> Done(observation = raw.observation)
+                "pass" -> Pass(reason = raw.reason ?: "Test passed")
+                "fail" -> Fail(reason = raw.reason ?: "Test failed")
                 else -> Done(observation = "Unknown action: ${raw.action}")
             }
         }
 
-        // Closes a truncated JSON object by dropping the last incomplete field
-        // and appending the missing closing brace. E.g.:
-        //   {"action":"tap","x":0.5,"observation":"Some unfinished
-        //   → {"action":"tap","x":0.5}
         private fun repairTruncatedJson(s: String): String {
             if (s.endsWith("}")) return s
             var depth = 0
