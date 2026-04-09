@@ -12,6 +12,13 @@ struct RunView: View {
     var body: some View {
         Form {
             Section("Required") {
+                Picker("Mode", selection: $config.mode) {
+                    ForEach(RunMode.allCases) { m in
+                        Text(m.displayName).tag(m)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 Picker("Platform", selection: $config.platform) {
                     ForEach(Platform.allCases) { p in
                         Text(p.displayName).tag(p)
@@ -47,7 +54,10 @@ struct RunView: View {
 
                 ZStack(alignment: .topLeading) {
                     if config.objective.isEmpty {
-                        Text("Describe what to analyze…")
+                        let placeholder = config.mode == .test
+                            ? "Check if the Buy button is enabled on the product page…"
+                            : "Describe what to analyze…"
+                        Text(placeholder)
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 8)
                             .padding(.horizontal, 4)
@@ -96,17 +106,19 @@ struct RunView: View {
                 Stepper("Max steps: \(config.maxSteps)",
                         value: $config.maxSteps, in: 1...100)
 
-                HStack {
-                    TextField("Output path", text: $config.outputPath)
-                    Button("Choose…") {
-                        let panel = NSSavePanel()
-                        panel.allowedContentTypes = [.html]
-                        panel.nameFieldStringValue = "report.html"
-                        if panel.runModal() == .OK, let url = panel.url {
-                            config.outputPath = url.path
+                if config.mode == .analyze {
+                    HStack {
+                        TextField("Output path", text: $config.outputPath)
+                        Button("Choose…") {
+                            let panel = NSSavePanel()
+                            panel.allowedContentTypes = [.html]
+                            panel.nameFieldStringValue = "report.html"
+                            if panel.runModal() == .OK, let url = panel.url {
+                                config.outputPath = url.path
+                            }
                         }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
                 }
 
                 Picker("Provider", selection: $config.providerOverride) {
@@ -120,7 +132,8 @@ struct RunView: View {
         }
         .formStyle(.grouped)
         .safeAreaInset(edge: .bottom) {
-            Button("Run Analysis") {
+            let label = config.mode == .test ? "Run Test" : "Run Analysis"
+            Button(label) {
                 runner.run(config: config, settings: settings)
             }
             .buttonStyle(.borderedProminent)
@@ -137,6 +150,6 @@ struct RunView: View {
         ) { _ in
             Task { await detector.refresh(for: config.platform) }
         }
-        .navigationTitle("New Analysis")
+        .navigationTitle(config.mode == .test ? "New Test" : "New Analysis")
     }
 }
