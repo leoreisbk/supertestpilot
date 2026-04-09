@@ -1,26 +1,28 @@
 # Como rodar uma análise de UX no iOS, Android e Web
 
-## O TestPilot original e o que construímos em cima
+## Por que construímos isso
 
-O TestPilot original nasceu como uma biblioteca open-source para **engenheiros**: um jeito de escrever testes automatizados de app usando linguagem natural em vez de código complexo. Em vez de programar seletores e interações, o desenvolvedor escrevia algo como *"vai até a tela de perfil e troca a foto"* — e a IA executava. Ainda era uma ferramenta técnica, para quem sabia como configurar e rodar.
+Times de produto têm uma dificuldade em comum: validar se o app está funcionando do jeito certo depende quase sempre do time de desenvolvimento. Designers não conseguem rodar testes. PMs precisam pedir ajuda para verificar um fluxo. QAs dependem de scripts frágeis que quebram a cada mudança de interface.
 
-O que construímos aqui é diferente em essência. Pegamos essa base e transformamos em algo muito mais poderoso:
+O TestPilot surgiu como uma biblioteca open-source para engenheiros — um jeito de escrever testes automatizados usando linguagem natural em vez de seletores e código. Útil, mas ainda técnico: exigia configuração, terminal e conhecimento de como subir o ambiente certo.
 
-- **Visão de verdade:** em vez de instruções pré-definidas, a IA *enxerga* o app — tira capturas de tela e interpreta a interface como um humano faria. Não precisa de seletores, identificadores técnicos ou código. Se está visível na tela, a IA entende e interage.
+O que construímos aqui parte dessa base e vai bem mais longe.
+
+## O que é diferente nessa versão
+
+Em vez de instruções executadas às cegas, a IA **enxerga** o app. A cada passo, ela tira uma captura de tela e interpreta a interface como um humano faria — lê textos, identifica botões, entende a hierarquia visual. Não precisa de seletores, identificadores técnicos ou código. Se está visível na tela, a IA entende e interage.
+
+Isso muda quem consegue usar:
+
+- **App macOS:** uma interface visual completa para rodar análises e testes sem tocar em linha de comando. Qualquer pessoa do time usa diretamente.
 
 - **Dois modos de uso:** exploração livre com relatório (*analyze*) ou avaliação objetiva de uma condição (*test*) — cada um servindo uma necessidade diferente do time.
-
-- **App macOS:** uma interface visual completa para rodar análises e testes sem tocar em linha de comando. Designers, PMs e QAs usam diretamente, no mesmo app.
 
 - **Três plataformas:** iOS, Android e Web — inclusive protótipos no ProtoPie e Figma.
 
 - **Login integrado:** credenciais opcionais em todos os fluxos; sessões web persistidas para não precisar autenticar a cada execução.
 
 O resultado é uma ferramenta que qualquer pessoa do time consegue usar de acordo com sua própria expectativa sobre o produto — sem intermediários, sem depender do desenvolvimento.
-
----
-
-## Como cada pessoa do time pode usar
 
 ---
 
