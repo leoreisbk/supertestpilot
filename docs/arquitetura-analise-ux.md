@@ -1,40 +1,56 @@
 # Arquitetura do TestPilot — referência técnica
 
-Este documento descreve o funcionamento interno dos dois modos do TestPilot: `analyze` (análise exploratória) e `test` (teste determinístico com PASS/FAIL). Destinado a engenheiros que precisam entender, manter ou estender o sistema.
+Este documento descreve o funcionamento interno dos dois modos do TestPilot: `analyze` (análise exploratória) e `test` (teste determinístico com PASS/FAIL), nas três plataformas suportadas: iOS, Android e Web. Destinado a engenheiros que precisam entender, manter ou estender o sistema.
 
 ---
 
 ## Visão geral
 
-O TestPilot é um projeto **Kotlin Multiplatform (KMM)**. A lógica central vive em `commonMain` e é compilada para iOS (XCFramework) e Android (AAR). O ponto de entrada é um script bash que orquestra o build, a injeção de configuração e a execução.
+O TestPilot é um projeto **Kotlin Multiplatform (KMM)**. A lógica central vive em `commonMain` e é compilada para três runtimes:
+
+- **iOS** — XCFramework consumido via XCTest
+- **Android** — AAR rodando via UIAutomator/AndroidJUnit4
+- **Web** — fat JAR JVM com Playwright para controle de browser
+
+O ponto de entrada é um script bash que orquestra o build, a injeção de configuração e a execução.
 
 ### Modo `analyze` (exploratório)
 
 ```
 ./testpilot analyze (bash)
-  └── build SDK (gradlew / build_ios_sdk.sh)
-  └── gera AnalystTests.swift com config injetada
-  └── xcodebuild test / adb instrument
-        └── AnalystIOS / AnalystAndroid (Kotlin)
-              └── Analyst.kt (loop compartilhado)
-                    ├── AnalystDriver (screenshot, tap, scroll, type)
-                    ├── AIClient (Anthropic / OpenAI / Gemini)
-                    └── HtmlReportWriter → report.html
+  ├── [ios/android] build SDK → xcodebuild / adb instrument
+  │       └── AnalystIOS / AnalystAndroid (Kotlin)
+  │             └── [login pre-step se --username/--password]
+  │             └── Analyst.kt (loop compartilhado)
+  │                   ├── AnalystDriver (screenshot, tap, scroll, type)
+  │                   ├── AIClient (Anthropic / OpenAI / Gemini)
+  │                   └── HtmlReportWriter → report.html
+  └── [web] build jvmJar → java -jar testpilot-jvm.jar
+              └── AnalystWeb (jvmMain)
+                    └── [login pre-step se --username/--password]
+                    └── Analyst.kt (loop compartilhado, reusado)
+                          ├── AnalystDriverWeb → Playwright headed
+                          ├── AIClient (Anthropic / OpenAI)
+                          └── HtmlReportWriter → report.html
 ```
 
 ### Modo `test` (determinístico)
 
 ```
 ./testpilot test (bash)
-  └── build SDK (gradlew / build_ios_sdk.sh)
-  └── gera TestAnalystTests.swift com config injetada
-  └── xcodebuild test
-        └── TestAnalystIOS (Kotlin)
-              └── CachingAIClient → cache em NSCachesDirectory
-              └── TestAnalyst.kt (loop determinístico)
-                    ├── AnalystDriver (screenshot, tap, scroll, type)
-                    ├── AIClient (Anthropic / OpenAI / Gemini)
-                    └── TestResult (passed, reason, steps)
+  ├── [ios/android] build SDK → xcodebuild / adb instrument
+  │       └── TestAnalystIOS / TestAnalystAndroid (Kotlin)
+  │             └── [login pre-step se --username/--password]
+  │             └── CachingAIClient → cache em NSCachesDirectory / arquivo
+  │             └── TestAnalyst.kt (loop determinístico)
+  │                   └── TestResult → TESTPILOT_RESULT: PASS/FAIL
+  └── [web] build jvmJar → java -jar testpilot-jvm.jar
+              └── TestAnalystWeb (jvmMain)
+                    └── [login pre-step se --username/--password]
+                    └── CachingAIClientJvm → cache em ~/.testpilot/cache/
+                    └── TestAnalyst.kt (loop determinístico, reusado)
+                          ├── AnalystDriverWeb → Playwright headless
+                          └── TestResult → TESTPILOT_RESULT: PASS/FAIL
   └── CLI parseia TESTPILOT_RESULT: → exit 0 (PASS) ou exit 1 (FAIL)
 ```
 
@@ -42,10 +58,12 @@ O TestPilot é um projeto **Kotlin Multiplatform (KMM)**. A lógica central vive
 |---|---|---|
 | Subcomando | `./testpilot analyze` | `./testpilot test` |
 | Classe iOS | `AnalystIOS` | `TestAnalystIOS` |
+| Classe Web | `AnalystWeb` | `TestAnalystWeb` |
 | Loop | `Analyst` | `TestAnalyst` |
 | Prompt | `VisionPrompt` | `TestVisionPrompt` |
+| Browser (web) | headed | headless |
 | Saída | Relatório HTML | PASS/FAIL + steps |
-| Cache de resposta IA | Não | Sim (`NSCachesDirectory/testpilot-cache/`) |
+| Cache de resposta IA | Não | Sim (iOS: `NSCachesDirectory`; JVM: `~/.testpilot/cache/`) |
 | Exit code | Sempre 0 | 0 = PASS, 1 = FAIL |
 
 ---
@@ -197,7 +215,7 @@ interface AIClient {
 | **OpenAI** | `api.openai.com/v1/chat/completions` | Base64 em data URI dentro de `image_url` |
 | **Gemini** | `generativelanguage.googleapis.com/…:generateContent` | Base64 em `inlineData` com MIME type |
 
-**Nota:** Gemini não está disponível no path Android. Apenas Anthropic e OpenAI funcionam lá.
+**Nota:** Gemini não está disponível no path Android nem no Web. Apenas Anthropic e OpenAI funcionam nessas plataformas.
 
 **OpenAI tem dois paths:** quando há `imageBytes`, usa HTTP manual via Ktor (o SDK oficial não suporta visão no KMM). Para mensagens sem imagem (ex: geração do summary), usa o SDK oficial `com.aallam.openai`.
 
@@ -327,16 +345,19 @@ Decorator sobre qualquer `AIClient`. Ativo apenas no modo `test`.
 
 ---
 
-## Marcadores stdout (modo test)
+## Marcadores stdout
 
-O `TestAnalystIOS` emite linhas prefixadas para o stdout durante a execução. O CLI e o app macOS monitoram essas linhas em tempo real:
+Todas as plataformas emitem linhas prefixadas para o stdout durante a execução. O CLI e o app macOS monitoram essas linhas em tempo real:
 
-| Linha | Significado |
-|-------|-------------|
-| `TESTPILOT_STEP: <mensagem>` | Um passo foi executado |
+| Linha | Quando |
+|-------|--------|
+| `TESTPILOT_STEP: <mensagem>` | Passo executado (modo test) |
 | `TESTPILOT_STEP: (cached) <mensagem>` | Passo executado a partir do cache |
 | `TESTPILOT_RESULT: PASS <motivo>` | Teste aprovado |
 | `TESTPILOT_RESULT: FAIL <motivo>` | Teste reprovado |
+| `TESTPILOT_REPORT_PATH=<caminho>` | Caminho do relatório HTML gerado (modo analyze) |
+| `TESTPILOT_LOGIN_READY` | Browser aberto aguardando login manual (`web-login`) |
+| `TESTPILOT_LOGIN_DONE:<caminho>` | Sessão salva; caminho do arquivo de sessão |
 
 ---
 
@@ -355,6 +376,94 @@ O relatório é um **HTML autossuficiente**: screenshots embutidas como data URI
 **Localização:** labels em inglês (padrão) ou pt-BR, selecionados via `config.language`.
 
 **Tamanho típico:** 5–20 MB dependendo da quantidade de steps e resolução do device.
+
+---
+
+## Login pre-step (todas as plataformas)
+
+Quando `--username` e `--password` são fornecidos, os entrypoints de todas as plataformas executam um passo de login **antes** do objetivo principal:
+
+```kotlin
+if (!username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+    val loginConfig = config.copy(maxSteps = 5)
+    Analyst(driver, aiClient, loginConfig)
+        .run("Log in with username: $username and password: $password")
+}
+```
+
+- Reutiliza o mesmo `Analyst` e `AnalystDriver` — sem código extra por plataforma
+- `maxSteps = 5` limita o pre-step independente do `maxSteps` do objetivo principal
+- Para o modo `test`, o pre-step usa o `baseClient` (cliente direto, sem cache) para não poluir o cache do teste
+
+**Web — sessão persistida:** após o login, o contexto Playwright é salvo em `~/.testpilot/sessions/<hostname>.json`. Nas execuções seguintes com a mesma URL, o arquivo é carregado e o pre-step é pulado.
+
+**iOS/Android — sem persistência de sessão:** o pre-step é executado em toda execução em que as credenciais são passadas (o estado de login persiste apenas dentro do ciclo de vida da sessão XCTest/UIAutomator).
+
+### `web-login` — login manual
+
+Para fluxos de autenticação que não podem ser automatizados (SSO, OAuth, MFA):
+
+1. `AnalystWeb` abre um browser headed e navega para a URL
+2. Emite `TESTPILOT_LOGIN_READY` no stdout
+3. Aguarda `\n` no stdin (o macOS app envia via `saveSession()`)
+4. Chama `browserContext.storageState(path = sessionPath)`
+5. Emite `TESTPILOT_LOGIN_DONE:<path>` e fecha
+
+---
+
+## Plataforma Web (jvmMain)
+
+O runtime web roda na JVM, separado dos targets iOS/Android. Playwright é a única dependência nova — toda a lógica de análise (`Analyst`, `TestAnalyst`, prompts, AI clients) é reusada de `commonMain` sem modificação.
+
+### `AnalystDriverWeb`
+
+Implementa `AnalystDriver` via Playwright for Java:
+
+```kotlin
+class AnalystDriverWeb(private val page: Page) : AnalystDriver {
+    override suspend fun screenshotPng() = withContext(Dispatchers.IO) { page.screenshot() }
+    override suspend fun tap(x, y)       = withContext(Dispatchers.IO) { page.mouse().click(x * 1280, y * 800) }
+    override suspend fun scroll(dir)     = withContext(Dispatchers.IO) { page.mouse().wheel(0.0, if (dir == "down") 400.0 else -400.0) }
+    override suspend fun type(x, y, t)   = withContext(Dispatchers.IO) { page.mouse().click(x * 1280, y * 800); page.keyboard().type(t) }
+}
+```
+
+- Viewport fixo: 1280×800
+- Todas as chamadas Playwright envolvidas em `withContext(Dispatchers.IO)` (API bloqueante)
+
+### `WebSession`
+
+Gerencia o arquivo de sessão (`~/.testpilot/sessions/<hostname>.json`):
+
+- `sessionPath(url)`: extrai hostname via `java.net.URI`; lança `IllegalArgumentException` em URL inválida
+- `loadContext(browser, url)`: cria `BrowserContext` com `storageState` se o arquivo existir
+- `saveSession(context, url)`: persiste `storageState` após login bem-sucedido
+- `interactiveLogin(url)`: abre browser headed, aguarda Enter, salva sessão
+
+### `CachingAIClientJvm`
+
+Decorator sobre qualquer `AIClient`, equivalente ao `CachingAIClient` de iOS:
+
+- **Chave:** FNV-1a 64-bit sobre amostra do screenshot (stride 200) + prompt — idêntico ao iOS
+- **Armazenamento:** `~/.testpilot/cache/<key>.json` via `java.io.File`
+- **Concorrência:** flag de cache usa `AtomicBoolean` para garantir happens-before entre `Dispatchers.IO` e o contexto chamador
+
+### `Main.kt`
+
+Lê configuração exclusivamente via variáveis de ambiente (`TESTPILOT_*`), sem argumentos de linha de comando, para evitar problemas de escaping no shell:
+
+| Variável | Uso |
+|----------|-----|
+| `TESTPILOT_MODE` | `analyze`, `test` ou `login` |
+| `TESTPILOT_WEB_URL` | URL alvo |
+| `TESTPILOT_OBJECTIVE` | Objetivo da análise/teste |
+| `TESTPILOT_API_KEY` | Chave de API |
+| `TESTPILOT_PROVIDER` | `anthropic` ou `openai` |
+| `TESTPILOT_MAX_STEPS` | Limite de steps |
+| `TESTPILOT_LANG` | `en` ou `pt-BR` |
+| `TESTPILOT_OUTPUT` | Caminho do relatório (analyze) |
+| `TESTPILOT_WEB_USERNAME` | Usuário para login automático |
+| `TESTPILOT_WEB_PASSWORD` | Senha para login automático |
 
 ---
 
@@ -402,8 +511,8 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 
 | Arquivo | Responsabilidade |
 |---------|-----------------|
-| `analyst/AnalystIOS.kt` | Entrypoint analyze: inicializa HttpClient(Darwin), AIClient; salva relatório |
-| `analyst/TestAnalystIOS.kt` | Entrypoint test: emite marcadores stdout; usa CachingAIClient |
+| `analyst/AnalystIOS.kt` | Entrypoint analyze: login pre-step opcional; inicializa HttpClient(Darwin), AIClient; salva relatório |
+| `analyst/TestAnalystIOS.kt` | Entrypoint test: login pre-step opcional; emite marcadores stdout; usa CachingAIClient |
 | `ai/CachingAIClient.kt` | Decorator: FNV-1a hash key, NSCachesDirectory store |
 | `analyst/AnalystDriverIOS.kt` | Implementa driver via XCUIApplication/XCUIScreen |
 | `harness/AnalystTests/AnalystTests.swift` | Gerado pelo CLI; não versionar mudanças locais |
@@ -412,8 +521,20 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 
 | Arquivo | Responsabilidade |
 |---------|-----------------|
-| `analyst/AnalystAndroid.kt` | Setup de instrumentação; salva relatório |
+| `analyst/AnalystAndroid.kt` | Setup de instrumentação; login pre-step via `InstrumentationRegistry.getArguments()`; salva relatório |
 | `analyst/AnalystDriverAndroid.kt` | Implementa driver via UiDevice |
+
+### Web (`jvmMain`)
+
+| Arquivo | Responsabilidade |
+|---------|-----------------|
+| `analyst/AnalystWeb.kt` | Entrypoint analyze: browser headed; login pre-step ou sessão carregada; emite `TESTPILOT_REPORT_PATH=` |
+| `analyst/TestAnalystWeb.kt` | Entrypoint test: browser headless; login pre-step usa browser headed separado; CachingAIClientJvm |
+| `analyst/AnalystDriverWeb.kt` | Implementa driver via Playwright for Java (viewport 1280×800) |
+| `analyst/WebSession.kt` | `sessionPath()`, `loadContext()`, `saveSession()`, `interactiveLogin()` |
+| `analyst/WebAIClientFactory.kt` | `buildWebAIClient()` — factory compartilhada entre AnalystWeb e TestAnalystWeb |
+| `ai/CachingAIClientJvm.kt` | Decorator: FNV-1a hash key (idêntico ao iOS), armazenamento via `java.io.File` |
+| `Main.kt` | Lê `TESTPILOT_*` env vars; despacha para AnalystWeb, TestAnalystWeb ou interactiveLogin |
 
 ### AI clients
 
@@ -427,9 +548,9 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 
 | Arquivo | Responsabilidade |
 |---------|-----------------|
-| `testpilot` | Script bash: parsing de args, detecção de device, build, execução, report |
+| `testpilot` | Script bash: parsing de args, detecção de device, build, execução, report; branches `ios`, `android`, `web`, `web-login` |
 | `scripts/build_ios_sdk.sh` | Build do XCFramework; geração dos `.def` de cinterop |
-| `sdk/testpilot/build.gradle.kts` | Configuração KMM: targets, frameworks, dependências |
+| `sdk/testpilot/build.gradle.kts` | Configuração KMM: targets iOS/Android/JVM, dependências, tasks `runWebRunner` e `installPlaywrightBrowsers` |
 
 ---
 
@@ -461,3 +582,7 @@ O CLI sobrescreve `maxSteps` via `--max-steps` (padrão `20` no bash, sobrepõe 
 | Erro de leitura do cache | Log de aviso; continua sem cache (não fatal) |
 | Erro de escrita do cache | Log de aviso; continua (não fatal) |
 | Erro de IA no modo test | Propaga como `FAIL` com a mensagem de erro como motivo |
+| URL inacessível (web) | Playwright lança exceção → `FAIL: Could not load URL` (test) ou erro CLI (analyze) |
+| Sessão corrompida (web) | Log de aviso; continua sem sessão (não fatal) |
+| Provider Gemini em plataforma web | Erro antecipado antes de abrir browser: `Gemini is not supported on web platform` |
+| Processo `web-login` encerra antes de `LOGIN_READY` | `AnalysisRunner` transiciona para `.failed(error:)` com stderr do processo |

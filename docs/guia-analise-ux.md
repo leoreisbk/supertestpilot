@@ -1,4 +1,4 @@
-# Como rodar uma análise de UX no iOS e Android
+# Como rodar uma análise de UX no iOS, Android e Web
 
 ## A motivação
 
@@ -55,20 +55,21 @@ A IA avalia uma afirmação específica sobre o app e retorna **PASSOU** ou **FA
 
 **Exemplo de objetivo:** *"o botão de compra está habilitado na tela do produto"*
 
-Ambos os modos funcionam em **iPhone/iPad** (aparelho físico ou simulador) e **Android** (aparelho físico ou emulador).
+Ambos os modos funcionam em **iPhone/iPad** (aparelho físico ou simulador), **Android** (aparelho físico ou emulador) e **Web** (qualquer URL acessível no navegador — incluindo protótipos no ProtoPie, Figma ou ambientes de staging).
 
 ---
 
 ## Antes de usar pela primeira vez
 
-**1. Tenha o app aberto no aparelho ou simulador**
+**1. Tenha o app ou a URL pronta**
 
 - **iPhone/iPad físico:** conecte o aparelho ao Mac com o cabo USB e abra o Xcode para que ele reconheça o aparelho.
 - **Simulador de iPhone/iPad:** abra o Xcode, suba um simulador e certifique-se de que o app está instalado nele.
 - **Aparelho Android físico:** conecte o aparelho ao computador com o cabo USB. Nas configurações do aparelho, ative o **Modo de desenvolvedor** e dentro dele ative a opção **Depuração USB**.
 - **Emulador Android:** abra o Android Studio, suba um emulador e certifique-se de que o app está instalado nele.
+- **Web:** basta ter a URL em mãos — nenhuma instalação adicional é necessária. O TestPilot abre o navegador automaticamente.
 
-Se você não sabe como fazer algum desses passos, peça ajuda a alguém do time de desenvolvimento.
+Se você não sabe como fazer algum dos passos de mobile, peça ajuda a alguém do time de desenvolvimento.
 
 ---
 
@@ -84,7 +85,7 @@ TESTPILOT_PROVIDER=gemini
 ```
 
 O TestPilot funciona com três serviços de IA diferentes — escolha um:
-- **Google Gemini** → use `gemini`
+- **Google Gemini** → use `gemini` (apenas iOS e Android)
 - **Anthropic Claude** → use `anthropic`
 - **OpenAI (ChatGPT)** → use `openai`
 
@@ -129,7 +130,17 @@ Abra o Terminal e, dentro da pasta do projeto, rode um dos comandos abaixo:
   --objective "o que você quer analisar"
 ```
 
-Enquanto a análise roda, você pode acompanhar a IA navegando pelo app em tempo real. Ao terminar, o relatório abre automaticamente no navegador.
+**Web — qualquer URL:**
+```bash
+./testpilot analyze \
+  --platform web \
+  --url https://seu-app.com \
+  --objective "como é fácil encontrar o fluxo de checkout"
+```
+
+O modo web abre um navegador visível para que você possa acompanhar a IA navegando em tempo real.
+
+Ao terminar, o relatório abre automaticamente no navegador.
 
 ---
 
@@ -163,6 +174,14 @@ Use `./testpilot test` quando quiser uma resposta objetiva de **passou** ou **fa
   --objective "o botão de compra está habilitado na tela do produto"
 ```
 
+**Web — qualquer URL:**
+```bash
+./testpilot test \
+  --platform web \
+  --url https://seu-app.com \
+  --objective "o botão de compra está habilitado na tela do produto"
+```
+
 Durante a execução, cada passo é exibido no terminal em tempo real. Ao final, o resultado aparece em destaque:
 
 ```
@@ -175,6 +194,39 @@ FAILED: Botão "Comprar" estava desabilitado
 ```
 
 Execuções repetidas do mesmo teste são mais rápidas porque o TestPilot guarda em cache as respostas da IA — se a tela não mudou, a resposta já está salva localmente.
+
+---
+
+## Como lidar com telas de login
+
+Se o app ou site exige login, o TestPilot consegue entrar antes de começar a análise. Há duas formas:
+
+### Login automático (usuário e senha simples)
+
+Passe o usuário e a senha diretamente no comando. O TestPilot faz o login e então executa o objetivo principal:
+
+```bash
+./testpilot analyze \
+  --platform web \
+  --url https://seu-app.com \
+  --objective "como é o fluxo de checkout" \
+  --username usuario@exemplo.com \
+  --password suasenha
+```
+
+Isso funciona em **todas as plataformas** — iOS, Android e Web. A sessão web é salva automaticamente: na próxima vez que rodar para o mesmo site, o login é pulado.
+
+### Login manual (SSO, OAuth, autenticação de dois fatores)
+
+Para fluxos de autenticação mais complexos — como login via Google, SSO corporativo ou verificação por SMS — use o comando `web-login`. Ele abre o navegador para você entrar manualmente:
+
+```bash
+./testpilot web-login --url https://seu-app.com
+```
+
+O terminal exibe a mensagem: *"Browser aberto. Faça o login e pressione Enter para salvar a sessão."*
+
+Após pressionar Enter, a sessão é salva e reutilizada em todas as execuções seguintes para aquele site — sem precisar fazer login de novo.
 
 ---
 
@@ -199,11 +251,15 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 
 | Opção | Padrão | O que faz |
 |-------|--------|-----------|
-| `--app` | — | Nome do app |
+| `--platform` | — | `ios`, `android` ou `web` |
+| `--app` | — | Nome do app (iOS e Android) |
+| `--url` | — | Endereço do site ou protótipo (Web) |
 | `--objective` | — | O que você quer analisar ou verificar (em texto livre) |
+| `--username` | — | Usuário para login automático antes da análise (opcional) |
+| `--password` | — | Senha para login automático (opcional; exige `--username`) |
 | `--max-steps` | `20` | Quantas ações a IA pode tomar antes de parar |
 | `--output` | `./report.html` | Onde salvar o relatório gerado (apenas `analyze`) |
-| `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
+| `--provider` | via `.env` | Qual IA usar: `gemini` (apenas mobile), `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |
 | `--team-id` | — | Código de desenvolvedor Apple (obrigatório ao usar `--device`) |
