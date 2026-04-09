@@ -13,12 +13,18 @@ DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omit
 TEAM_ID=""       # Apple Developer Team ID (required for physical device)
 
 COMMAND="${1:-}"
-if [[ "$COMMAND" != "analyze" ]]; then
+if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" ]]; then
   echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
   echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
   echo "       [--api-key <key>] [--max-steps <n>] [--output <path>] [--lang en|pt-BR]"
+  echo ""
+  echo "       ./testpilot test --platform ios|android --app <name> --objective <text>"
+  echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
+  echo "       [--api-key <key>] [--max-steps <n>] [--lang en|pt-BR]"
   exit 1
 fi
+TEST_MODE=false
+[[ "$COMMAND" == "test" ]] && TEST_MODE=true
 shift
 
 while [[ $# -gt 0 ]]; do
@@ -182,6 +188,39 @@ else:
   XCAPP_INIT="XCUIApplication()"
   [[ "$BUNDLE_ID_OPT" != "nil" ]] && XCAPP_INIT="XCUIApplication(bundleIdentifier: $BUNDLE_ID_OPT)"
 
+if [[ "$TEST_MODE" == "true" ]]; then
+  cat > "$TEST_SWIFT" <<SWIFT
+// This file is overwritten by the testpilot CLI before each run.
+// Do not edit manually.
+import XCTest
+import TestPilotShared
+
+class AnalystTests: XCTestCase {
+    var analyst: TestAnalystIOS!
+    var xcApp: XCUIApplication!
+
+    override func setUp() {
+        super.setUp()
+        xcApp = $XCAPP_INIT
+        let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
+        let config = ConfigBuilder()
+            .provider(provider: provider)
+            .apiKey(key: "$API_KEY_ESC")
+            .maxSteps(steps: $MAX_STEPS)
+            .language(lang: "$LANG_ESC")
+            .build()
+        analyst = TestAnalystIOS(config: config)
+    }
+
+    func testAnalyze() async throws {
+        let _ = try await analyst.run(
+            objective: "$OBJECTIVE_ESC",
+            xcApp: xcApp
+        )
+    }
+}
+SWIFT
+else
   cat > "$TEST_SWIFT" <<SWIFT
 // This file is overwritten by the testpilot CLI before each run.
 // Do not edit manually.
@@ -213,6 +252,7 @@ class AnalystTests: XCTestCase {
     }
 }
 SWIFT
+fi
 
   # ── Run xcodebuild ───────────────────────────────────────────────────────────
   echo "Running analysis..."
@@ -232,22 +272,53 @@ SWIFT
           2>&1 || true)
   echo "$LOG" > "$XCODE_LOG"
 
-  REPORT_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//' || true)
-
-  if [[ -z "$REPORT_PATH" ]]; then
-    echo "Error: Analysis produced no report. Test likely failed."
-    echo "Xcodebuild log saved to: $XCODE_LOG"
-    echo "--- Key lines ---"
-    grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
-    exit 1
+  if [[ "$TEST_MODE" == "true" ]]; then
+    echo "Running test..."
+    while IFS= read -r line; do
+      if [[ "$line" == *"TESTPILOT_STEP: "* ]]; then
+        msg="${line#*TESTPILOT_STEP: }"
+        echo "  · $msg"
+      fi
+    done <<< "$LOG"
   fi
 
-  # ── Extract report from log ──────────────────────────────────────────────────
-  # The SDK prints the HTML inline between TESTPILOT_REPORT_START/END markers.
-  # For physical devices this is more reliable than devicectl file transfer.
-  echo "Extracting report..."
-  if [[ "$USE_DEVICE" == "true" ]]; then
-    python3 -c "
+  if [[ "$TEST_MODE" == "true" ]]; then
+    RESULT_LINE=$(echo "$LOG" | grep "TESTPILOT_RESULT: " | tail -1 | sed 's/.*TESTPILOT_RESULT: //' || true)
+
+    if [[ -z "$RESULT_LINE" ]]; then
+      echo "Error: Test produced no result. Test likely failed to run."
+      echo "Xcodebuild log saved to: $XCODE_LOG"
+      echo "--- Key lines ---"
+      grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
+      exit 1
+    fi
+
+    if [[ "$RESULT_LINE" == PASS* ]]; then
+      REASON="${RESULT_LINE#PASS }"
+      echo ""
+      echo "PASSED: $REASON"
+      exit 0
+    else
+      REASON="${RESULT_LINE#FAIL }"
+      echo ""
+      echo "FAILED: $REASON"
+      exit 1
+    fi
+  else
+    REPORT_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//' || true)
+
+    if [[ -z "$REPORT_PATH" ]]; then
+      echo "Error: Analysis produced no report. Test likely failed."
+      echo "Xcodebuild log saved to: $XCODE_LOG"
+      echo "--- Key lines ---"
+      grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
+      exit 1
+    fi
+
+    # ── Extract report from log ──────────────────────────────────────────────────
+    echo "Extracting report..."
+    if [[ "$USE_DEVICE" == "true" ]]; then
+      python3 -c "
 import sys
 log = open('$XCODE_LOG').read()
 start = log.find('TESTPILOT_REPORT_START\n')
@@ -257,13 +328,14 @@ if start == -1 or end == -1:
 html = log[start + len('TESTPILOT_REPORT_START\n'):end]
 open('$OUTPUT', 'w').write(html)
 " || { echo "Error: Could not extract report from xcodebuild log."; exit 1; }
-  else
-    cp "$REPORT_PATH" "$OUTPUT" \
-      || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_PATH"; exit 1; }
-  fi
+    else
+      cp "$REPORT_PATH" "$OUTPUT" \
+        || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_PATH"; exit 1; }
+    fi
 
-  echo "Report written to: $OUTPUT"
-  open "$OUTPUT"
+    echo "Report written to: $OUTPUT"
+    open "$OUTPUT"
+  fi
 
 elif [[ "$PLATFORM" == "android" ]]; then
   command -v adb >/dev/null 2>&1 || { echo "Error: adb not found — install Android SDK Platform Tools"; exit 1; }
