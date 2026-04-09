@@ -61,6 +61,8 @@ if [[ -f ".env" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve OUTPUT to an absolute path so it's correct regardless of working directory
+OUTPUT="$(cd "$(dirname "$OUTPUT")" 2>/dev/null && pwd)/$(basename "$OUTPUT")" 2>/dev/null || OUTPUT="$(pwd)/$(basename "$OUTPUT")"
 
 # ── web-login: establish browser session without running a test ──────────────
 if [[ "$COMMAND" == "web-login" ]]; then
