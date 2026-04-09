@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "1500"
+   version = "1.7">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AA0006000000000000000001"
+               BuildableName = "HarnessApp.app"
+               BlueprintName = "HarnessApp"
+               ReferencedContainer = "container:Harness.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AA0006000000000000000002"
+               BuildableName = "AnalystTests.xctest"
+               BlueprintName = "AnalystTests"
+               ReferencedContainer = "container:Harness.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES">
+      <EnvironmentVariables>
+         <EnvironmentVariable key="TESTPILOT_API_KEY" value="$(TESTPILOT_API_KEY)" isEnabled="YES"/>
+         <EnvironmentVariable key="TESTPILOT_PROVIDER" value="$(TESTPILOT_PROVIDER)" isEnabled="YES"/>
+         <EnvironmentVariable key="TESTPILOT_OBJECTIVE" value="$(TESTPILOT_OBJECTIVE)" isEnabled="YES"/>
+         <EnvironmentVariable key="TESTPILOT_MAX_STEPS" value="$(TESTPILOT_MAX_STEPS)" isEnabled="YES"/>
+         <EnvironmentVariable key="TESTPILOT_BUNDLE_ID" value="$(TESTPILOT_BUNDLE_ID)" isEnabled="YES"/>
+      </EnvironmentVariables>
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AA0006000000000000000002"
+               BuildableName = "AnalystTests.xctest"
+               BlueprintName = "AnalystTests"
+               ReferencedContainer = "container:Harness.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "AA0006000000000000000001"
+            BuildableName = "HarnessApp.app"
+            BlueprintName = "HarnessApp"
+            ReferencedContainer = "container:Harness.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+</Scheme>

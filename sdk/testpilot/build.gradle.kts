@@ -2,19 +2,21 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    kotlin("plugin.serialization") version "1.8.10"
+    kotlin("plugin.serialization") version "2.1.20"
     id("com.android.library")
 }
 
 kotlin {
-    android {
+    androidTarget {
         compilations.all {
             kotlinOptions {
                 jvmTarget = "1.8"
             }
         }
     }
-    
+
+    jvm()
+
     val xcf = XCFramework("TestPilotShared")
     listOf(
         iosX64(),
@@ -24,6 +26,14 @@ kotlin {
         val main by it.compilations.getting
         main.cinterops.create("xctest") {
             defFile("src/iosMain/xctest_${it.name}.def")
+        }
+        it.compilations.all {
+            kotlinOptions {
+                freeCompilerArgs += listOf(
+                    "-opt-in=kotlinx.cinterop.ExperimentalForeignApi",
+                    "-opt-in=kotlin.experimental.ExperimentalNativeApi",
+                )
+            }
         }
 
         it.binaries.framework {
@@ -39,7 +49,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation("com.aallam.openai:openai-client:3.1.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("io.ktor:ktor-client-websockets:$ktorVersion")
                 implementation("io.ktor:ktor-client-cio:$ktorVersion")
@@ -66,6 +76,11 @@ kotlin {
                 implementation("io.ktor:ktor-client-darwin:$ktorVersion")
             }
         }
+        val jvmMain by getting {
+            dependencies {
+                implementation("com.microsoft.playwright:playwright:1.44.0")
+            }
+        }
     }
 }
 
@@ -76,4 +91,27 @@ android {
         minSdk = 29
         targetSdk = 33
     }
+}
+
+// ── Web runner tasks ──────────────────────────────────────────────────────────
+
+fun jvmClasspath() = kotlin.jvm().compilations["main"].let { c ->
+    c.output.allOutputs + c.runtimeDependencyFiles
+}
+
+tasks.register<JavaExec>("runWebRunner") {
+    group = "application"
+    description = "Run the web runner with env vars set by the testpilot CLI"
+    dependsOn("jvmMainClasses")
+    mainClass.set("co.work.testpilot.MainKt")
+    classpath = jvmClasspath()
+}
+
+tasks.register<JavaExec>("installPlaywrightBrowsers") {
+    group = "application"
+    description = "Download Playwright Chromium browser (one-time setup)"
+    dependsOn("jvmMainClasses")
+    mainClass.set("com.microsoft.playwright.CLI")
+    classpath = jvmClasspath()
+    args = listOf("install", "chromium")
 }

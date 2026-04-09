@@ -1,47 +1,27 @@
-@file:OptIn(BetaOpenAI::class)
-
 package co.work.testpilot.runtime.prompts
 
+import co.work.testpilot.ai.AIClient
+import co.work.testpilot.ai.ChatMessage
 import co.work.testpilot.runtime.Config
-import co.work.testpilot.openai.OpenAIModel
-import co.work.testpilot.runtime.Instruction
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.removeComments
-import com.aallam.openai.api.BetaOpenAI
-import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.aallam.openai.api.chat.ChatMessage
-import com.aallam.openai.api.chat.ChatRole
-import com.aallam.openai.api.model.ModelId
-import com.aallam.openai.client.OpenAI
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 data class InstructPromptInput(val objective: String, val simplifiedUI: String, val lastInstruction: String? = null)
 
-class InstructPrompt(client: OpenAI, config: Config): OpenAIPrompt<InstructPromptInput, String>(client, config) {
+class InstructPrompt(client: AIClient, config: Config) : AIPrompt<InstructPromptInput, String>(client, config) {
     override suspend fun run(input: InstructPromptInput): String {
-        val request = ChatCompletionRequest(
-            model = ModelId(OpenAIModel.GPT4_0314.idString),
-            messages = listOf(
-                ChatMessage(ChatRole.System, system(input.objective)),
-                ChatMessage(ChatRole.User, uiState(
-                    input.simplifiedUI,
-                    input.lastInstruction
-                )),
-            ),
-            temperature = config.temperature,
-            n = 1,
-            maxTokens = config.maxTokens,
+        val messages = listOf(
+            ChatMessage(ChatMessage.ROLE_SYSTEM, system(input.objective)),
+            ChatMessage(ChatMessage.ROLE_USER, uiState(input.simplifiedUI, input.lastInstruction)),
         )
-        val response = client.testPilotChatCompletion(request)
-        val jsonCommand = response.firstCompletionContent ?: throw TestAutomationException.EmptyResponse()
-        return jsonCommand
+        return client.chatCompletion(
+            messages = messages,
+            maxTokens = config.maxTokens,
+            temperature = config.temperature,
+        ).ifBlank { throw TestAutomationException.EmptyResponse() }
     }
 
     private companion object {
-        val serializer = Json { ignoreUnknownKeys = true }
-
         fun system(objective: String) = """
         As a mobile app agent, you have an objective and a simplified UI description
         Analyze the UI content and respond with the command which you believe will help achieve your objective

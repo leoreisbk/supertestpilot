@@ -1,0 +1,467 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PLATFORM=""
+APP_NAME=""
+URL=""
+USERNAME=""
+PASSWORD=""
+OBJECTIVE=""
+API_KEY="${TESTPILOT_API_KEY:-}"
+PROVIDER="${TESTPILOT_PROVIDER:-anthropic}"
+MAX_STEPS=20
+OUTPUT="./report.html"
+LANG_CODE="en"
+DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omitted)
+TEAM_ID=""       # Apple Developer Team ID (required for physical device)
+
+COMMAND="${1:-}"
+if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-login" ]]; then
+  echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
+  echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
+  echo "       [--api-key <key>] [--max-steps <n>] [--output <path>] [--lang en|pt-BR]"
+  echo ""
+  echo "       ./testpilot analyze --platform web --url <URL> --objective <text>"
+  echo "       ./testpilot test    --platform web --url <URL> --objective <text>"
+  echo "       [--username <user>] [--password <pass>]"
+  echo "       [--provider anthropic|openai] [--api-key <key>] [--max-steps <n>] [--lang en|pt-BR]"
+  echo ""
+  echo "       ./testpilot web-login --url <URL>"
+  exit 1
+fi
+TEST_MODE=false
+[[ "$COMMAND" == "test" ]] && TEST_MODE=true
+shift
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --platform)  PLATFORM="$2";     shift 2 ;;
+    --app)       APP_NAME="$2";     shift 2 ;;
+    --url)       URL="$2";          shift 2 ;;
+    --username)  USERNAME="$2";     shift 2 ;;
+    --password)  PASSWORD="$2";     shift 2 ;;
+    --objective) OBJECTIVE="$2";    shift 2 ;;
+    --api-key)   API_KEY="$2";      shift 2 ;;
+    --provider)  PROVIDER="$2";     shift 2 ;;
+    --max-steps) MAX_STEPS="$2";    shift 2 ;;
+    --output)    OUTPUT="$2";       shift 2 ;;
+    --lang)      LANG_CODE="$2";    shift 2 ;;
+    --device)    DEVICE_UDID="$2";  shift 2 ;;
+    --team-id)   TEAM_ID="$2";      shift 2 ;;
+    *) echo "Unknown flag: $1"; exit 1 ;;
+  esac
+done
+
+# Load .env
+if [[ -f ".env" ]]; then
+  set -a; source .env; set +a
+  API_KEY="${TESTPILOT_API_KEY:-$API_KEY}"
+  PROVIDER="${TESTPILOT_PROVIDER:-$PROVIDER}"
+  TEAM_ID="${TESTPILOT_TEAM_ID:-$TEAM_ID}"
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── web-login: establish browser session without running a test ──────────────
+if [[ "$COMMAND" == "web-login" ]]; then
+  [[ -z "$URL" ]] && { echo "Error: --url required for web-login"; exit 1; }
+  command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
+
+  echo "Building web runner..."
+  (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
+    || { echo "Error: JVM build failed."; exit 1; }
+
+  (
+    export TESTPILOT_MODE="login"
+    export TESTPILOT_WEB_URL="$URL"
+    export TESTPILOT_API_KEY="${API_KEY:-dummy}"
+    cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:runWebRunner
+  )
+  exit $?
+fi
+
+[[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios, android, or web)"; exit 1; }
+[[ -z "$OBJECTIVE" ]] && { echo "Error: --objective required"; exit 1; }
+[[ -z "$API_KEY" ]]   && { echo "Error: API key required (--api-key or TESTPILOT_API_KEY in .env)"; exit 1; }
+
+if [[ "$PLATFORM" == "web" ]]; then
+  [[ -z "$URL" ]] && { echo "Error: --url required for --platform web"; exit 1; }
+else
+  [[ -z "$APP_NAME" ]] && { echo "Error: --app required for --platform $PLATFORM"; exit 1; }
+fi
+
+if [[ "$PLATFORM" == "ios" ]]; then
+  command -v xcrun >/dev/null 2>&1 || { echo "Error: xcrun not found — install Xcode command line tools"; exit 1; }
+
+  # ── Determine target: physical device or simulator ──────────────────────────
+  USE_DEVICE=false
+  if [[ -n "$DEVICE_UDID" ]]; then
+    USE_DEVICE=true
+    [[ -z "$TEAM_ID" ]] && { echo "Error: --team-id required when targeting a physical device (or set TESTPILOT_TEAM_ID in .env)"; exit 1; }
+    DESTINATION="platform=iOS,id=$DEVICE_UDID"
+    echo "Targeting physical device: $DEVICE_UDID"
+  else
+    BOOTED=$(xcrun simctl list devices | grep "(Booted)" | head -1)
+    [[ -z "$BOOTED" ]] && { echo "Error: No booted iOS simulator. Boot one in Xcode or with: xcrun simctl boot <UDID>"; exit 1; }
+
+    BOOTED_UDID=$(xcrun simctl list devices --json | python3 -c "
+import json, sys
+devs = json.load(sys.stdin)
+for runtime, devices in devs.get('devices', {}).items():
+    for d in devices:
+        if d.get('state') == 'Booted':
+            print(d['udid'])
+            exit()
+")
+    [[ -z "$BOOTED_UDID" ]] && { echo "Error: Could not determine booted simulator UDID."; exit 1; }
+    DESTINATION="platform=iOS Simulator,id=$BOOTED_UDID"
+  fi
+
+  # ── Resolve bundle ID ────────────────────────────────────────────────────────
+  echo "Resolving bundle ID for \"$APP_NAME\"..."
+  export TP_APP_NAME="$APP_NAME"
+
+  if [[ "$USE_DEVICE" == "true" ]]; then
+    # Physical device: list apps via devicectl.
+    # devicectl writes a text table to stdout AND JSON to --json-output;
+    # using /dev/stdout for both corrupts the JSON stream, so we use a temp file.
+    _APPS_JSON=$(mktemp /tmp/tp_apps_XXXXXX.json)
+    xcrun devicectl device info apps --device "$DEVICE_UDID" --json-output "$_APPS_JSON" >/dev/null 2>&1 || true
+    BUNDLE_ID=$(python3 -c "
+import json, sys, os
+name_lower = os.environ['TP_APP_NAME'].lower()
+with open('$_APPS_JSON') as f:
+    data = json.load(f)
+apps = data.get('result', {}).get('apps', [])
+matches = []
+for app in apps:
+    bid = app.get('bundleIdentifier', app.get('bundleID', ''))
+    name = app.get('name', bid)
+    if name_lower in name.lower() or name_lower in bid.lower():
+        matches.append((bid, name))
+if len(matches) == 0:
+    print('ERROR_no_match', end='')
+elif len(matches) == 1:
+    print(matches[0][0], end='')
+else:
+    print('MULTIPLE_' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
+" 2>/dev/null || echo "ERROR_no_match")
+    rm -f "$_APPS_JSON"
+  else
+    # Simulator: parse ASCII plist from simctl listapps
+    BUNDLE_ID=$(xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
+      | python3 -c "
+import sys, re, os
+text = sys.stdin.read()
+name_lower = os.environ['TP_APP_NAME'].lower()
+matches = []
+blocks = re.split(r'\"([^\"]+)\"\s*=\s*\{', text)
+i = 1
+while i < len(blocks) - 1:
+    bid = blocks[i]; body = blocks[i+1]; i += 2
+    if '.' not in bid: continue
+    dm = re.search(r'CFBundleDisplayName\s*=\s*(?:\"([^\"]*)\"|([A-Za-z0-9 _\-]+))\s*;', body)
+    nm = re.search(r'CFBundleName\s*=\s*(?:\"([^\"]*)\"|([A-Za-z0-9 _\-]+))\s*;', body)
+    display = (dm.group(1) or dm.group(2)) if dm else ((nm.group(1) or nm.group(2)) if nm else bid)
+    if name_lower in display.lower() or name_lower in bid.lower():
+        matches.append((bid, display))
+if len(matches) == 0:
+    print('ERROR_no_match', end='')
+elif len(matches) == 1:
+    print(matches[0][0], end='')
+else:
+    print('MULTIPLE_' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
+")
+  fi
+
+  if [[ "$BUNDLE_ID" == ERROR* ]]; then
+    echo "Error: No app matching \"$APP_NAME\" found on the target device."
+    exit 1
+  fi
+
+  if [[ "$BUNDLE_ID" == MULTIPLE* ]]; then
+    echo "Multiple matches. Pick one:"
+    IFS=',' read -ra CHOICES <<< "${BUNDLE_ID#MULTIPLE_}"
+    select choice in "${CHOICES[@]}"; do BUNDLE_ID="${choice%%=*}"; break; done
+  fi
+
+  echo "Found: $BUNDLE_ID"
+
+  # ── Build SDK ────────────────────────────────────────────────────────────────
+  echo "Building SDK..."
+  (cd "$SCRIPT_DIR" && scripts/build_ios_sdk.sh) >/dev/null 2>&1 \
+    || { echo "Error: SDK build failed. Run scripts/build_ios_sdk.sh manually for details."; exit 1; }
+
+  # ── Prepare test file ────────────────────────────────────────────────────────
+  DERIVED_DATA=$(mktemp -d)
+  TEST_SWIFT="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift"
+  TEST_SWIFT_BACKUP="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift.bak"
+  cp "$TEST_SWIFT" "$TEST_SWIFT_BACKUP"
+  trap 'cp "$TEST_SWIFT_BACKUP" "$TEST_SWIFT"; rm -f "$TEST_SWIFT_BACKUP"; [[ -f "$DERIVED_DATA/xcodebuild.log" ]] && cp "$DERIVED_DATA/xcodebuild.log" /tmp/testpilot_last_xcodebuild.log; rm -rf "$DERIVED_DATA"' EXIT
+
+  _swift_esc() {
+    local s="$1"
+    s="${s//\\/\\\\}"    # backslash → \\
+    s="${s//\"/\\\"}"    # " → \"
+    s="${s//$'\n'/\\n}"  # newline → \n (keeps Swift string on one line)
+    s="${s//$'\r'/}"     # strip carriage returns
+    printf '%s' "$s"
+  }
+  API_KEY_ESC=$(_swift_esc "$API_KEY")
+  PROVIDER_ESC=$(_swift_esc "$PROVIDER")
+  OBJECTIVE_ESC=$(_swift_esc "$OBJECTIVE")
+  LANG_ESC=$(_swift_esc "$LANG_CODE")
+  BUNDLE_ID_OPT="nil"
+  [[ -n "$BUNDLE_ID" ]] && BUNDLE_ID_OPT="\"$(_swift_esc "$BUNDLE_ID")\""
+
+  # XCUIApplication(bundleIdentifier:) calls XCUIWaitAndAssert internally on Xcode 26+,
+  # which conflicts with the async test runner's outer XCTWaiter. Creating it in the
+  # synchronous setUp() avoids this — setUp() runs before the async waiter is pushed.
+  XCAPP_INIT="XCUIApplication()"
+  [[ "$BUNDLE_ID_OPT" != "nil" ]] && XCAPP_INIT="XCUIApplication(bundleIdentifier: $BUNDLE_ID_OPT)"
+
+if [[ "$TEST_MODE" == "true" ]]; then
+  cat > "$TEST_SWIFT" <<SWIFT
+// This file is overwritten by the testpilot CLI before each run.
+// Do not edit manually.
+import XCTest
+import TestPilotShared
+
+class AnalystTests: XCTestCase {
+    var analyst: TestAnalystIOS!
+    var xcApp: XCUIApplication!
+
+    override func setUp() {
+        super.setUp()
+        xcApp = $XCAPP_INIT
+        let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
+        let config = ConfigBuilder()
+            .provider(provider: provider)
+            .apiKey(key: "$API_KEY_ESC")
+            .maxSteps(steps: $MAX_STEPS)
+            .language(lang: "$LANG_ESC")
+            .build()
+        analyst = TestAnalystIOS(config: config)
+    }
+
+    func testAnalyze() async throws {
+        let _ = try await analyst.run(
+            objective: "$OBJECTIVE_ESC",
+            xcApp: xcApp
+        )
+    }
+}
+SWIFT
+else
+  cat > "$TEST_SWIFT" <<SWIFT
+// This file is overwritten by the testpilot CLI before each run.
+// Do not edit manually.
+import XCTest
+import TestPilotShared
+
+class AnalystTests: XCTestCase {
+    var analyst: AnalystIOS!
+    var xcApp: XCUIApplication!
+
+    override func setUp() {
+        super.setUp()
+        xcApp = $XCAPP_INIT
+        let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
+        let config = ConfigBuilder()
+            .provider(provider: provider)
+            .apiKey(key: "$API_KEY_ESC")
+            .maxSteps(steps: $MAX_STEPS)
+            .language(lang: "$LANG_ESC")
+            .build()
+        analyst = AnalystIOS(config: config)
+    }
+
+    func testAnalyze() async throws {
+        let _ = try await analyst.run(
+            objective: "$OBJECTIVE_ESC",
+            xcApp: xcApp
+        )
+    }
+}
+SWIFT
+fi
+
+  # ── Run xcodebuild ───────────────────────────────────────────────────────────
+  echo "Running analysis..."
+  XCODE_LOG="$DERIVED_DATA/xcodebuild.log"
+
+  XCODE_EXTRA_ARGS=()
+  if [[ "$USE_DEVICE" == "true" ]]; then
+    XCODE_EXTRA_ARGS+=(-allowProvisioningUpdates "DEVELOPMENT_TEAM=$TEAM_ID")
+  fi
+
+  LOG=$(xcodebuild test \
+          -project "$SCRIPT_DIR/harness/Harness.xcodeproj" \
+          -scheme AnalystTests \
+          -destination "$DESTINATION" \
+          -derivedDataPath "$DERIVED_DATA" \
+          ${XCODE_EXTRA_ARGS[@]+"${XCODE_EXTRA_ARGS[@]}"} \
+          2>&1 || true)
+  echo "$LOG" > "$XCODE_LOG"
+
+  if [[ "$TEST_MODE" == "true" ]]; then
+    echo "Running test..."
+    while IFS= read -r line; do
+      if [[ "$line" == *"TESTPILOT_STEP: "* ]]; then
+        msg="${line#*TESTPILOT_STEP: }"
+        echo "  · $msg"
+      fi
+    done <<< "$LOG"
+  fi
+
+  if [[ "$TEST_MODE" == "true" ]]; then
+    RESULT_LINE=$(echo "$LOG" | grep "TESTPILOT_RESULT: " | tail -1 | sed 's/.*TESTPILOT_RESULT: //' || true)
+
+    if [[ -z "$RESULT_LINE" ]]; then
+      echo "Error: Test produced no result. Test likely failed to run."
+      echo "Xcodebuild log saved to: $XCODE_LOG"
+      echo "--- Key lines ---"
+      grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
+      exit 1
+    fi
+
+    if [[ "$RESULT_LINE" == PASS* ]]; then
+      REASON="${RESULT_LINE#PASS }"
+      echo ""
+      echo "PASSED: $REASON"
+      exit 0
+    else
+      REASON="${RESULT_LINE#FAIL }"
+      echo ""
+      echo "FAILED: $REASON"
+      exit 1
+    fi
+  else
+    REPORT_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//' || true)
+
+    if [[ -z "$REPORT_PATH" ]]; then
+      echo "Error: Analysis produced no report. Test likely failed."
+      echo "Xcodebuild log saved to: $XCODE_LOG"
+      echo "--- Key lines ---"
+      grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
+      exit 1
+    fi
+
+    # ── Extract report from log ──────────────────────────────────────────────────
+    echo "Extracting report..."
+    if [[ "$USE_DEVICE" == "true" ]]; then
+      python3 -c "
+import sys
+log = open('$XCODE_LOG').read()
+start = log.find('TESTPILOT_REPORT_START\n')
+end   = log.find('\nTESTPILOT_REPORT_END', start)
+if start == -1 or end == -1:
+    sys.exit(1)
+html = log[start + len('TESTPILOT_REPORT_START\n'):end]
+open('$OUTPUT', 'w').write(html)
+" || { echo "Error: Could not extract report from xcodebuild log."; exit 1; }
+    else
+      cp "$REPORT_PATH" "$OUTPUT" \
+        || { echo "Error: Could not copy report from simulator. Path tried: $REPORT_PATH"; exit 1; }
+    fi
+
+    echo "Report written to: $OUTPUT"
+    open "$OUTPUT"
+  fi
+
+elif [[ "$PLATFORM" == "android" ]]; then
+  command -v adb >/dev/null 2>&1 || { echo "Error: adb not found — install Android SDK Platform Tools"; exit 1; }
+
+  DEVICES=$(adb devices | grep -v "^List" | grep -c "device$" || true)
+  [[ "$DEVICES" == "0" ]] && { echo "Error: No Android device/emulator connected."; exit 1; }
+
+  echo "Resolving package for \"$APP_NAME\"..."
+  PACKAGE=$(adb shell pm list packages -3 2>/dev/null | sed 's/package://' | grep -i "$APP_NAME" | head -1 | tr -d '\r')
+  [[ -z "$PACKAGE" ]] && { echo "Error: No package matching \"$APP_NAME\". Run: adb shell pm list packages -3"; exit 1; }
+  echo "Found: $PACKAGE"
+
+  echo "Building SDK..."
+  (cd "$SCRIPT_DIR/sdk" && ./gradlew testpilot:assembleDebug) >/dev/null 2>&1 \
+    || { echo "Error: AAR build failed."; exit 1; }
+
+  echo "Running analysis..."
+  INSTRUMENT_OUTPUT=$(adb shell am instrument \
+    -e class "co.work.testpilot.analyst.AnalystAndroid" \
+    -e TESTPILOT_API_KEY "$API_KEY" \
+    -e TESTPILOT_PROVIDER "$PROVIDER" \
+    -e TESTPILOT_OBJECTIVE "$OBJECTIVE" \
+    -e TESTPILOT_MAX_STEPS "$MAX_STEPS" \
+    -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)
+
+  if echo "$INSTRUMENT_OUTPUT" | grep -q "FAILURES\|Error"; then
+    echo "Error: Analysis failed. Output:"
+    echo "$INSTRUMENT_OUTPUT"
+    exit 1
+  fi
+
+  echo "Pulling report..."
+  adb pull "/sdcard/Android/data/$PACKAGE/files/testpilot_report.html" "$OUTPUT" \
+    || { echo "Error: Could not pull report from device."; exit 1; }
+
+  echo "Report written to: $OUTPUT"
+  open "$OUTPUT" 2>/dev/null || echo "Open $OUTPUT in your browser."
+
+elif [[ "$PLATFORM" == "web" ]]; then
+  command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
+
+  echo "Building web runner..."
+  (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
+    || { echo "Error: JVM build failed."; exit 1; }
+
+  # Install Playwright browsers on first run
+  if [[ ! -d "$HOME/.cache/ms-playwright" && ! -d "$HOME/Library/Caches/ms-playwright" ]]; then
+    echo "Installing Playwright browsers (first time only)..."
+    (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:installPlaywrightBrowsers) \
+      || { echo "Error: Could not install Playwright browsers."; exit 1; }
+  fi
+
+  WEB_LOG=$(mktemp)
+  trap 'rm -f "$WEB_LOG"' EXIT
+
+  (
+    export TESTPILOT_MODE="$COMMAND"
+    export TESTPILOT_WEB_URL="$URL"
+    export TESTPILOT_OBJECTIVE="$OBJECTIVE"
+    export TESTPILOT_API_KEY="$API_KEY"
+    export TESTPILOT_PROVIDER="$PROVIDER"
+    export TESTPILOT_MAX_STEPS="$MAX_STEPS"
+    export TESTPILOT_LANG="$LANG_CODE"
+    export TESTPILOT_OUTPUT="$OUTPUT"
+    export TESTPILOT_WEB_USERNAME="$USERNAME"
+    export TESTPILOT_WEB_PASSWORD="$PASSWORD"
+    cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:runWebRunner 2>&1
+  ) | tee "$WEB_LOG"
+  RUNNER_EXIT=${PIPESTATUS[0]}
+
+  if [[ "$TEST_MODE" == "true" ]]; then
+    RESULT_LINE=$(grep "^TESTPILOT_RESULT:" "$WEB_LOG" | tail -1)
+    rm -f "$WEB_LOG"
+    if [[ -z "$RESULT_LINE" && "$RUNNER_EXIT" -ne 0 ]]; then
+      echo "Error: Web runner crashed (exit $RUNNER_EXIT). Check output above."
+      exit 1
+    fi
+    if [[ "$RESULT_LINE" == "TESTPILOT_RESULT: PASS"* ]]; then
+      exit 0
+    else
+      exit 1
+    fi
+  else
+    if [[ "$RUNNER_EXIT" -ne 0 ]]; then
+      echo "Error: Web runner failed (exit $RUNNER_EXIT). Check output above."
+      rm -f "$WEB_LOG"
+      exit 1
+    fi
+    rm -f "$WEB_LOG"
+    echo "Report written to: $OUTPUT"
+    open "$OUTPUT" 2>/dev/null || echo "Open $OUTPUT in your browser."
+  fi
+
+else
+  echo "Error: Unknown platform \"$PLATFORM\". Use ios, android, or web."
+  exit 1
+fi

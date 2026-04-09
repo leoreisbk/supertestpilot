@@ -17,8 +17,8 @@ class TestableAppIOS(bundleId: String? = null) : TestableApp<AppUISnapshotIOS> {
 
     override suspend fun snapshot(): AppUISnapshotIOS {
         val snapshotProvider = xcApp as XCUIElementSnapshotProvidingProtocol
-        val snapshot = snapshotProvider.snapshotWithError(null) ?: throw TestAutomationException.SnapshotFailed()
-
+        val snapshot = snapshotProvider.snapshotWithError(null)
+            ?: throw TestAutomationException.SnapshotFailed()
         return AppUISnapshotIOS(snapshot)
     }
 }

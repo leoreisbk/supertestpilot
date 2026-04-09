@@ -1,7 +1,10 @@
 package co.work.testpilot.runtime
 
 import co.work.testpilot.AppUISnapshot
-import co.work.testpilot.openai.OpenAIModel
+import co.work.testpilot.ai.AIClient
+import co.work.testpilot.ai.AnthropicChatClient
+import co.work.testpilot.ai.GeminiChatClient
+import co.work.testpilot.ai.OpenAIChatClient
 import co.work.testpilot.runtime.prompts.InstructPrompt
 import co.work.testpilot.runtime.prompts.InstructPromptInput
 import co.work.testpilot.runtime.prompts.SimplifyPrompt
@@ -9,22 +12,26 @@ import co.work.testpilot.runtime.prompts.SimplifyPromptInput
 import co.work.testpilot.throwables.TestAutomationException
 import co.work.testpilot.utils.EmbeddingElement
 import co.work.testpilot.utils.EmbeddingUtils
+import co.work.testpilot.utils.StringSimilarity
 import com.aallam.openai.api.embedding.EmbeddingRequest
 import com.aallam.openai.api.logging.LogLevel
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import kotlin.coroutines.cancellation.CancellationException
 
 class Runner(private val config: Config) {
-    private val aiClient = OpenAI(config = OpenAIConfig(
-        token = config.apiKey,
-        organization = config.apiOrg,
-        headers = config.apiHeaders,
-        host = config.apiHost?.let { OpenAIHost(it) } ?: OpenAIHost.OpenAI,
-        logLevel = LogLevel.None
-    ))
+    private val aiClient: AIClient = createAIClient(config)
+
+    // OpenAI client kept for embedding-based fuzzy element matching.
+    // null when provider is not OpenAI; fuzzy matching degrades gracefully.
+    private val openAIForEmbeddings: OpenAI? = when (config.provider) {
+        AIProvider.OpenAI -> buildOpenAIClient(config)
+        AIProvider.Anthropic, AIProvider.Gemini -> null
+    }
 
     private val simplifyPrompt = SimplifyPrompt(aiClient, config)
     private val instructPrompt = InstructPrompt(aiClient, config)
@@ -39,12 +46,15 @@ class Runner(private val config: Config) {
     }
 
     suspend fun searchEmbeddings(items: List<String>, query: String, n: Int = 1): List<String> {
-        val texts = items.filter { it.isNotBlank() }
+        val client = openAIForEmbeddings
+            ?: return StringSimilarity.search(items, query, n)
 
-        // We append the query text to the embedding requests
-        val response = aiClient.embeddings(
+        val texts = items.filter { it.isNotBlank() }
+        val embeddingModelId = ModelId("text-embedding-ada-002")
+
+        val response = client.embeddings(
             EmbeddingRequest(
-                model = ModelId(OpenAIModel.GPT3_TextEmbeddingAda002.idString),
+                model = embeddingModelId,
                 input = texts + listOf(query),
             )
         )
@@ -60,3 +70,39 @@ class Runner(private val config: Config) {
         )
     }
 }
+
+private fun createAIClient(config: Config): AIClient {
+    val httpClient = HttpClient(CIO)
+    return when (config.provider) {
+        AIProvider.OpenAI -> OpenAIChatClient(
+            openAI = buildOpenAIClient(config),
+            modelId = config.modelId ?: AIProviderDefaults.openAIModel,
+            httpClient = httpClient,
+            apiKey = config.apiKey,
+            apiHost = config.apiHost ?: "https://api.openai.com",
+        )
+        AIProvider.Anthropic -> AnthropicChatClient(
+            apiKey = config.apiKey,
+            modelId = config.modelId ?: AIProviderDefaults.anthropicModel,
+            httpClient = httpClient,
+            apiHost = config.apiHost ?: "https://api.anthropic.com",
+            extraHeaders = config.apiHeaders,
+        )
+        AIProvider.Gemini -> GeminiChatClient(
+            apiKey = config.apiKey,
+            modelId = config.modelId ?: AIProviderDefaults.geminiModel,
+            httpClient = httpClient,
+            apiHost = config.apiHost ?: "https://generativelanguage.googleapis.com",
+        )
+    }
+}
+
+private fun buildOpenAIClient(config: Config) = OpenAI(
+    config = OpenAIConfig(
+        token = config.apiKey,
+        organization = config.apiOrg,
+        headers = config.apiHeaders,
+        host = config.apiHost?.let { OpenAIHost(it) } ?: OpenAIHost.OpenAI,
+        logLevel = LogLevel.None,
+    )
+)
