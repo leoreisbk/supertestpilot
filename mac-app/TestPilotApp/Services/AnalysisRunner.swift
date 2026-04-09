@@ -2,10 +2,18 @@ import Foundation
 import AppKit
 import Observation
 
+struct TestStep: Equatable {
+    let message: String
+    let cached: Bool
+}
+
 enum AnalysisState: Equatable {
     case idle
     case running(statusLine: String)
+    case testRunning(steps: [TestStep])
     case completed(reportPath: String)
+    case testPassed(reason: String, steps: [TestStep])
+    case testFailed(reason: String, steps: [TestStep])
     case failed(error: String)
 }
 
@@ -47,14 +55,16 @@ final class AnalysisRunner {
         }
 
         var args: [String] = [
-            "analyze",
+            config.mode.rawValue,
             "--platform", config.platform.rawValue,
             "--app",      config.appName,
             "--objective", effectiveObjective,
             "--lang",     config.language.rawValue,
             "--max-steps", "\(config.maxSteps)",
-            "--output",   outputPath
         ]
+        if config.mode == .analyze {
+            args += ["--output", outputPath]
+        }
 
         if let device = config.selectedDevice, device.isPhysical {
             args += ["--device", device.id]
@@ -92,39 +102,83 @@ final class AnalysisRunner {
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty,
-                  let line = String(data: data, encoding: .utf8)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines),
-                  !line.isEmpty
+                  let text = String(data: data, encoding: .utf8)
             else { return }
-            DispatchQueue.main.async {
-                self?.lastStdoutLine = line
-                self?.state = .running(statusLine: line)
+
+            for rawLine in text.components(separatedBy: .newlines) {
+                let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !line.isEmpty else { continue }
+
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.lastStdoutLine = line
+
+                    if line.hasPrefix("TESTPILOT_STEP: ") {
+                        let msg = String(line.dropFirst("TESTPILOT_STEP: ".count))
+                        let cached = msg.hasPrefix("(cached)")
+                        let clean = cached ? String(msg.dropFirst("(cached) ".count)) : msg
+                        let step = TestStep(message: clean, cached: cached)
+                        if case .testRunning(let steps) = self.state {
+                            self.state = .testRunning(steps: steps + [step])
+                        } else {
+                            self.state = .testRunning(steps: [step])
+                        }
+                    } else if line.hasPrefix("TESTPILOT_RESULT: ") {
+                        let payload = String(line.dropFirst("TESTPILOT_RESULT: ".count))
+                        let steps: [TestStep]
+                        if case .testRunning(let s) = self.state { steps = s } else { steps = [] }
+                        if payload.hasPrefix("PASS ") {
+                            let reason = String(payload.dropFirst("PASS ".count))
+                            self.state = .testPassed(reason: reason, steps: steps)
+                        } else if payload.hasPrefix("FAIL ") {
+                            let reason = String(payload.dropFirst("FAIL ".count))
+                            self.state = .testFailed(reason: reason, steps: steps)
+                        }
+                    } else {
+                        if case .running = self.state {
+                            self.state = .running(statusLine: line)
+                        }
+                    }
+                }
             }
         }
 
         p.terminationHandler = { [weak self] proc in
             stdout.fileHandleForReading.readabilityHandler = nil
-            // Drain remaining stderr synchronously after process exits
             let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
             let lastStderr = String(data: stderrData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             DispatchQueue.main.async {
-                // Don't overwrite state if already reset by cancel()
-                guard case .running = self?.state else { return }
-                if proc.terminationStatus == 0 {
-                    self?.state = .completed(reportPath: outputPath)
-                } else {
-                    let fallback = self?.lastStdoutLine ?? ""
+                guard let self else { return }
+                switch self.state {
+                case .running:
+                    if proc.terminationStatus == 0 {
+                        self.state = .completed(reportPath: outputPath)
+                    } else {
+                        let fallback = self.lastStdoutLine
+                        let msg = !lastStderr.isEmpty ? lastStderr
+                                : !fallback.isEmpty    ? fallback
+                                : "Analysis failed (exit \(proc.terminationStatus))"
+                        self.state = .failed(error: msg)
+                    }
+                case .testRunning(let steps):
+                    let fallback = self.lastStdoutLine
                     let msg = !lastStderr.isEmpty ? lastStderr
                             : !fallback.isEmpty    ? fallback
-                            : "Analysis failed (exit \(proc.terminationStatus))"
-                    self?.state = .failed(error: msg)
+                            : "Test failed (exit \(proc.terminationStatus))"
+                    self.state = .testFailed(reason: msg, steps: steps)
+                default:
+                    break
                 }
             }
         }
 
         lastStdoutLine = ""
-        state = .running(statusLine: "Starting analysis…")
+        if config.mode == .test {
+            state = .testRunning(steps: [])
+        } else {
+            state = .running(statusLine: "Starting analysis…")
+        }
         process = p
 
         do {
