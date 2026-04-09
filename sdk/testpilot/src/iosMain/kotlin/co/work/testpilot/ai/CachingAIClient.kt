@@ -1,13 +1,11 @@
 package co.work.testpilot.ai
 
 import co.work.testpilot.Logging
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.readBytes
-import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.dataUsingEncoding
+import platform.Foundation.stringWithContentsOfFile
 import platform.Foundation.writeToFile
 
 class CachingAIClient(
@@ -58,16 +56,12 @@ class CachingAIClient(
         return h.toString(16).padStart(16, '0')
     }
 
-    @OptIn(ExperimentalForeignApi::class)
     private fun readFile(path: String): String? {
         return try {
-            val data = NSData.dataWithContentsOfFile(path) ?: return null
-            val bytes = data.bytes ?: return null
-            bytes.readBytes(data.length.toInt()).decodeToString()
+            NSString.stringWithContentsOfFile(path, NSUTF8StringEncoding, null)?.toString()
         } catch (_: Exception) { null }
     }
 
-    @OptIn(ExperimentalForeignApi::class)
     private fun writeFile(path: String, content: String) {
         try {
             NSFileManager.defaultManager.createDirectoryAtPath(

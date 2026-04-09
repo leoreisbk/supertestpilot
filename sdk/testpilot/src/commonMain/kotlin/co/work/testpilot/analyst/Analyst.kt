@@ -56,6 +56,7 @@ class Analyst(
 
             when (action) {
                 is AnalysisAction.Done -> done = true
+                is AnalysisAction.Pass, is AnalysisAction.Fail -> done = true
                 is AnalysisAction.Tap -> driver.tap(action.x, action.y)
                 is AnalysisAction.Scroll -> driver.scroll(action.direction)
                 is AnalysisAction.Type -> driver.type(action.x, action.y, action.text)
