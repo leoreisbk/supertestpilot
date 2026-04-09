@@ -3,6 +3,9 @@ set -euo pipefail
 
 PLATFORM=""
 APP_NAME=""
+URL=""
+USERNAME=""
+PASSWORD=""
 OBJECTIVE=""
 API_KEY="${TESTPILOT_API_KEY:-}"
 PROVIDER="${TESTPILOT_PROVIDER:-anthropic}"
@@ -13,14 +16,17 @@ DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omit
 TEAM_ID=""       # Apple Developer Team ID (required for physical device)
 
 COMMAND="${1:-}"
-if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" ]]; then
+if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-login" ]]; then
   echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
   echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
   echo "       [--api-key <key>] [--max-steps <n>] [--output <path>] [--lang en|pt-BR]"
   echo ""
-  echo "       ./testpilot test --platform ios|android --app <name> --objective <text>"
-  echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
-  echo "       [--api-key <key>] [--max-steps <n>] [--lang en|pt-BR]"
+  echo "       ./testpilot analyze --platform web --url <URL> --objective <text>"
+  echo "       ./testpilot test    --platform web --url <URL> --objective <text>"
+  echo "       [--username <user>] [--password <pass>]"
+  echo "       [--provider anthropic|openai] [--api-key <key>] [--max-steps <n>] [--lang en|pt-BR]"
+  echo ""
+  echo "       ./testpilot web-login --url <URL>"
   exit 1
 fi
 TEST_MODE=false
@@ -31,6 +37,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --platform)  PLATFORM="$2";     shift 2 ;;
     --app)       APP_NAME="$2";     shift 2 ;;
+    --url)       URL="$2";          shift 2 ;;
+    --username)  USERNAME="$2";     shift 2 ;;
+    --password)  PASSWORD="$2";     shift 2 ;;
     --objective) OBJECTIVE="$2";    shift 2 ;;
     --api-key)   API_KEY="$2";      shift 2 ;;
     --provider)  PROVIDER="$2";     shift 2 ;;
@@ -51,12 +60,35 @@ if [[ -f ".env" ]]; then
   TEAM_ID="${TESTPILOT_TEAM_ID:-$TEAM_ID}"
 fi
 
-[[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios or android)"; exit 1; }
-[[ -z "$APP_NAME" ]]  && { echo "Error: --app required"; exit 1; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── web-login: establish browser session without running a test ──────────────
+if [[ "$COMMAND" == "web-login" ]]; then
+  [[ -z "$URL" ]] && { echo "Error: --url required for web-login"; exit 1; }
+  command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
+
+  echo "Building web runner..."
+  (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
+    || { echo "Error: JVM build failed."; exit 1; }
+
+  (
+    export TESTPILOT_MODE="login"
+    export TESTPILOT_WEB_URL="$URL"
+    export TESTPILOT_API_KEY="${API_KEY:-dummy}"
+    cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:runWebRunner
+  )
+  exit $?
+fi
+
+[[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios, android, or web)"; exit 1; }
 [[ -z "$OBJECTIVE" ]] && { echo "Error: --objective required"; exit 1; }
 [[ -z "$API_KEY" ]]   && { echo "Error: API key required (--api-key or TESTPILOT_API_KEY in .env)"; exit 1; }
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "$PLATFORM" == "web" ]]; then
+  [[ -z "$URL" ]] && { echo "Error: --url required for --platform web"; exit 1; }
+else
+  [[ -z "$APP_NAME" ]] && { echo "Error: --app required for --platform $PLATFORM"; exit 1; }
+fi
 
 if [[ "$PLATFORM" == "ios" ]]; then
   command -v xcrun >/dev/null 2>&1 || { echo "Error: xcrun not found — install Xcode command line tools"; exit 1; }
@@ -374,7 +406,62 @@ elif [[ "$PLATFORM" == "android" ]]; then
   echo "Report written to: $OUTPUT"
   open "$OUTPUT" 2>/dev/null || echo "Open $OUTPUT in your browser."
 
+elif [[ "$PLATFORM" == "web" ]]; then
+  command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
+
+  echo "Building web runner..."
+  (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
+    || { echo "Error: JVM build failed."; exit 1; }
+
+  # Install Playwright browsers on first run
+  if [[ ! -d "$HOME/.cache/ms-playwright" ]]; then
+    echo "Installing Playwright browsers (first time only)..."
+    (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:installPlaywrightBrowsers) \
+      || { echo "Error: Could not install Playwright browsers."; exit 1; }
+  fi
+
+  WEB_LOG=$(mktemp)
+  trap 'rm -f "$WEB_LOG"' EXIT
+
+  (
+    export TESTPILOT_MODE="$COMMAND"
+    export TESTPILOT_WEB_URL="$URL"
+    export TESTPILOT_OBJECTIVE="$OBJECTIVE"
+    export TESTPILOT_API_KEY="$API_KEY"
+    export TESTPILOT_PROVIDER="$PROVIDER"
+    export TESTPILOT_MAX_STEPS="$MAX_STEPS"
+    export TESTPILOT_LANG="$LANG_CODE"
+    export TESTPILOT_OUTPUT="$OUTPUT"
+    export TESTPILOT_WEB_USERNAME="$USERNAME"
+    export TESTPILOT_WEB_PASSWORD="$PASSWORD"
+    cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:runWebRunner 2>&1
+  ) | tee "$WEB_LOG"
+  RUNNER_EXIT=${PIPESTATUS[0]}
+
+  if [[ "$TEST_MODE" == "true" ]]; then
+    RESULT_LINE=$(grep "^TESTPILOT_RESULT:" "$WEB_LOG" | tail -1)
+    rm -f "$WEB_LOG"
+    if [[ -z "$RESULT_LINE" && "$RUNNER_EXIT" -ne 0 ]]; then
+      echo "Error: Web runner crashed (exit $RUNNER_EXIT). Check output above."
+      exit 1
+    fi
+    if [[ "$RESULT_LINE" == "TESTPILOT_RESULT: PASS"* ]]; then
+      exit 0
+    else
+      exit 1
+    fi
+  else
+    if [[ "$RUNNER_EXIT" -ne 0 ]]; then
+      echo "Error: Web runner failed (exit $RUNNER_EXIT). Check output above."
+      rm -f "$WEB_LOG"
+      exit 1
+    fi
+    rm -f "$WEB_LOG"
+    echo "Report written to: $OUTPUT"
+    open "$OUTPUT" 2>/dev/null || echo "Open $OUTPUT in your browser."
+  fi
+
 else
-  echo "Error: Unknown platform \"$PLATFORM\". Use ios or android."
+  echo "Error: Unknown platform \"$PLATFORM\". Use ios, android, or web."
   exit 1
 fi
