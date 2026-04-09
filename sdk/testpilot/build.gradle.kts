@@ -14,7 +14,9 @@ kotlin {
             }
         }
     }
-    
+
+    jvm()
+
     val xcf = XCFramework("TestPilotShared")
     listOf(
         iosX64(),
@@ -74,6 +76,11 @@ kotlin {
                 implementation("io.ktor:ktor-client-darwin:$ktorVersion")
             }
         }
+        val jvmMain by getting {
+            dependencies {
+                implementation("com.microsoft.playwright:playwright:1.44.0")
+            }
+        }
     }
 }
 
@@ -84,4 +91,27 @@ android {
         minSdk = 29
         targetSdk = 33
     }
+}
+
+// ── Web runner tasks ──────────────────────────────────────────────────────────
+
+fun jvmClasspath() = kotlin.jvm().compilations["main"].let { c ->
+    c.output.allOutputs + c.runtimeDependencyFiles
+}
+
+tasks.register<JavaExec>("runWebRunner") {
+    group = "application"
+    description = "Run the web runner with env vars set by the testpilot CLI"
+    dependsOn("jvmMainClasses")
+    mainClass.set("co.work.testpilot.MainKt")
+    classpath = jvmClasspath()
+}
+
+tasks.register<JavaExec>("installPlaywrightBrowsers") {
+    group = "application"
+    description = "Download Playwright Chromium browser (one-time setup)"
+    dependsOn("jvmMainClasses")
+    mainClass.set("com.microsoft.playwright.CLI")
+    classpath = jvmClasspath()
+    args = listOf("install", "chromium")
 }
