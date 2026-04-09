@@ -35,13 +35,35 @@ struct ContentView: View {
                 .frame(minWidth: 560, minHeight: 440)
         }
         .onChange(of: runner.state) { _, newState in
-            if case .completed(let path) = newState {
+            switch newState {
+            case .completed(let path):
                 history.append(RunRecord(
-                    appName:    config.appName,
-                    platform:   config.platform,
-                    objective:  config.objective,
-                    reportPath: path
+                    appName: config.appName,
+                    platform: config.platform,
+                    objective: config.objective,
+                    reportPath: path,
+                    mode: .analyze
                 ))
+            case .testPassed(let reason, _):
+                history.append(RunRecord(
+                    appName: config.appName,
+                    platform: config.platform,
+                    objective: config.objective,
+                    reportPath: "",
+                    mode: .test,
+                    testOutcome: TestOutcome(passed: true, reason: reason)
+                ))
+            case .testFailed(let reason, _):
+                history.append(RunRecord(
+                    appName: config.appName,
+                    platform: config.platform,
+                    objective: config.objective,
+                    reportPath: "",
+                    mode: .test,
+                    testOutcome: TestOutcome(passed: false, reason: reason)
+                ))
+            default:
+                break
             }
         }
     }

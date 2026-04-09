@@ -38,6 +38,11 @@ private struct HistoryRowView: View {
                                     ? Color.blue.opacity(0.15)
                                     : Color.green.opacity(0.15))
                         .clipShape(Capsule())
+                    Text(record.mode.displayName.uppercased())
+                        .font(.caption2)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.12))
+                        .clipShape(Capsule())
                 }
                 Text(record.objective)
                     .font(.caption)
@@ -51,20 +56,36 @@ private struct HistoryRowView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Button("Open Report") {
-                    let path = record.reportPath
-                    if FileManager.default.fileExists(atPath: path) {
-                        reportMissing = false
-                        NSWorkspace.shared.open(URL(fileURLWithPath: path))
-                    } else {
-                        reportMissing = true
+                if record.mode == .test, let outcome = record.testOutcome {
+                    HStack(spacing: 4) {
+                        Image(systemName: outcome.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundStyle(outcome.passed ? .green : .red)
+                        Text(outcome.passed ? "PASSED" : "FAILED")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(outcome.passed ? .green : .red)
                     }
-                }
-                .buttonStyle(.bordered)
-                if reportMissing {
-                    Text("File not found")
+                    Text(outcome.reason)
                         .font(.caption2)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 180)
+                } else {
+                    Button("Open Report") {
+                        let path = record.reportPath
+                        if FileManager.default.fileExists(atPath: path) {
+                            reportMissing = false
+                            NSWorkspace.shared.open(URL(fileURLWithPath: path))
+                        } else {
+                            reportMissing = true
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    if reportMissing {
+                        Text("File not found")
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
         }
