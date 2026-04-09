@@ -15,6 +15,7 @@ enum AnalysisState: Equatable {
     case testPassed(reason: String, steps: [TestStep])
     case testFailed(reason: String, steps: [TestStep])
     case failed(error: String)
+    case webLoginPending
 }
 
 @MainActor
@@ -56,21 +57,28 @@ final class AnalysisRunner {
 
         var args: [String] = [
             config.mode.rawValue,
-            "--platform", config.platform.rawValue,
-            "--app",      config.appName,
+            "--platform",  config.platform.rawValue,
             "--objective", effectiveObjective,
-            "--lang",     config.language.rawValue,
+            "--lang",      config.language.rawValue,
             "--max-steps", "\(config.maxSteps)",
         ]
-        if config.mode == .analyze {
-            args += ["--output", outputPath]
+
+        if config.platform == .web {
+            args += ["--url", config.url]
+            if !config.username.isEmpty { args += ["--username", config.username] }
+            if !config.password.isEmpty { args += ["--password", config.password] }
+        } else {
+            args += ["--app", config.appName]
+            if let device = config.selectedDevice, device.isPhysical {
+                args += ["--device", device.id]
+                if !settings.teamId.isEmpty {
+                    args += ["--team-id", settings.teamId]
+                }
+            }
         }
 
-        if let device = config.selectedDevice, device.isPhysical {
-            args += ["--device", device.id]
-            if !settings.teamId.isEmpty {
-                args += ["--team-id", settings.teamId]
-            }
+        if config.mode == .analyze {
+            args += ["--output", outputPath]
         }
 
         let provider = config.providerOverride ?? settings.provider
@@ -196,5 +204,89 @@ final class AnalysisRunner {
 
     func reset() {
         state = .idle
+    }
+
+    func webLogin(config: RunConfig, settings: SettingsStore) {
+        guard case .idle = state else { return }
+
+        let scriptURL: URL
+        if !settings.scriptPath.isEmpty {
+            let expanded = NSString(string: settings.scriptPath).expandingTildeInPath
+            scriptURL = URL(fileURLWithPath: expanded)
+        } else if let bundled = Bundle.main.url(forResource: "testpilot", withExtension: nil) {
+            scriptURL = bundled
+        } else {
+            state = .failed(error: "testpilot script not found — set the script path in Settings")
+            return
+        }
+
+        var args: [String] = ["web-login", "--url", config.url]
+        let provider = config.providerOverride ?? settings.provider
+        args += ["--provider", provider.rawValue]
+
+        var env = ProcessInfo.processInfo.environment
+        let extraPaths = ["/opt/homebrew/bin", "/opt/homebrew/sbin",
+                          "/usr/local/bin", "/usr/local/sbin"]
+        let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        env["PATH"] = extraPaths.joined(separator: ":") + ":" + currentPath
+        env["TESTPILOT_API_KEY"]  = settings.apiKey
+        env["TESTPILOT_PROVIDER"] = provider.rawValue
+
+        let p = Process()
+        p.executableURL = scriptURL
+        p.arguments = args
+        p.environment = env
+
+        let stdin  = Pipe()
+        let stdout = Pipe()
+        let stderr = Pipe()
+        p.standardInput  = stdin
+        p.standardOutput = stdout
+        p.standardError  = stderr
+
+        stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty,
+                  let text = String(data: data, encoding: .utf8) else { return }
+            for line in text.components(separatedBy: .newlines) {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if trimmed == "TESTPILOT_LOGIN_READY" {
+                        self.state = .webLoginPending
+                    } else if trimmed.hasPrefix("TESTPILOT_LOGIN_DONE:") {
+                        stdout.fileHandleForReading.readabilityHandler = nil
+                        self.state = .idle
+                    }
+                }
+            }
+        }
+
+        p.terminationHandler = { [weak self] _ in
+            stdout.fileHandleForReading.readabilityHandler = nil
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if case .webLoginPending = self.state {
+                    self.state = .idle
+                }
+            }
+        }
+
+        state = .running(statusLine: "Opening browser for login…")
+        process = p
+
+        do {
+            try p.run()
+        } catch {
+            state = .failed(error: error.localizedDescription)
+        }
+    }
+
+    func saveSession() {
+        guard case .webLoginPending = state else { return }
+        if let stdin = process?.standardInput as? Pipe {
+            stdin.fileHandleForWriting.write(Data([10])) // "\n"
+        }
     }
 }

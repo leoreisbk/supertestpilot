@@ -34,9 +34,13 @@ private struct HistoryRowView: View {
                     Text(record.platform.rawValue.uppercased())
                         .font(.caption2)
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(record.platform == .ios
-                                    ? Color.blue.opacity(0.15)
-                                    : Color.green.opacity(0.15))
+                        .background({
+                            switch record.platform {
+                            case .ios:     return Color.blue.opacity(0.15)
+                            case .android: return Color.green.opacity(0.15)
+                            case .web:     return Color.purple.opacity(0.15)
+                            }
+                        }())
                         .clipShape(Capsule())
                     Text(record.mode.displayName.uppercased())
                         .font(.caption2)

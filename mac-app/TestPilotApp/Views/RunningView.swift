@@ -82,6 +82,16 @@ struct RunningView: View {
 
             case .idle:
                 EmptyView()
+
+            case .webLoginPending:
+                NeuralOrbView()
+                Text("Browser open — log in and tap Save Session")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 360)
+                Button("Cancel") { runner.cancel() }
+                    .buttonStyle(.bordered)
             }
         }
         .padding()

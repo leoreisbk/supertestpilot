@@ -8,7 +8,7 @@ struct RunView: View {
     var runner: AnalysisRunner
 
     @State private var showAdvanced = false
-    @State private var showWebLoginSheet = false  // TODO: Task 11 — bind to runner.state == .webLoginPending
+    private var showWebLoginSheet: Bool { runner.state == .webLoginPending }
 
     var body: some View {
         Form {
@@ -78,8 +78,7 @@ struct RunView: View {
                     TextField("Username (optional)", text: $config.username)
                     SecureField("Password (optional)", text: $config.password)
                     Button("Manage Session…") {
-                        // TODO: Task 11 — replace with runner.webLogin(config: config, settings: settings)
-                        showWebLoginSheet = true
+                        runner.webLogin(config: config, settings: settings)
                     }
                     .buttonStyle(.borderless)
                     .foregroundStyle(.secondary)
@@ -171,8 +170,10 @@ struct RunView: View {
             Task { await detector.refresh(for: config.platform) }
         }
         .navigationTitle(config.mode == .test ? "New Test" : "New Analysis")
-        .sheet(isPresented: $showWebLoginSheet) {
-            // TODO: Task 11 — bind to runner.state == .webLoginPending; wire saveSession()/cancel()
+        .sheet(isPresented: Binding(
+            get: { runner.state == .webLoginPending },
+            set: { _ in }
+        )) {
             VStack(spacing: 20) {
                 Text("Log in to \(config.url)")
                     .font(.headline)
@@ -182,11 +183,11 @@ struct RunView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                 Button("Save Session") {
-                    showWebLoginSheet = false
+                    runner.saveSession()
                 }
                 .buttonStyle(.borderedProminent)
                 Button("Cancel") {
-                    showWebLoginSheet = false
+                    runner.cancel()
                 }
                 .buttonStyle(.bordered)
             }
