@@ -4,8 +4,15 @@ import Observation
 enum Platform: String, Codable, CaseIterable, Identifiable {
     case ios = "ios"
     case android = "android"
+    case web = "web"
     var id: String { rawValue }
-    var displayName: String { self == .ios ? "iOS" : "Android" }
+    var displayName: String {
+        switch self {
+        case .ios:     return "iOS"
+        case .android: return "Android"
+        case .web:     return "Web"
+        }
+    }
 }
 
 enum AIProvider: String, CaseIterable, Identifiable {
@@ -44,6 +51,9 @@ final class RunConfig {
     var platform: Platform = .ios
     var selectedDevice: DeviceInfo? = nil
     var appName: String = ""
+    var url: String = ""
+    var username: String = ""
+    var password: String = ""
     var objective: String = ""
     var language: Language = .en
     var maxSteps: Int = 20
@@ -54,8 +64,11 @@ final class RunConfig {
     var mode: RunMode = .analyze
 
     var isValid: Bool {
-        selectedDevice != nil
+        guard !objective.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        if platform == .web {
+            return !url.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+        return selectedDevice != nil
             && !appName.trimmingCharacters(in: .whitespaces).isEmpty
-            && !objective.trimmingCharacters(in: .whitespaces).isEmpty
     }
 }

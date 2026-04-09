@@ -13,6 +13,7 @@ final class DeviceDetector {
         switch platform {
         case .ios:     found = await fetchIOSDevices()
         case .android: found = await fetchAndroidDevices()
+        case .web:     found = []
         }
         devices = found
         isRefreshing = false

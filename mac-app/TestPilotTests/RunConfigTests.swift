@@ -22,6 +22,22 @@ final class RunConfigTests: XCTestCase {
         XCTAssertFalse(config.isValid, "whitespace-only fields should be invalid")
     }
 
+    func testIsValidWebRequiresOnlyUrlAndObjective() {
+        let config = RunConfig()
+        config.platform = .web
+
+        XCTAssertFalse(config.isValid, "empty web config should be invalid")
+
+        config.url = "https://example.com"
+        XCTAssertFalse(config.isValid, "web config without objective should be invalid")
+
+        config.objective = "Check onboarding"
+        XCTAssertTrue(config.isValid, "web config with url and objective should be valid")
+
+        config.url = "   "
+        XCTAssertFalse(config.isValid, "whitespace-only url should be invalid")
+    }
+
     func testRunRecordDecodesLegacyJSON() throws {
         // Old records have no "mode" or "testOutcome" fields.
         let json = """
