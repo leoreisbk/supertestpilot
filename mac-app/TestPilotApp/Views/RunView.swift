@@ -8,6 +8,7 @@ struct RunView: View {
     var runner: AnalysisRunner
 
     @State private var showAdvanced = false
+    @State private var showWebLoginSheet = false  // TODO: Task 11 — bind to runner.state == .webLoginPending
 
     var body: some View {
         Form {
@@ -30,27 +31,32 @@ struct RunView: View {
                     Task { await detector.refresh(for: config.platform) }
                 }
 
-                HStack {
-                    Picker("Device", selection: $config.selectedDevice) {
-                        Text("Select a device").tag(Optional<DeviceInfo>(nil))
-                        ForEach(detector.devices) { device in
-                            Text(device.displayName).tag(Optional(device))
+                if config.platform != .web {
+                    HStack {
+                        Picker("Device", selection: $config.selectedDevice) {
+                            Text("Select a device").tag(Optional<DeviceInfo>(nil))
+                            ForEach(detector.devices) { device in
+                                Text(device.displayName).tag(Optional(device))
+                            }
+                        }
+                        if detector.isRefreshing {
+                            ProgressView().scaleEffect(0.7)
+                        } else {
+                            Button {
+                                Task { await detector.refresh(for: config.platform) }
+                            } label: {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Refresh device list")
                         }
                     }
-                    if detector.isRefreshing {
-                        ProgressView().scaleEffect(0.7)
-                    } else {
-                        Button {
-                            Task { await detector.refresh(for: config.platform) }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Refresh device list")
-                    }
-                }
 
-                TextField("App name", text: $config.appName)
+                    TextField("App name", text: $config.appName)
+                } else {
+                    TextField("URL", text: $config.url)
+                        .textContentType(.URL)
+                }
 
                 ZStack(alignment: .topLeading) {
                     if config.objective.isEmpty {
@@ -66,6 +72,20 @@ struct RunView: View {
                     TextEditor(text: $config.objective)
                         .frame(minHeight: 80)
                         .scrollContentBackground(.hidden)
+                }
+
+                if config.platform == .web {
+                    TextField("Username (optional)", text: $config.username)
+                    SecureField("Password (optional)", text: $config.password)
+                    Button("Manage Session…") {
+                        // TODO: Task 11 — replace with runner.webLogin(config: config, settings: settings)
+                        showWebLoginSheet = true
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .help("Open a browser to log in manually — useful for SSO or OAuth")
+                    .disabled(config.url.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
 
@@ -151,5 +171,27 @@ struct RunView: View {
             Task { await detector.refresh(for: config.platform) }
         }
         .navigationTitle(config.mode == .test ? "New Test" : "New Analysis")
+        .sheet(isPresented: $showWebLoginSheet) {
+            // TODO: Task 11 — bind to runner.state == .webLoginPending; wire saveSession()/cancel()
+            VStack(spacing: 20) {
+                Text("Log in to \(config.url)")
+                    .font(.headline)
+                Text("A browser window has opened. Complete login, then tap Save Session.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                Button("Save Session") {
+                    showWebLoginSheet = false
+                }
+                .buttonStyle(.borderedProminent)
+                Button("Cancel") {
+                    showWebLoginSheet = false
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(32)
+            .frame(minWidth: 320)
+        }
     }
 }
