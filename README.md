@@ -1,9 +1,9 @@
 TestPilot
 ===
 
-AI-powered mobile app testing using vision — exploratory analysis and deterministic pass/fail tests.
+AI-powered app testing using vision — exploratory analysis and deterministic pass/fail tests for iOS, Android, and web.
 
-TestPilot is a Kotlin Multiplatform (KMM) SDK that drives iOS and Android apps using screenshots and a multimodal AI loop. It supports two modes:
+TestPilot is a Kotlin Multiplatform (KMM) SDK that drives iOS, Android, and web apps using screenshots and a multimodal AI loop. It supports two modes:
 
 - **`./testpilot analyze`** — exploratory UX analysis: the AI navigates freely and generates an HTML report with screenshots and observations
 - **`./testpilot test`** — deterministic pass/fail: the AI evaluates a specific assertion and exits with `0` (PASS) or `1` (FAIL), with response caching for fast reruns
@@ -19,10 +19,17 @@ Refer to [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for build and installation i
 Run `./testpilot analyze` with a free-form objective. The AI explores the app and generates an HTML report.
 
 ```bash
+# iOS
 ./testpilot analyze \
   --platform ios \
   --app "My App" \
   --objective "how easy is it to find the search feature and complete a purchase"
+
+# Web
+./testpilot analyze \
+  --platform web \
+  --url https://your-app.com \
+  --objective "how easy is it to find the checkout flow"
 ```
 
 At the end, the report opens automatically in the browser.
@@ -32,9 +39,16 @@ At the end, the report opens automatically in the browser.
 Run `./testpilot test` with a specific assertion. The AI evaluates it and returns PASS or FAIL.
 
 ```bash
+# iOS
 ./testpilot test \
   --platform ios \
   --app "My App" \
+  --objective "Check if the Buy button is enabled on the product page"
+
+# Web
+./testpilot test \
+  --platform web \
+  --url https://your-app.com \
   --objective "Check if the Buy button is enabled on the product page"
 ```
 
@@ -53,16 +67,44 @@ Exit code `0` = PASS, `1` = FAIL — suitable for CI pipelines.
 
 Responses are cached in `~/.testpilot/cache/` so reruns of the same test skip API calls.
 
+## Web session management
+
+For apps that require login, TestPilot can authenticate before running:
+
+**Automatic login** (username + password):
+
+```bash
+./testpilot test \
+  --platform web \
+  --url https://your-app.com \
+  --objective "Check the dashboard loads correctly" \
+  --username user@example.com \
+  --password secret
+```
+
+The session is saved to `~/.testpilot/sessions/<hostname>.json` and reused on subsequent runs.
+
+**Manual login** (SSO, OAuth, MFA):
+
+```bash
+./testpilot web-login --url https://your-app.com
+```
+
+Opens a browser window. Log in manually, then press Enter to save the session.
+
 ## Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--app` | — | App name to test |
+| `--platform` | — | `ios`, `android`, or `web` |
+| `--app` | — | App name (`ios`/`android` only) |
+| `--url` | — | URL to open (`web` only) |
 | `--objective` | — | What to analyze or assert |
-| `--platform` | — | `ios` or `android` |
+| `--username` | — | Username for automatic login pre-step (`web` only) |
+| `--password` | — | Password for automatic login pre-step (`web` only) |
 | `--max-steps` | `20` | Maximum AI actions before stopping |
 | `--output` | `./report.html` | Report path (`analyze` only) |
-| `--provider` | via `.env` | AI provider: `anthropic`, `openai`, or `gemini` |
+| `--provider` | via `.env` | AI provider: `anthropic` or `openai` (web); `anthropic`, `openai`, or `gemini` (mobile) |
 | `--api-key` | via `.env` | AI API key |
 | `--device` | — | iOS device UDID for physical device |
 | `--team-id` | — | Apple Developer Team ID (required with `--device`) |
