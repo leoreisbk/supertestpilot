@@ -1,41 +1,67 @@
 # Como rodar uma análise de UX no iOS, Android e Web
 
-## A motivação
+## O TestPilot original e o que construímos em cima
 
-Durante as dailies, o time foi levantando uma necessidade recorrente: ter uma forma mais rápida e consistente de avaliar a experiência de uso do app — sem depender apenas de percepção manual ou sessões de teste com usuários. Era preciso algo que conseguisse navegar pelo app de forma autônoma e gerar observações objetivas sobre o que encontrasse pelo caminho.
+O TestPilot original nasceu como uma biblioteca open-source para **engenheiros**: um jeito de escrever testes automatizados de app usando linguagem natural em vez de código complexo. Em vez de programar seletores e interações, o desenvolvedor escrevia algo como *"vai até a tela de perfil e troca a foto"* — e a IA executava. Ainda era uma ferramenta técnica, para quem sabia como configurar e rodar.
 
-Não existia uma ferramenta pronta que fizesse exatamente isso.
+O que construímos aqui é diferente em essência. Pegamos essa base e transformamos em algo muito mais poderoso:
+
+- **Visão de verdade:** em vez de instruções pré-definidas, a IA *enxerga* o app — tira capturas de tela e interpreta a interface como um humano faria. Não precisa de seletores, identificadores técnicos ou código. Se está visível na tela, a IA entende e interage.
+
+- **Dois modos de uso:** exploração livre com relatório (*analyze*) ou avaliação objetiva de uma condição (*test*) — cada um servindo uma necessidade diferente do time.
+
+- **App macOS:** uma interface visual completa para rodar análises e testes sem tocar em linha de comando. Designers, PMs e QAs usam diretamente, no mesmo app.
+
+- **Três plataformas:** iOS, Android e Web — inclusive protótipos no ProtoPie e Figma.
+
+- **Login integrado:** credenciais opcionais em todos os fluxos; sessões web persistidas para não precisar autenticar a cada execução.
+
+O resultado é uma ferramenta que qualquer pessoa do time consegue usar de acordo com sua própria expectativa sobre o produto — sem intermediários, sem depender do desenvolvimento.
 
 ---
 
-## Por que o TestPilot?
-
-O TestPilot nasceu como uma ferramenta para engenheiros: um jeito de escrever testes automatizados de app usando linguagem natural em vez de código complexo. Em vez de programar cada clique, o desenvolvedor escrevia algo como *"vai até a tela de perfil e troca a foto"* — e a IA executava isso no app.
-
-A base já estava lá: o TestPilot sabia abrir apps, navegar por telas, tirar capturas de tela e interpretar o que via usando inteligência artificial. Faltava só uma nova camada por cima — uma que não fosse voltada para engenheiros validando código, mas para qualquer pessoa do time avaliando experiência.
+## Como cada pessoa do time pode usar
 
 ---
 
-## O que foi preciso adaptar
+## Como cada pessoa do time pode usar
 
-O TestPilot original foi construído para **executar passos definidos** — você dizia o que fazer e ele fazia. Para a análise de UX, o comportamento precisava ser diferente: a IA deveria **explorar livremente**, tomar decisões sozinha sobre onde ir, e ao final **registrar o que observou** em vez de apenas confirmar se algo funcionou.
+Cada área do time tem uma forma de expectativa diferente sobre o produto. O TestPilot atende a todas:
 
-Foram três mudanças principais:
+**Designer** — quer entender se a experiência de uso está como foi projetada. Usa o modo *análise* com um objetivo aberto:
+> *"como é a experiência de criar uma conta pela primeira vez"*
+> A IA navega livremente e gera um relatório com capturas de tela e observações sobre cada passo.
 
-**1. Um novo modo de operação — o modo análise**
-Em vez de receber uma lista de tarefas, a IA recebe um *objetivo aberto* e decide por conta própria como explorar o app. Ao final, em vez de um resultado de "passou/falhou", ela gera um relatório com capturas de tela e comentários sobre cada passo.
+**Product Manager** — quer validar se um fluxo específico está funcionando antes de um lançamento. Usa o modo *teste* com uma afirmação objetiva:
+> *"o usuário consegue finalizar uma compra sem precisar criar conta"*
+> O TestPilot retorna PASSOU ou FALHOU com o motivo.
 
-**2. Suporte a mais serviços de IA**
-O TestPilot original usava apenas OpenAI (ChatGPT). Para dar mais flexibilidade ao time — e não depender de um único fornecedor — adicionamos suporte ao **Google Gemini** e ao **Anthropic Claude** também.
+**QA** — quer cobrir regressões de forma consistente e rápida. Usa o modo *teste* integrado ao pipeline de CI, com respostas em cache para reruns instantâneos:
+> *"o botão de pagamento está habilitado na tela do produto"*
+> Exit code 0 (passou) ou 1 (falhou) — plugável em qualquer CI.
 
-**3. Uma solução para a restrição do iPhone**
-O iOS tem uma barreira de segurança: nenhum programa externo consegue controlar um app ou tirar capturas de tela diretamente. A Apple só libera esse acesso durante a execução de **testes automatizados**, que recebem permissões especiais para isso.
+---
 
-Para contornar isso sem abrir mão da simplicidade de uso, criamos uma estrutura chamada `harness/`. Ela é composta por:
-- **HarnessApp** — um aplicativo auxiliar vazio que precisa estar instalado no aparelho. Você nunca vai abrir ele; ele existe apenas para que o iOS libere as permissões necessárias. Pense nele como um crachá de acesso.
-- **AnalystTests** — é quem executa de fato os comandos: tirar capturas de tela, tocar na tela, rolar o conteúdo. É o "braço" que o TestPilot usa para interagir com o app analisado, dentro do contexto de permissão que o HarnessApp abriu.
+## Como usar o TestPilot
 
-Você não precisa mexer em nada disso — o TestPilot instala e gerencia tudo automaticamente. No Android essa estrutura não existe porque o sistema já permite esse tipo de controle sem restrições adicionais.
+Há duas formas de usar: pelo **app macOS** (recomendado para designers e PMs) ou pelo **terminal** (recomendado para QAs e integração com CI).
+
+### Pelo app macOS
+
+O app macOS é a forma mais simples de rodar análises e testes sem tocar em linha de comando.
+
+1. Escolha o **modo** (Analyze ou Test) e a **plataforma** (iOS, Android ou Web)
+2. Selecione o dispositivo ou informe a URL do site
+3. Escreva o objetivo em texto livre
+4. Clique em **Run Analysis** ou **Run Test**
+
+O resultado aparece em tempo real: para análise, o relatório abre no navegador ao final; para teste, cada passo aparece na tela com o veredicto final em destaque.
+
+Se o app ou site exige login, preencha os campos de usuário e senha — o TestPilot faz o login automaticamente antes de começar. Para fluxos mais complexos (SSO, autenticação de dois fatores), o botão **Manage Session** abre o navegador para você entrar manualmente.
+
+### Pelo terminal
+
+Para quem prefere linha de comando ou precisa integrar com CI, todos os recursos estão disponíveis via `./testpilot`. Os exemplos nas seções abaixo usam essa forma.
 
 ---
 
@@ -56,6 +82,28 @@ A IA avalia uma afirmação específica sobre o app e retorna **PASSOU** ou **FA
 **Exemplo de objetivo:** *"o botão de compra está habilitado na tela do produto"*
 
 Ambos os modos funcionam em **iPhone/iPad** (aparelho físico ou simulador), **Android** (aparelho físico ou emulador) e **Web** (qualquer URL acessível no navegador — incluindo protótipos no ProtoPie, Figma ou ambientes de staging).
+
+---
+
+## Por baixo dos panos — como a visão funciona
+
+Não precisa saber disso para usar — mas se tiver curiosidade:
+
+A cada passo, o TestPilot tira uma captura de tela do app e manda para a IA junto com o objetivo. A IA analisa a imagem como um humano faria — lê os textos, identifica botões, entende a hierarquia visual — e decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo, ou emitir um veredicto.
+
+Nenhum elemento da tela precisa ter um identificador especial. Se está visível, a IA consegue interagir.
+
+---
+
+## Uma solução para a restrição do iPhone
+
+O iOS tem uma barreira de segurança: nenhum programa externo consegue controlar um app ou tirar capturas de tela diretamente. A Apple só libera esse acesso durante a execução de **testes automatizados**, que recebem permissões especiais para isso.
+
+Para contornar isso sem abrir mão da simplicidade de uso, criamos uma estrutura chamada `harness/`. Ela é composta por:
+- **HarnessApp** — um aplicativo auxiliar vazio que precisa estar instalado no aparelho. Você nunca vai abrir ele; ele existe apenas para que o iOS libere as permissões necessárias. Pense nele como um crachá de acesso.
+- **AnalystTests** — é quem executa de fato os comandos: tirar capturas de tela, tocar na tela, rolar o conteúdo. É o "braço" que o TestPilot usa para interagir com o app analisado, dentro do contexto de permissão que o HarnessApp abriu.
+
+Você não precisa mexer em nada disso — o TestPilot instala e gerencia tudo automaticamente. No Android e na Web essa estrutura não existe porque o sistema já permite esse tipo de controle sem restrições adicionais.
 
 ---
 

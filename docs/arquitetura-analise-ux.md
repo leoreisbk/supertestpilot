@@ -4,6 +4,27 @@ Este documento descreve o funcionamento interno dos dois modos do TestPilot: `an
 
 ---
 
+## O que foi construído — visão geral da evolução
+
+O TestPilot open-source original era uma biblioteca KMM para engenheiros: recebia instruções em linguagem natural e as executava em apps móveis via XCTest/UIAutomator. Não havia interface visual, não havia modo de análise exploratória, não havia suporte web, e o foco era automação de tarefas definidas.
+
+Esta versão estendeu essa base com uma arquitetura significativamente mais ampla:
+
+| | TestPilot original | Esta versão |
+|---|---|---|
+| Entrada | Instruções pré-definidas | Objetivo em linguagem natural |
+| Percepção | Não se aplica | Screenshot + IA visão a cada step |
+| Modo análise | Não existia | `Analyst` + `HtmlReportWriter` |
+| Modo teste | Não existia | `TestAnalyst` + `CachingAIClient` |
+| Plataformas | iOS, Android | iOS, Android, Web (Playwright/JVM) |
+| Interface | CLI only | CLI + app macOS (SwiftUI) |
+| Login | Não existia | Auto-login + sessão persistida (web) / pre-step (mobile) |
+| Multi-provider | OpenAI only | Anthropic, OpenAI, Gemini |
+
+A lógica central — `Analyst`, `TestAnalyst`, prompts, AI clients — vive em `commonMain` e é compartilhada entre as três plataformas sem duplicação.
+
+---
+
 ## Visão geral
 
 O TestPilot é um projeto **Kotlin Multiplatform (KMM)**. A lógica central vive em `commonMain` e é compilada para três runtimes:
@@ -65,6 +86,26 @@ O ponto de entrada é um script bash que orquestra o build, a injeção de confi
 | Saída | Relatório HTML | PASS/FAIL + steps |
 | Cache de resposta IA | Não | Sim (iOS: `NSCachesDirectory`; JVM: `~/.testpilot/cache/`) |
 | Exit code | Sempre 0 | 0 = PASS, 1 = FAIL |
+
+---
+
+## App macOS
+
+O app macOS (`mac-app/`) é uma camada de interface SwiftUI sobre o mesmo CLI. Não há lógica de análise no app — ele apenas spawna o processo `testpilot` e parseia o stdout em tempo real.
+
+```
+Usuário (RunView)
+  └── AnalysisRunner.run(config, settings)
+        └── Process(executableURL: testpilot, arguments: [...])
+              ├── stdout → parse TESTPILOT_STEP / TESTPILOT_RESULT / TESTPILOT_REPORT_PATH
+              └── stderr → capturado para mensagem de erro em caso de falha
+```
+
+**Estado da UI:** `AnalysisState` enum com os casos `idle`, `running`, `testRunning`, `webLoginPending`, `completed`, `testPassed`, `testFailed`, `failed`. O `AnalysisRunner` é um `@Observable` — a view reage diretamente às mudanças de estado.
+
+**Fluxo `web-login`:** `AnalysisRunner.webLogin()` spawna o processo com stdin aberto. Ao receber `TESTPILOT_LOGIN_READY` no stdout, transiciona para `.webLoginPending` e exibe o sheet de login. `saveSession()` escreve `\n` no stdin para sinalizar ao processo que salve e encerre.
+
+**Persistência:** `HistoryStore` serializa `[RunRecord]` em JSON no Application Support. `SettingsStore` persiste API key no Keychain e demais preferências em `UserDefaults`.
 
 ---
 
