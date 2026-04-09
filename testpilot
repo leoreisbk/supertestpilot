@@ -419,6 +419,11 @@ elif [[ "$PLATFORM" == "android" ]]; then
 elif [[ "$PLATFORM" == "web" ]]; then
   command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
 
+  if [[ "$PROVIDER" == "gemini" ]]; then
+    echo "Error: Gemini is not supported for --platform web. Set --provider anthropic or --provider openai, or update TESTPILOT_PROVIDER in .env."
+    exit 1
+  fi
+
   echo "Building web runner..."
   (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
     || { echo "Error: JVM build failed."; exit 1; }
@@ -431,7 +436,8 @@ elif [[ "$PLATFORM" == "web" ]]; then
   fi
 
   WEB_LOG=$(mktemp)
-  trap 'rm -f "$WEB_LOG"' EXIT
+  WEB_EXIT_FILE=$(mktemp)
+  trap 'rm -f "$WEB_LOG" "$WEB_EXIT_FILE"' EXIT
 
   (
     export TESTPILOT_MODE="$COMMAND"
@@ -445,8 +451,10 @@ elif [[ "$PLATFORM" == "web" ]]; then
     export TESTPILOT_WEB_USERNAME="$USERNAME"
     export TESTPILOT_WEB_PASSWORD="$PASSWORD"
     cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:runWebRunner 2>&1
-  ) | tee "$WEB_LOG"
-  RUNNER_EXIT=${PIPESTATUS[0]}
+    echo $? >"$WEB_EXIT_FILE"
+  ) | grep -v -E "^(FAILURE:|> Run with|> Get more help at|Execution failed for task|> Process '.*' finished with non-zero|BUILD FAILED|\* What went wrong:|\* Try:|[0-9]+ actionable task)" \
+    | tee "$WEB_LOG"
+  RUNNER_EXIT=$(cat "$WEB_EXIT_FILE" 2>/dev/null || echo "1")
 
   if [[ "$TEST_MODE" == "true" ]]; then
     RESULT_LINE=$(grep "^TESTPILOT_RESULT:" "$WEB_LOG" | tail -1)
