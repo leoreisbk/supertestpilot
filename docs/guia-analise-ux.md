@@ -39,13 +39,23 @@ Você não precisa mexer em nada disso — o TestPilot instala e gerencia tudo a
 
 ---
 
-## O que é a análise de UX, na prática
+## O que o TestPilot faz, na prática
 
-A análise usa inteligência artificial para navegar pelo app como se fosse um usuário real e, ao final, gera um relatório com observações sobre a experiência de uso. Você só precisa dizer **o que quer analisar** — a IA faz o resto.
+O TestPilot tem dois modos de operação:
 
-Funciona tanto em **iPhone/iPad** (aparelho físico ou simulador) quanto em **Android** (aparelho físico ou emulador).
+### Análise de UX (`./testpilot analyze`)
+
+A IA navega pelo app como se fosse um usuário real e, ao final, gera um relatório com capturas de tela e observações sobre a experiência de uso. Você só precisa dizer **o que quer analisar** — a IA faz o resto.
 
 **Exemplo de objetivo:** *"como é fácil encontrar a aba de treino e iniciar uma atividade"*
+
+### Teste determinístico (`./testpilot test`)
+
+A IA avalia uma afirmação específica sobre o app e retorna **PASSOU** ou **FALHOU** — sem exploração. Ideal para verificar se algo específico está funcionando, ou para integrar com pipelines de CI/CD.
+
+**Exemplo de objetivo:** *"o botão de compra está habilitado na tela do produto"*
+
+Ambos os modos funcionam em **iPhone/iPad** (aparelho físico ou simulador) e **Android** (aparelho físico ou emulador).
 
 ---
 
@@ -86,7 +96,7 @@ O Xcode é o programa da Apple para desenvolvimento de apps. Se não estiver ins
 
 ---
 
-## Como rodar a análise
+## Como rodar a análise de UX
 
 Abra o Terminal e, dentro da pasta do projeto, rode um dos comandos abaixo:
 
@@ -123,28 +133,76 @@ Enquanto a análise roda, você pode acompanhar a IA navegando pelo app em tempo
 
 ---
 
-## O que acontece durante a análise
+## Como rodar um teste determinístico
+
+Use `./testpilot test` quando quiser uma resposta objetiva de **passou** ou **falhou** para uma condição específica do app.
+
+**iPhone/iPad — simulador:**
+```bash
+./testpilot test \
+  --platform ios \
+  --app "Nome do App" \
+  --objective "o botão de compra está habilitado na tela do produto"
+```
+
+**iPhone/iPad — aparelho físico conectado:**
+```bash
+./testpilot test \
+  --platform ios \
+  --app "Nome do App" \
+  --objective "o botão de compra está habilitado na tela do produto" \
+  --device <ID do aparelho> \
+  --team-id <seu código de desenvolvedor Apple>
+```
+
+**Android — emulador ou aparelho físico:**
+```bash
+./testpilot test \
+  --platform android \
+  --app "Nome do App" \
+  --objective "o botão de compra está habilitado na tela do produto"
+```
+
+Durante a execução, cada passo é exibido no terminal em tempo real. Ao final, o resultado aparece em destaque:
+
+```
+Running test...
+  ✓ Abriu a tela inicial
+  ✓ Navegou até a página do produto
+  ✗ Botão "Comprar" estava desabilitado
+
+FAILED: Botão "Comprar" estava desabilitado
+```
+
+Execuções repetidas do mesmo teste são mais rápidas porque o TestPilot guarda em cache as respostas da IA — se a tela não mudou, a resposta já está salva localmente.
+
+---
+
+## O que acontece durante a execução
 
 Não precisa saber disso para usar — mas se tiver curiosidade:
 
 1. O TestPilot abre o app no simulador ou no aparelho
 2. Tira uma captura de tela da tela atual
 3. Manda a imagem para a IA junto com o seu objetivo
-4. A IA decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo
+4. A IA decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo — ou emitir um veredicto (análise: *concluído*; teste: *passou/falhou*)
 5. A ação é executada no app
-6. Repete isso até completar o objetivo ou chegar ao limite de ações
-7. Gera um relatório com as capturas de tela e as observações de cada passo
+6. Repete isso até concluir o objetivo ou chegar ao limite de ações
+7. **Modo analyze:** gera um relatório com as capturas de tela e as observações de cada passo
+7. **Modo test:** exibe PASSOU ou FALHOU com o motivo
 
 ---
 
 ## Opções disponíveis
 
+As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo indicação.
+
 | Opção | Padrão | O que faz |
 |-------|--------|-----------|
-| `--app` | — | Nome do app a analisar |
-| `--objective` | — | O que você quer analisar (em texto livre) |
+| `--app` | — | Nome do app |
+| `--objective` | — | O que você quer analisar ou verificar (em texto livre) |
 | `--max-steps` | `20` | Quantas ações a IA pode tomar antes de parar |
-| `--output` | `./report.html` | Onde salvar o relatório gerado |
+| `--output` | `./report.html` | Onde salvar o relatório gerado (apenas `analyze`) |
 | `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |

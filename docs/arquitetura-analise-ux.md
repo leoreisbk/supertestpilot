@@ -1,15 +1,17 @@
-# Arquitetura do modo de análise de UX — referência técnica
+# Arquitetura do TestPilot — referência técnica
 
-Este documento descreve o funcionamento interno do modo `analyze` do TestPilot. Destinado a engenheiros que precisam entender, manter ou estender o sistema.
+Este documento descreve o funcionamento interno dos dois modos do TestPilot: `analyze` (análise exploratória) e `test` (teste determinístico com PASS/FAIL). Destinado a engenheiros que precisam entender, manter ou estender o sistema.
 
 ---
 
 ## Visão geral
 
-O TestPilot é um projeto **Kotlin Multiplatform (KMM)**. A lógica central de análise vive em `commonMain` e é compilada para iOS (XCFramework) e Android (AAR). O ponto de entrada é um script bash que orquestra o build, a injeção de configuração e a execução do teste.
+O TestPilot é um projeto **Kotlin Multiplatform (KMM)**. A lógica central vive em `commonMain` e é compilada para iOS (XCFramework) e Android (AAR). O ponto de entrada é um script bash que orquestra o build, a injeção de configuração e a execução.
+
+### Modo `analyze` (exploratório)
 
 ```
-testpilot (bash)
+./testpilot analyze (bash)
   └── build SDK (gradlew / build_ios_sdk.sh)
   └── gera AnalystTests.swift com config injetada
   └── xcodebuild test / adb instrument
@@ -19,6 +21,32 @@ testpilot (bash)
                     ├── AIClient (Anthropic / OpenAI / Gemini)
                     └── HtmlReportWriter → report.html
 ```
+
+### Modo `test` (determinístico)
+
+```
+./testpilot test (bash)
+  └── build SDK (gradlew / build_ios_sdk.sh)
+  └── gera TestAnalystTests.swift com config injetada
+  └── xcodebuild test
+        └── TestAnalystIOS (Kotlin)
+              └── CachingAIClient → cache em NSCachesDirectory
+              └── TestAnalyst.kt (loop determinístico)
+                    ├── AnalystDriver (screenshot, tap, scroll, type)
+                    ├── AIClient (Anthropic / OpenAI / Gemini)
+                    └── TestResult (passed, reason, steps)
+  └── CLI parseia TESTPILOT_RESULT: → exit 0 (PASS) ou exit 1 (FAIL)
+```
+
+| | `analyze` | `test` |
+|---|---|---|
+| Subcomando | `./testpilot analyze` | `./testpilot test` |
+| Classe iOS | `AnalystIOS` | `TestAnalystIOS` |
+| Loop | `Analyst` | `TestAnalyst` |
+| Prompt | `VisionPrompt` | `TestVisionPrompt` |
+| Saída | Relatório HTML | PASS/FAIL + steps |
+| Cache de resposta IA | Não | Sim (`NSCachesDirectory/testpilot-cache/`) |
+| Exit code | Sempre 0 | 0 = PASS, 1 = FAIL |
 
 ---
 
@@ -117,7 +145,7 @@ for (i in 0 until config.maxSteps) {
         is Tap    → driver.tap(action.x, action.y)
         is Scroll → driver.scroll(action.direction)
         is Type   → driver.type(action.x, action.y, action.text)
-        is Done   → break
+        is Done, is Pass, is Fail → break   // Pass/Fail também encerram o loop
     }
 
     observations += action.observation
@@ -204,7 +232,9 @@ ConfigBuilder()
 
 ---
 
-## Prompts — `VisionPrompt.kt`
+## Prompts
+
+### `VisionPrompt.kt` (modo analyze)
 
 O prompt de sistema instrui a IA a agir como analista de UX explorando um app. O prompt do usuário inclui:
 
@@ -227,6 +257,86 @@ A IA deve responder com um JSON estruturado:
 ```
 
 **Resiliência a JSON truncado:** `AnalysisAction.repairTruncatedJson()` fecha JSON incompleto descartando o último campo mal-formado, evitando falhas por respostas cortadas por `maxTokens`.
+
+### `TestVisionPrompt.kt` (modo test)
+
+O prompt de sistema instrui a IA a agir como avaliador determinístico:
+
+- Cada step: descreve o que está visível e decide a próxima ação
+- Quando há evidência suficiente: retorna `pass` ou `fail` imediatamente, sem explorar mais
+- `temperature = 0.0`
+
+A IA responde no mesmo formato JSON, mas com dois novos valores de `action`:
+
+```json
+{
+  "action": "tap" | "scroll" | "type" | "pass" | "fail",
+  "reason": "O botão Buy está visível e habilitado na tela de produto"
+}
+```
+
+O campo `reason` é obrigatório em `pass` e `fail`.
+
+---
+
+## O loop determinístico — `TestAnalyst.kt`
+
+Localização: `sdk/testpilot/src/commonMain/…/analyst/TestAnalyst.kt`
+
+Mirrors `Analyst`, mas:
+- Usa `TestVisionPrompt` em vez de `VisionPrompt`
+- Termina quando a IA retorna `Pass` ou `Fail` (ou `Done`)
+- Se `maxSteps` for atingido sem veredicto → `TestResult(passed=false, reason="Test did not reach a conclusion within N steps")`
+- Retorna `TestResult(passed, reason, steps)` em vez de `AnalysisReport`
+
+```kotlin
+data class TestResult(
+    val passed: Boolean,
+    val reason: String,
+    val steps: List<String>,
+)
+```
+
+### `AnalysisAction` — extensões para o modo test
+
+```kotlin
+sealed class AnalysisAction {
+    // ações existentes...
+    data class Pass(val reason: String) : AnalysisAction()
+    data class Fail(val reason: String) : AnalysisAction()
+}
+```
+
+---
+
+## Cache de respostas — `CachingAIClient.kt`
+
+Localização: `sdk/testpilot/src/iosMain/…/ai/CachingAIClient.kt`
+
+Decorator sobre qualquer `AIClient`. Ativo apenas no modo `test`.
+
+**Chave de cache:** FNV-1a 64-bit sobre amostra do screenshot (1 byte a cada 200) + texto completo do prompt → nome de arquivo hexadecimal de 16 caracteres.
+
+**Armazenamento:** `NSCachesDirectory/testpilot-cache/<key>.json` — persiste entre execuções separadas do mesmo test target (o container de processo do XCTest é reutilizado).
+
+**Hit:** retorna resposta cacheada; dispara callback `onCacheHit` para que o step seja anotado com `(cached)`.
+
+**Miss:** chama o cliente subjacente e persiste a resposta.
+
+**Erros:** leitura/escrita do cache não são fatais — em caso de erro, o cliente subjacente é chamado normalmente.
+
+---
+
+## Marcadores stdout (modo test)
+
+O `TestAnalystIOS` emite linhas prefixadas para o stdout durante a execução. O CLI e o app macOS monitoram essas linhas em tempo real:
+
+| Linha | Significado |
+|-------|-------------|
+| `TESTPILOT_STEP: <mensagem>` | Um passo foi executado |
+| `TESTPILOT_STEP: (cached) <mensagem>` | Passo executado a partir do cache |
+| `TESTPILOT_RESULT: PASS <motivo>` | Teste aprovado |
+| `TESTPILOT_RESULT: FAIL <motivo>` | Teste reprovado |
 
 ---
 
@@ -278,18 +388,23 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 
 | Arquivo | Responsabilidade |
 |---------|-----------------|
-| `analyst/Analyst.kt` | Loop principal: screenshot, stuck detection, chamada à IA, execução de ação |
+| `analyst/Analyst.kt` | Loop exploratório: screenshot, stuck detection, chamada à IA, execução de ação |
+| `analyst/TestAnalyst.kt` | Loop determinístico: termina em Pass/Fail; retorna `TestResult` |
 | `analyst/AnalystDriver.kt` | Interface de driver (screenshot, tap, scroll, type) |
-| `ai/VisionPrompt.kt` | Montagem do prompt, envio à IA, parsing da resposta |
-| `analyst/AnalysisAction.kt` | Sealed class para Tap/Scroll/Type/Done + reparo de JSON truncado |
-| `analyst/HtmlReportWriter.kt` | Geração do HTML com screenshots inline |
+| `ai/VisionPrompt.kt` | Prompt para modo analyze (exploração livre) |
+| `ai/TestVisionPrompt.kt` | Prompt para modo test (avaliador determinístico) |
+| `analyst/AnalysisAction.kt` | Sealed class: Tap/Scroll/Type/Done/Pass/Fail + reparo de JSON truncado |
+| `analyst/TestResult.kt` | `data class TestResult(passed, reason, steps)` |
+| `analyst/HtmlReportWriter.kt` | Geração do HTML com screenshots inline (apenas modo analyze) |
 | `runtime/Config.kt` | Data class + ConfigBuilder |
 
 ### iOS (`iosMain`)
 
 | Arquivo | Responsabilidade |
 |---------|-----------------|
-| `analyst/AnalystIOS.kt` | Inicializa HttpClient(Darwin), AIClient; salva relatório |
+| `analyst/AnalystIOS.kt` | Entrypoint analyze: inicializa HttpClient(Darwin), AIClient; salva relatório |
+| `analyst/TestAnalystIOS.kt` | Entrypoint test: emite marcadores stdout; usa CachingAIClient |
+| `ai/CachingAIClient.kt` | Decorator: FNV-1a hash key, NSCachesDirectory store |
 | `analyst/AnalystDriverIOS.kt` | Implementa driver via XCUIApplication/XCUIScreen |
 | `harness/AnalystTests/AnalystTests.swift` | Gerado pelo CLI; não versionar mudanças locais |
 
@@ -342,3 +457,7 @@ O CLI sobrescreve `maxSteps` via `--max-steps` (padrão `20` no bash, sobrepõe 
 | Simulador não inicializado | Mensagem de erro com comando de boot |
 | Provisioning falha | Log do xcodebuild capturado para debug |
 | JSON de ação truncado | `repairTruncatedJson()` tenta fechar o JSON; fallback para `done` se inválido |
+| `maxSteps` atingido sem veredicto (test) | `FAIL: Test did not reach a conclusion within N steps` |
+| Erro de leitura do cache | Log de aviso; continua sem cache (não fatal) |
+| Erro de escrita do cache | Log de aviso; continua (não fatal) |
+| Erro de IA no modo test | Propaga como `FAIL` com a mensagem de erro como motivo |
