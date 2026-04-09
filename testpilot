@@ -419,11 +419,6 @@ elif [[ "$PLATFORM" == "android" ]]; then
 elif [[ "$PLATFORM" == "web" ]]; then
   command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
 
-  if [[ "$PROVIDER" == "gemini" ]]; then
-    echo "Error: Gemini is not supported for --platform web. Set --provider anthropic or --provider openai, or update TESTPILOT_PROVIDER in .env."
-    exit 1
-  fi
-
   echo "Building web runner..."
   (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
     || { echo "Error: JVM build failed."; exit 1; }

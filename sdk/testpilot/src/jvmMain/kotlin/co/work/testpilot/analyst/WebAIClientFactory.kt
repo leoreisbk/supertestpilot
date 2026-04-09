@@ -1,6 +1,7 @@
 package co.work.testpilot.analyst
 
 import co.work.testpilot.ai.AnthropicChatClient
+import co.work.testpilot.ai.GeminiChatClient
 import co.work.testpilot.ai.OpenAIChatClient
 import co.work.testpilot.runtime.AIProvider
 import co.work.testpilot.runtime.AIProviderDefaults
@@ -32,6 +33,10 @@ internal fun buildWebAIClient(cfg: Config, httpClient: HttpClient) = when (cfg.p
         apiKey = cfg.apiKey,
         apiHost = cfg.apiHost ?: "https://api.openai.com",
     )
-    AIProvider.Gemini ->
-        throw IllegalArgumentException("Gemini is not supported on web platform. Use anthropic or openai.")
+    AIProvider.Gemini -> GeminiChatClient(
+        apiKey = cfg.apiKey,
+        modelId = cfg.modelId ?: AIProviderDefaults.geminiModel,
+        httpClient = httpClient,
+        apiHost = cfg.apiHost ?: "https://generativelanguage.googleapis.com",
+    )
 }

@@ -27,10 +27,6 @@ fun main(args: Array<String>) {
             "analyze", "test" -> {
                 val apiKey    = requireEnv("TESTPILOT_API_KEY")
                 val provider  = env("TESTPILOT_PROVIDER") ?: "anthropic"
-                if (provider == "gemini") {
-                    System.err.println("Error: Gemini is not supported on the web platform. Use 'anthropic' or 'openai'.")
-                    exitProcess(1)
-                }
                 val maxSteps  = env("TESTPILOT_MAX_STEPS")?.toIntOrNull() ?: 20
                 val lang      = env("TESTPILOT_LANG") ?: "en"
                 val objective = requireEnv("TESTPILOT_OBJECTIVE")
