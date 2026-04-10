@@ -205,6 +205,8 @@ final class AnalysisRunner {
     }
 
     func reset() {
+        process?.terminate()
+        process = nil
         analyzeSteps = []
         state = .idle
     }

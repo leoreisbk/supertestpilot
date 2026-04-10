@@ -18,13 +18,14 @@ TEAM_ID=""       # Apple Developer Team ID (required for physical device)
 COMMAND="${1:-}"
 if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-login" ]]; then
   echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
+  echo "       ./testpilot test    --platform ios|android --app <name> --objective <text>"
   echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
   echo "       [--api-key <key>] [--max-steps <n>] [--output <path>] [--lang en|pt-BR]"
   echo ""
   echo "       ./testpilot analyze --platform web --url <URL> --objective <text>"
   echo "       ./testpilot test    --platform web --url <URL> --objective <text>"
   echo "       [--username <user>] [--password <pass>]"
-  echo "       [--provider anthropic|openai] [--api-key <key>] [--max-steps <n>] [--lang en|pt-BR]"
+  echo "       [--provider anthropic|openai|gemini] [--api-key <key>] [--max-steps <n>] [--lang en|pt-BR]"
   echo ""
   echo "       ./testpilot web-login --url <URL>"
   exit 1
@@ -410,37 +411,78 @@ elif [[ "$PLATFORM" == "android" ]]; then
   (cd "$SCRIPT_DIR/sdk" && ./gradlew testpilot:assembleDebug) >/dev/null 2>&1 \
     || { echo "Error: AAR build failed."; exit 1; }
 
-  echo "Running analysis..."
-  INSTRUMENT_OUTPUT=$(adb shell am instrument \
-    -e class "co.work.testpilot.analyst.AnalystAndroid" \
-    -e TESTPILOT_API_KEY "$API_KEY" \
-    -e TESTPILOT_PROVIDER "$PROVIDER" \
-    -e TESTPILOT_OBJECTIVE "$OBJECTIVE" \
-    -e TESTPILOT_MAX_STEPS "$MAX_STEPS" \
-    -e TESTPILOT_USERNAME "$USERNAME" \
-    -e TESTPILOT_PASSWORD "$PASSWORD" \
-    -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)
+  if [[ "$TEST_MODE" == "true" ]]; then
+    echo "Running test..."
+    INSTRUMENT_OUTPUT=$(adb shell am instrument \
+      -e class "co.work.testpilot.analyst.TestAnalystAndroid" \
+      -e TESTPILOT_API_KEY "$API_KEY" \
+      -e TESTPILOT_PROVIDER "$PROVIDER" \
+      -e TESTPILOT_OBJECTIVE "$OBJECTIVE" \
+      -e TESTPILOT_MAX_STEPS "$MAX_STEPS" \
+      -e TESTPILOT_USERNAME "$USERNAME" \
+      -e TESTPILOT_PASSWORD "$PASSWORD" \
+      -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)
 
-  if echo "$INSTRUMENT_OUTPUT" | grep -q "FAILURES\|Error"; then
-    echo "Error: Analysis failed."
-    if echo "$INSTRUMENT_OUTPUT" | grep -qi "authentication\|unauthorized\|api key\|401"; then
-      echo "Hint: Check your API key — authentication failed."
-    elif echo "$INSTRUMENT_OUTPUT" | grep -qi "no such file\|ClassNotFoundException\|NoClassDefFound"; then
-      echo "Hint: App may not have the TestPilot SDK installed. Check your build."
-    elif echo "$INSTRUMENT_OUTPUT" | grep -qi "INSTRUMENTATION_ABORTED\|process crashed"; then
-      echo "Hint: Instrumentation was aborted. Try force-stopping the app first: adb shell am force-stop $PACKAGE"
+    RESULT_LINE=$(echo "$INSTRUMENT_OUTPUT" | grep "TESTPILOT_RESULT: " | tail -1 | sed 's/.*TESTPILOT_RESULT: //' || true)
+    # Echo steps in real-time equivalent (already captured, print them now)
+    echo "$INSTRUMENT_OUTPUT" | grep "TESTPILOT_STEP: " | sed 's/.*TESTPILOT_STEP: /TESTPILOT_STEP: /'
+
+    if [[ -z "$RESULT_LINE" ]]; then
+      echo "Error: Test produced no result. The run likely failed to start."
+      if echo "$INSTRUMENT_OUTPUT" | grep -qi "authentication\|unauthorized\|api key\|401"; then
+        echo "Hint: Check your API key — authentication failed."
+      elif echo "$INSTRUMENT_OUTPUT" | grep -qi "no such file\|ClassNotFoundException\|NoClassDefFound"; then
+        echo "Hint: App may not have the TestPilot SDK installed. Check your build."
+      elif echo "$INSTRUMENT_OUTPUT" | grep -qi "INSTRUMENTATION_ABORTED\|process crashed"; then
+        echo "Hint: Instrumentation was aborted. Try: adb shell am force-stop $PACKAGE"
+      fi
+      echo "--- Output ---"
+      echo "$INSTRUMENT_OUTPUT"
+      exit 1
     fi
-    echo "--- Output ---"
-    echo "$INSTRUMENT_OUTPUT"
-    exit 1
+
+    if [[ "$RESULT_LINE" == PASS* ]]; then
+      echo ""
+      echo "PASSED: ${RESULT_LINE#PASS }"
+      exit 0
+    else
+      echo ""
+      echo "FAILED: ${RESULT_LINE#FAIL }"
+      exit 1
+    fi
+  else
+    echo "Running analysis..."
+    INSTRUMENT_OUTPUT=$(adb shell am instrument \
+      -e class "co.work.testpilot.analyst.AnalystAndroid" \
+      -e TESTPILOT_API_KEY "$API_KEY" \
+      -e TESTPILOT_PROVIDER "$PROVIDER" \
+      -e TESTPILOT_OBJECTIVE "$OBJECTIVE" \
+      -e TESTPILOT_MAX_STEPS "$MAX_STEPS" \
+      -e TESTPILOT_USERNAME "$USERNAME" \
+      -e TESTPILOT_PASSWORD "$PASSWORD" \
+      -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)
+
+    if echo "$INSTRUMENT_OUTPUT" | grep -q "FAILURES\|Error"; then
+      echo "Error: Analysis failed."
+      if echo "$INSTRUMENT_OUTPUT" | grep -qi "authentication\|unauthorized\|api key\|401"; then
+        echo "Hint: Check your API key — authentication failed."
+      elif echo "$INSTRUMENT_OUTPUT" | grep -qi "no such file\|ClassNotFoundException\|NoClassDefFound"; then
+        echo "Hint: App may not have the TestPilot SDK installed. Check your build."
+      elif echo "$INSTRUMENT_OUTPUT" | grep -qi "INSTRUMENTATION_ABORTED\|process crashed"; then
+        echo "Hint: Instrumentation was aborted. Try: adb shell am force-stop $PACKAGE"
+      fi
+      echo "--- Output ---"
+      echo "$INSTRUMENT_OUTPUT"
+      exit 1
+    fi
+
+    echo "Pulling report..."
+    adb pull "/sdcard/Android/data/$PACKAGE/files/testpilot_report.html" "$OUTPUT" \
+      || { echo "Error: Could not pull report from device."; exit 1; }
+
+    echo "Report written to: $OUTPUT"
+    open "$OUTPUT" 2>/dev/null || echo "Open $OUTPUT in your browser."
   fi
-
-  echo "Pulling report..."
-  adb pull "/sdcard/Android/data/$PACKAGE/files/testpilot_report.html" "$OUTPUT" \
-    || { echo "Error: Could not pull report from device."; exit 1; }
-
-  echo "Report written to: $OUTPUT"
-  open "$OUTPUT" 2>/dev/null || echo "Open $OUTPUT in your browser."
 
 elif [[ "$PLATFORM" == "web" ]]; then
   command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
