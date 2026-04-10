@@ -10,6 +10,7 @@
 		05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2986E6861809CDB1FFBDF4B /* RunRecord.swift */; };
 		1A2B3C4D5E6F7A8B9C0D1E2F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A3B4C5D6E7F8A9B0C1D2E3F /* ContentView.swift */; };
 		3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */; };
+		A1F2E3D4C5B6A7980011AABB /* ArtifactManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E3D4C5A6F7089100CCDDEE /* ArtifactManager.swift */; };
 		4A5EF25384470A19F0008425 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */; };
 		5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */; };
 		78421CB2880D4DD6B7A09871 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2394908B8A714FE44470FD9 /* SettingsStoreTests.swift */; };
@@ -43,6 +44,7 @@
 		2FCEC884526EE789C0F69614 /* DeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceInfo.swift; sourceTree = "<group>"; };
 		455406A00A4451D3B4D4C190 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisRunner.swift; sourceTree = "<group>"; };
+		B2E3D4C5A6F7089100CCDDEE /* ArtifactManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactManager.swift; sourceTree = "<group>"; };
 		6467E336163CC33E741CC71E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunConfigTests.swift; sourceTree = "<group>"; };
@@ -137,6 +139,7 @@
 			isa = PBXGroup;
 			children = (
 				4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */,
+				B2E3D4C5A6F7089100CCDDEE /* ArtifactManager.swift */,
 				6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */,
 				D69990ABFADC8F4F410613BF /* HistoryStore.swift */,
 				B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */,
@@ -251,6 +254,7 @@
 				CBCBDD4B9C0BA4F331C16506 /* DeviceInfo.swift in Sources */,
 				90D55D309C2BD8B48DB40010 /* HistoryStore.swift in Sources */,
 				3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */,
+				A1F2E3D4C5B6A7980011AABB /* ArtifactManager.swift in Sources */,
 				5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */,
 				7A8B9C0D1E2F3A4B5C6D7E8F /* NeuralOrbView.swift in Sources */,
 				A9B0C1D2E3F4A5B6C7D8E9F0 /* RunningView.swift in Sources */,
