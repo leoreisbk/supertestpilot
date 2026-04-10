@@ -27,11 +27,13 @@ class AnalystDriverAndroid : AnalystDriver {
     override suspend fun scroll(direction: String) {
         val w = device.displayWidth
         val h = device.displayHeight
-        val fifth = (h * 0.2).toInt()
+        // 40% scroll distance for controlled, precise scrolling
+        val from = (h * 0.35).toInt()
+        val to   = (h * 0.65).toInt()
         if (direction == "down") {
-            device.swipe(w / 2, h - fifth, w / 2, fifth, 20)
+            device.swipe(w / 2, to, w / 2, from, 25)
         } else {
-            device.swipe(w / 2, fifth, w / 2, h - fifth, 20)
+            device.swipe(w / 2, from, w / 2, to, 25)
         }
         device.waitForIdle()
     }
