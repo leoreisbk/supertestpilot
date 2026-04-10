@@ -53,7 +53,12 @@ class TestAnalystAndroid(private val config: Config) {
 
         val cacheDir = (InstrumentationRegistry.getInstrumentation().targetContext
             .externalCacheDir?.absolutePath ?: "/sdcard/testpilot-cache") + "/testpilot-cache"
-        val aiClient = CachingAIClientJvm(delegate = baseClient, cacheDir = cacheDir)
+        var lastResponseCached = false
+        val aiClient = CachingAIClientJvm(
+            delegate = baseClient,
+            cacheDir = cacheDir,
+            onCacheHit = { lastResponseCached = true },
+        )
 
         val driver = AnalystDriverAndroid()
 
@@ -66,7 +71,9 @@ class TestAnalystAndroid(private val config: Config) {
         }
 
         val result = TestAnalyst(driver, aiClient, config).run(objective) { message ->
-            println("TESTPILOT_STEP: $message")
+            val prefix = if (lastResponseCached) "(cached) " else ""
+            println("TESTPILOT_STEP: $prefix$message")
+            lastResponseCached = false
         }
 
         val verdict = if (result.passed) "PASS" else "FAIL"

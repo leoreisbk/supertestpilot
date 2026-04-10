@@ -53,7 +53,12 @@ class AnalystAndroid(private val config: Config) {
 
         val cacheDir = (InstrumentationRegistry.getInstrumentation().targetContext
             .externalCacheDir?.absolutePath ?: "/sdcard/testpilot-cache") + "/testpilot-cache"
-        val aiClient = CachingAIClientJvm(delegate = baseClient, cacheDir = cacheDir)
+        var lastResponseCached = false
+        val aiClient = CachingAIClientJvm(
+            delegate = baseClient,
+            cacheDir = cacheDir,
+            onCacheHit = { lastResponseCached = true },
+        )
 
         val driver = AnalystDriverAndroid()
 
@@ -67,7 +72,9 @@ class AnalystAndroid(private val config: Config) {
 
         val analyst = Analyst(driver, aiClient, config)
         val report = analyst.run(objective) { observation ->
-            println("TESTPILOT_STEP: $observation")
+            val prefix = if (lastResponseCached) "(cached) " else ""
+            println("TESTPILOT_STEP: $prefix$observation")
+            lastResponseCached = false
         }
         val html = HtmlReportWriter.generate(report, config.language)
 
