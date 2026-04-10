@@ -32,6 +32,7 @@ class VisionPrompt(
             - Observations should name concrete UX issues (e.g. low contrast, missing feedback, confusing label) or positives — not generic statements.
             - Navigate actively: tap into flows, open menus, go deeper. One screen is never enough.
             - If you are on a detail or sub-screen, navigate back to explore other areas of the app.
+            - Use "type" — NOT "tap" — when interacting with text fields, search bars, or any input that accepts keyboard text. Include realistic test values (e.g. "Test" for name fields).
             - Do not tap the same element twice in a row.
             $languageInstruction
         """.trimIndent()
