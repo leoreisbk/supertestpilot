@@ -8,12 +8,7 @@ import kotlinx.cinterop.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import platform.CoreGraphics.CGRect
-import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGVector
-import platform.UIKit.UIGraphicsBeginImageContextWithOptions
-import platform.UIKit.UIGraphicsEndImageContext
-import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
 import platform.XCTest.XCUIApplication
@@ -28,16 +23,15 @@ class AnalystDriverIOS(private val xcApp: XCUIApplication) : AnalystDriver {
     override suspend fun screenshotPng(): ByteArray = withContext(Dispatchers.Main) {
         val screenshot = XCUIScreen.mainScreen.screenshot()
         val pngData = screenshot.PNGRepresentation ?: return@withContext ByteArray(0)
-        // Resize to 50% and encode as JPEG to reduce token cost (~4-6x smaller than full PNG)
-        val image = UIImage(data = pngData) ?: return@withContext pngData.bytes?.readBytes(pngData.length.toInt()) ?: ByteArray(0)
-        val w = image.size.useContents { width }
-        val h = image.size.useContents { height }
-        UIGraphicsBeginImageContextWithOptions(cValue<CGSize> { width = w / 2.0; height = h / 2.0 }, false, 1.0)
-        image.drawInRect(cValue<CGRect> { origin.x = 0.0; origin.y = 0.0; size.width = w / 2.0; size.height = h / 2.0 })
-        val resized = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        val jpegData = UIImageJPEGRepresentation(resized ?: image, 0.75) ?: return@withContext ByteArray(0)
-        jpegData.bytes?.readBytes(jpegData.length.toInt()) ?: ByteArray(0)
+        // Convert PNG → JPEG to reduce token cost (~3-5x smaller than full-res PNG)
+        val jpegData = UIImage(data = pngData)?.let { UIImageJPEGRepresentation(it, 0.7) }
+        if (jpegData != null) {
+            val bytes = jpegData.bytes ?: return@withContext ByteArray(0)
+            return@withContext bytes.readBytes(jpegData.length.toInt())
+        }
+        // Fallback: return original PNG bytes
+        val bytes = pngData.bytes ?: return@withContext ByteArray(0)
+        bytes.readBytes(pngData.length.toInt())
     }
 
     override suspend fun tap(x: Double, y: Double) {
