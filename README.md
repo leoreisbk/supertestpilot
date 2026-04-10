@@ -133,6 +133,10 @@ TESTPILOT_PROVIDER=anthropic
 
 Or pass `--provider` and `--api-key` directly on the command line.
 
+# Comparison with other tools
+
+See [docs/comparativo-ferramentas.md](docs/comparativo-ferramentas.md) for a detailed comparison with Maestro and FlowDeck — when to use each and where TestPilot stands out.
+
 # How it works
 
 Each step of the loop:

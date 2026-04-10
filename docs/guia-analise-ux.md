@@ -1,5 +1,7 @@
 # Como rodar uma análise de UX no iOS, Android e Web
 
+> Quer comparar o TestPilot com Maestro e FlowDeck? Veja [comparativo-ferramentas.md](comparativo-ferramentas.md).
+
 ## Por que construímos isso
 
 Times de produto têm uma dificuldade em comum: validar se o app está funcionando do jeito certo depende quase sempre do time de desenvolvimento. Designers não conseguem rodar testes. PMs precisam pedir ajuda para verificar um fluxo. QAs dependem de scripts frágeis que quebram a cada mudança de interface.
@@ -291,7 +293,7 @@ Não precisa saber disso para usar — mas se tiver curiosidade:
 5. A ação é executada no app
 6. Repete isso até concluir o objetivo ou chegar ao limite de ações
 7. **Modo analyze:** gera um relatório com as capturas de tela e as observações de cada passo
-7. **Modo test:** exibe PASSOU ou FALHOU com o motivo
+8. **Modo test:** exibe PASSOU ou FALHOU com o motivo
 
 ---
 
