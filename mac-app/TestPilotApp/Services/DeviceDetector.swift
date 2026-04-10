@@ -74,18 +74,35 @@ final class DeviceDetector {
 
     private func fetchAndroidDevices() async -> [DeviceInfo] {
         guard let output = await shell("/usr/bin/env", args: ["adb", "devices"]) else { return [] }
-        return output
+        let serials = output
             .split(separator: "\n")
             .dropFirst() // skip "List of devices attached"
-            .compactMap { line -> DeviceInfo? in
+            .compactMap { line -> (String, DeviceType)? in
                 let parts = line.split(separator: "\t")
                 guard parts.count == 2 else { return nil }
                 let serial = String(parts[0])
                 let status = String(parts[1]).trimmingCharacters(in: .whitespaces)
                 guard status == "device" else { return nil }
                 let type: DeviceType = serial.hasPrefix("emulator-") ? .androidEmulator : .androidDevice
-                return DeviceInfo(id: serial, name: serial, type: type)
+                return (serial, type)
             }
+
+        return await withTaskGroup(of: DeviceInfo?.self) { group in
+            for (serial, type) in serials {
+                group.addTask {
+                    let model = await self.shell("/usr/bin/env",
+                        args: ["adb", "-s", serial, "shell", "getprop", "ro.product.model"])
+                    let name = model?.trimmingCharacters(in: .whitespacesAndNewlines)
+                               .filter { !$0.isNewline }
+                    return DeviceInfo(id: serial, name: name?.isEmpty == false ? name! : serial, type: type)
+                }
+            }
+            var result: [DeviceInfo] = []
+            for await device in group {
+                if let d = device { result.append(d) }
+            }
+            return result
+        }
     }
 
     // MARK: - Shell helper
