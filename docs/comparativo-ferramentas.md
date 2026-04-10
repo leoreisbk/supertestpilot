@@ -8,7 +8,7 @@ Este documento compara o TestPilot com duas ferramentas populares — **Maestro*
 
 | | TestPilot | Maestro | FlowDeck |
 |---|---|---|---|
-| **Como funciona** | IA enxerga a tela e decide o que fazer | Scripts YAML declarativos | CLI de automação + árvore de acessibilidade |
+| **Como funciona** | IA enxerga a tela + lê árvore de elementos e decide o que fazer | Scripts YAML declarativos | CLI de automação + árvore de acessibilidade |
 | **O que você escreve** | Objetivo em linguagem natural | Arquivo `.yaml` com comandos | Comandos de terminal |
 | **Quem pode usar** | Qualquer pessoa do time | Engenheiros | Engenheiros |
 | **Plataformas** | iOS, Android, Web | iOS, Android, Web | iOS, macOS |
@@ -18,6 +18,7 @@ Este documento compara o TestPilot com duas ferramentas populares — **Maestro*
 | **Depende de IA** | Sim (Gemini, Claude, OpenAI) | Não | Parcialmente |
 | **Cache de respostas** | Sim (reruns instantâneos) | N/A | Sim |
 | **Árvore de acessibilidade** | Sim (iOS, Android, Web) | Não | Sim |
+| **Detecção de loop** | Sim (fingerprint + coordenadas) | N/A | N/A |
 
 ---
 
@@ -63,7 +64,7 @@ flowdeck assert --visible "Tela principal"
 ```
 
 **Quando usar FlowDeck:**
-- Automação de UI iOS/macOS onde controle de timing é crítico
+- Automação de UI iOS/macOS onde controle de timing explícito é crítico
 - Times que já usam scripts e querem adicionar captura de tela automatizada
 - Quando a árvore de acessibilidade do app está bem estruturada
 
@@ -72,12 +73,13 @@ flowdeck assert --visible "Tela principal"
 - Não tem modo exploratório — só executa o que você programou
 - Suporte apenas a iOS e macOS (sem Android ou Web)
 - Ainda necessita de escrita de scripts por um engenheiro
+- Sem visão: age apenas sobre a árvore de acessibilidade, não sobre o que está visível na tela
 
 ---
 
 ## TestPilot
 
-**Como funciona:** Você descreve o que quer verificar em linguagem natural. A IA tira capturas de tela, interpreta a interface visualmente e decide sozinha como navegar — sem precisar de seletores, IDs ou scripts.
+**Como funciona:** Você descreve o que quer verificar em linguagem natural. A cada passo, a IA recebe a captura de tela e a árvore de elementos da interface — lê os labels diretamente e decide sozinha como navegar, sem precisar de seletores, IDs ou scripts.
 
 ```bash
 # Modo análise — exploração livre
@@ -101,16 +103,18 @@ flowdeck assert --visible "Tela principal"
 
 **3. Manutenção zero de scripts** — quando a interface do app muda, o TestPilot se adapta automaticamente porque toma decisões a cada passo. Maestro e FlowDeck quebram quando a UI muda.
 
-**6. Árvore de acessibilidade integrada** — além da captura de tela, o TestPilot envia a lista de elementos de interface (botões, campos, links com seus rótulos) para a IA a cada passo. A IA lê os labels dos elementos diretamente, sem depender apenas da interpretação visual — o mesmo nível de precisão que o FlowDeck oferece com a árvore de acessibilidade, mas combinado com visão e sem exigir scripts.
+**4. Visão + árvore de acessibilidade combinadas** — FlowDeck usa a árvore de acessibilidade, mas não tem visão. O TestPilot combina os dois: envia screenshot e lista de elementos a cada passo. A IA lê labels diretamente (precisão do FlowDeck) e também interpreta o que está visível na tela (algo que a árvore sozinha não captura — cores, posicionamento, estados visuais).
 
-**4. Três provedores de IA** — funciona com Gemini, Anthropic Claude ou OpenAI. Você escolhe o que o time já usa.
+**5. Preenchimento confiável de formulários** — o prompt guia a IA a distinguir `tap` (botões, navegação) de `type` (campos de texto), com detecção de loop por coordenada: se a IA toca o mesmo elemento mais de três vezes sem progresso, um aviso é injetado automaticamente forçando uma mudança de estratégia.
 
-**5. Cache inteligente** — reruns do mesmo teste (sem mudança na UI) são instantâneos porque as respostas da IA ficam salvas localmente. Útil em pipelines de CI.
+**6. Três provedores de IA** — funciona com Gemini, Anthropic Claude ou OpenAI. Você escolhe o que o time já usa.
 
-**Onde Maestro e FlowDeck têm vantagem:**
-- Testes 100% determinísticos sem custo de API
-- Controle preciso sobre cada passo da interação
-- Melhor para suítes grandes de regressão onde a UI é estável
+**7. Cache inteligente** — reruns do mesmo teste (sem mudança na UI) são instantâneos porque as respostas da IA ficam salvas localmente. Útil em pipelines de CI.
+
+**Onde Maestro e FlowDeck ainda têm vantagem:**
+- Testes 100% determinísticos sem custo de API por execução
+- Controle explícito de timing entre cada passo (ex: `wait --timeout 3000`)
+- Melhor para suítes grandes de regressão onde a UI é estável e o custo de API importa
 
 ---
 
@@ -120,8 +124,9 @@ flowdeck assert --visible "Tela principal"
 |---|---|
 | "Quero entender como está a experiência de criar conta" | **TestPilot** (analyze) |
 | "Quero verificar se o checkout funciona antes de um deploy" | **TestPilot** (test) |
+| "Quero preencher formulários e validar fluxos de criação" | **TestPilot** (test) |
 | "Tenho 200 testes de regressão que precisam rodar em 5 minutos" | **Maestro** |
 | "Quero um script preciso que testa exatamente os mesmos passos toda vez" | **Maestro** |
-| "Quero automação iOS com controle fino de timing e árvore de acessibilidade" | **FlowDeck** |
+| "Quero automação iOS com controle fino de timing entre cada ação" | **FlowDeck** |
 | "O designer do time precisa validar um fluxo sem ajuda de engenheiro" | **TestPilot** |
 | "Quero integrar com CI e receber PASS/FAIL automaticamente" | **TestPilot** ou **Maestro** |

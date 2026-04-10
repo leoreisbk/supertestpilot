@@ -304,6 +304,11 @@ O prompt de sistema instrui a IA a agir como analista de UX explorando um app. O
 - A árvore de acessibilidade (seção "UI Element Tree"), quando não vazia — lista de elementos com tipo, label e valor
 - Aviso de tela travada se `stuckCount >= 1`
 
+Regras explícitas no prompt:
+- Usar `type` (não `tap`) em campos de texto — evita focar o campo sem digitar nada
+- Não repetir observações já registradas
+- Navegar ativamente; não usar `done` antes de 5 telas distintas
+
 A IA deve responder com um JSON estruturado:
 
 ```json
@@ -321,14 +326,21 @@ A IA deve responder com um JSON estruturado:
 
 ### `TestVisionPrompt.kt` (modo test)
 
-O prompt de sistema instrui a IA a agir como avaliador determinístico:
+O prompt de sistema instrui a IA a agir como avaliador determinístico. O prompt do usuário inclui:
 
-- Cada step: descreve o que está visível e decide a próxima ação
-- Quando há evidência suficiente: retorna `pass` ou `fail` imediatamente, sem explorar mais
+- O objetivo do teste
+- Os steps já executados, incluindo eventuais avisos `[LOOP WARNING]` injetados pelo `TestAnalyst`
+- A screenshot atual (base64)
+- A árvore de acessibilidade com indicação de tipo de interação esperada: `TextField → type`, `Button → tap`
+
+Regras explícitas no prompt:
+- `tap` para botões e navegação; `type` para qualquer campo que aceite texto, com valores realistas no campo `text` (ex: `"Aspirin"`, `"500mg"`)
+- `scroll` quando o teclado estiver cobrindo campos do formulário
+- Se o mesmo step aparecer 3+ vezes no histórico → mudar estratégia ou emitir `fail`
+- Entradas `[LOOP WARNING]` são diretivas do sistema — exigem mudança imediata de abordagem
 - `temperature = 0.0`
-- O prompt do usuário inclui a árvore de acessibilidade (seção "UI Element Tree") quando não vazia, permitindo que a IA leia os labels dos elementos diretamente sem depender apenas da interpretação visual
 
-A IA responde no mesmo formato JSON, mas com dois novos valores de `action`:
+A IA responde com:
 
 ```json
 {
@@ -337,7 +349,7 @@ A IA responde no mesmo formato JSON, mas com dois novos valores de `action`:
 }
 ```
 
-O campo `reason` é obrigatório em `pass` e `fail`.
+O campo `reason` é obrigatório em todas as ações.
 
 ---
 
@@ -345,7 +357,8 @@ O campo `reason` é obrigatório em `pass` e `fail`.
 
 Localização: `sdk/testpilot/src/commonMain/…/analyst/TestAnalyst.kt`
 
-Mirrors `Analyst`, mas:
+Mirrors `Analyst`, mas com comportamento determinístico e duas camadas de detecção de loop:
+
 - Usa `TestVisionPrompt` em vez de `VisionPrompt`
 - Termina quando a IA retorna `Pass` ou `Fail` (ou `Done`)
 - Se `maxSteps` for atingido sem veredicto → `TestResult(passed=false, reason="Test did not reach a conclusion within N steps")`
@@ -358,6 +371,16 @@ data class TestResult(
     val steps: List<String>,
 )
 ```
+
+### Detecção de loop por coordenada
+
+Além da detecção de tela travada por fingerprint (herdada de `Analyst`), `TestAnalyst` rastreia as últimas 8 coordenadas de tap. Se o mesmo alvo (dentro de tolerância 0.05) for tocado 3+ vezes consecutivas, um aviso é injetado no histórico de steps:
+
+```
+[LOOP WARNING] Same target tapped 4 times — change strategy immediately
+```
+
+O `TestVisionPrompt` instrui a IA a tratar essa entrada como diretiva do sistema, forçando uma mudança de abordagem ou a emissão imediata de `fail`. Ações de `scroll` e `type` limpam o histórico de taps (padrão quebrado).
 
 ### `AnalysisAction` — extensões para o modo test
 
@@ -536,7 +559,7 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 | Árvore de acessibilidade | `snapshotWithError()` → texto indentado (max depth 6, max 200 nodes) | `dumpWindowHierarchy()` → parse XML |
 | Tap | `XCUICoordinate.tap()` | `UiDevice.click(x, y)` em pixels |
 | Scroll | `XCUIApplication.swipeUp/Down()` | `UiDevice.swipe()` |
-| Type | `XCUICoordinate.typeText()` | `Instrumentation.sendStringSync()` |
+| Type | `XCUICoordinate.tap()` + `XCUIApplication.typeText()` | `Instrumentation.sendStringSync()` |
 | Relatório | `NSTemporaryDirectory()` | `getExternalFilesDir()` |
 | Providers | Anthropic, OpenAI, Gemini | Anthropic, OpenAI |
 
@@ -549,7 +572,7 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 | Arquivo | Responsabilidade |
 |---------|-----------------|
 | `analyst/Analyst.kt` | Loop exploratório: screenshot, stuck detection, chamada à IA, execução de ação |
-| `analyst/TestAnalyst.kt` | Loop determinístico: termina em Pass/Fail; retorna `TestResult` |
+| `analyst/TestAnalyst.kt` | Loop determinístico: termina em Pass/Fail; detecção de loop por coordenada (injecta `[LOOP WARNING]`); retorna `TestResult` |
 | `analyst/AnalystDriver.kt` | Interface de driver (screenshot, tap, scroll, type, accessibilityTree) |
 | `ai/VisionPrompt.kt` | Prompt para modo analyze (exploração livre); inclui seção "UI Element Tree" quando árvore não vazia |
 | `ai/TestVisionPrompt.kt` | Prompt para modo test (avaliador determinístico); inclui seção "UI Element Tree" quando árvore não vazia |

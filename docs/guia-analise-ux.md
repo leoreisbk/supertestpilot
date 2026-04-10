@@ -290,10 +290,12 @@ Não precisa saber disso para usar — mas se tiver curiosidade:
 2. Tira uma captura de tela da tela atual e coleta a lista de elementos de interface (botões, campos, links) com seus rótulos
 3. Manda a imagem e a lista de elementos para a IA junto com o seu objetivo
 4. A IA decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo — ou emitir um veredicto (análise: *concluído*; teste: *passou/falhou*)
-5. A ação é executada no app
+5. A ação é executada no app — campos de texto são preenchidos com digitação real (não toque), botões e links com toque
 6. Repete isso até concluir o objetivo ou chegar ao limite de ações
 7. **Modo analyze:** gera um relatório com as capturas de tela e as observações de cada passo
 8. **Modo test:** exibe PASSOU ou FALHOU com o motivo
+
+O TestPilot também monitora automaticamente se a IA está travada: se a mesma área da tela for tocada repetidamente sem progresso, um aviso é injetado forçando a IA a tentar uma estratégia diferente. Isso evita execuções que rodam 40 passos sem sair do lugar.
 
 ---
 
