@@ -11,7 +11,7 @@ class AnalystDriverAndroid : AnalystDriver {
 
     override suspend fun screenshotPng(): ByteArray {
         val tmpFile = File(instrumentation.context.cacheDir, "testpilot_screenshot.png")
-        device.takeScreenshot(tmpFile)
+        device.takeScreenshot(tmpFile, 0.5f, 80)
         val bytes = tmpFile.readBytes()
         tmpFile.delete()
         return bytes
