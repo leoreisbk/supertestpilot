@@ -29,6 +29,7 @@ class Analyst(
         var done = false
         var stuckCount = 0
         var lastFingerprint = Int.MIN_VALUE
+        var scrollRecoveryCount = 0
 
         for (i in 0 until config.maxSteps) {
             if (done) break
@@ -38,9 +39,12 @@ class Analyst(
             stuckCount = if (fp == lastFingerprint) stuckCount + 1 else 0
             lastFingerprint = fp
 
-            // Hard recovery: force a scroll back after 5 consecutive identical screens.
+            // Hard recovery: alternate scroll direction so repeated recoveries don't
+            // cancel each other out (e.g. stuck at top: up would do nothing).
             if (stuckCount >= 5) {
-                driver.scroll("up")
+                val direction = if (scrollRecoveryCount % 2 == 0) "up" else "down"
+                driver.scroll(direction)
+                scrollRecoveryCount++
                 stuckCount = 0
                 continue
             }
