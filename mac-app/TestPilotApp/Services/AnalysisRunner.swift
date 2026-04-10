@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import Observation
+import SwiftUI
 
 struct TestStep: Equatable {
     let message: String
@@ -119,14 +120,16 @@ final class AnalysisRunner {
                         let cached = msg.hasPrefix("(cached)")
                         let clean = cached ? String(msg.dropFirst("(cached) ".count)) : msg
                         let step = TestStep(message: clean, cached: cached)
-                        switch self.state {
-                        case .testRunning(let steps):
-                            self.state = .testRunning(steps: steps + [step])
-                        case .running:
-                            self.analyzeSteps.append(step)
-                            self.state = .running(statusLine: clean)
-                        default:
-                            break
+                        withAnimation(.easeInOut(duration: 0.4)) {
+                            switch self.state {
+                            case .testRunning(let steps):
+                                self.state = .testRunning(steps: steps + [step])
+                            case .running:
+                                self.analyzeSteps.append(step)
+                                self.state = .running(statusLine: clean)
+                            default:
+                                break
+                            }
                         }
                     } else if line.hasPrefix("TESTPILOT_RESULT: ") {
                         let payload = String(line.dropFirst("TESTPILOT_RESULT: ".count))

@@ -24,17 +24,26 @@ struct RunningView: View {
             case .running(let statusLine):
                 NeuralOrbView()
                 Text(statusLine)
+                    .id(statusLine)
+                    .transition(.opacity)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 360)
-                    .animation(.easeInOut(duration: 0.3), value: statusLine)
                 Button("Cancel") { runner.cancel() }
                     .buttonStyle(.bordered)
 
             case .testRunning(let steps):
                 NeuralOrbView()
-                StepListView(steps: steps)
+                if let current = steps.last {
+                    Text(current.message)
+                        .id(steps.count)
+                        .transition(.opacity)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 360)
+                }
                 Button("Cancel") { runner.cancel() }
                     .buttonStyle(.bordered)
 
