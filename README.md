@@ -25,6 +25,12 @@ Run `./testpilot analyze` with a free-form objective. The AI explores the app an
   --app "My App" \
   --objective "how easy is it to find the search feature and complete a purchase"
 
+# Android
+./testpilot analyze \
+  --platform android \
+  --app "com.example.myapp" \
+  --objective "how easy is it to find the search feature and complete a purchase"
+
 # Web
 ./testpilot analyze \
   --platform web \
@@ -43,6 +49,12 @@ Run `./testpilot test` with a specific assertion. The AI evaluates it and return
 ./testpilot test \
   --platform ios \
   --app "My App" \
+  --objective "Check if the Buy button is enabled on the product page"
+
+# Android
+./testpilot test \
+  --platform android \
+  --app "com.example.myapp" \
   --objective "Check if the Buy button is enabled on the product page"
 
 # Web
@@ -100,11 +112,11 @@ Opens a browser window. Log in manually, then press Enter to save the session.
 | `--app` | — | App name (`ios`/`android` only) |
 | `--url` | — | URL to open (`web` only) |
 | `--objective` | — | What to analyze or assert |
-| `--username` | — | Username for automatic login pre-step (`web` only) |
-| `--password` | — | Password for automatic login pre-step (`web` only) |
+| `--username` | — | Username for automatic login pre-step (all platforms) |
+| `--password` | — | Password for automatic login pre-step (all platforms) |
 | `--max-steps` | `40` | Maximum AI actions before stopping |
 | `--output` | `./report.html` | Report path (`analyze` only) |
-| `--provider` | via `.env` | AI provider: `anthropic` or `openai` (web); `anthropic`, `openai`, or `gemini` (mobile) |
+| `--provider` | via `.env` | AI provider: `anthropic`, `openai`, or `gemini` |
 | `--api-key` | via `.env` | AI API key |
 | `--device` | — | iOS device UDID for physical device |
 | `--team-id` | — | Apple Developer Team ID (required with `--device`) |
