@@ -4,6 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.multiplatform")
     kotlin("plugin.serialization") version "2.1.20"
     id("com.android.library")
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 kotlin {
@@ -114,4 +115,24 @@ tasks.register<JavaExec>("installPlaywrightBrowsers") {
     mainClass.set("com.microsoft.playwright.CLI")
     classpath = jvmClasspath()
     args = listOf("install", "chromium")
+}
+
+// ── Web fat-jar ───────────────────────────────────────────────────────────────
+
+tasks.register<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+    group = "build"
+    description = "Produces a self-contained fat-jar for the web runner"
+    archiveBaseName.set("testpilot-web")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+    isZip64 = true
+    from(kotlin.jvm().compilations["main"].output.allOutputs)
+    from(kotlin.jvm().compilations["main"].runtimeDependencyFiles)
+    manifest {
+        attributes["Main-Class"] = "co.work.testpilot.MainKt"
+    }
+    dependsOn("jvmMainClasses")
+    mergeServiceFiles()
+    // Playwright bundles its own driver — exclude duplicate signatures
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
 }
