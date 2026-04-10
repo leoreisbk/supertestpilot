@@ -330,8 +330,15 @@ fi
     RESULT_LINE=$(echo "$LOG" | grep "TESTPILOT_RESULT: " | tail -1 | sed 's/.*TESTPILOT_RESULT: //' || true)
 
     if [[ -z "$RESULT_LINE" ]]; then
-      echo "Error: Test produced no result. Test likely failed to run."
-      echo "Xcodebuild log saved to: $XCODE_LOG"
+      echo "Error: Test produced no result — the test likely failed to start."
+      if grep -qi "authentication\|unauthorized\|api key\|401" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: Check your API key — authentication error detected."
+      elif grep -qi "No booted\|device not found\|Unable to find" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: Device not found. Run: xcrun simctl list devices booted"
+      elif grep -qi "does not exist\|bundle not found\|could not be launched" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: App not found on device. Check --app matches the installed app name."
+      fi
+      echo "Log saved to: $XCODE_LOG"
       echo "--- Key lines ---"
       grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
       exit 1
@@ -352,8 +359,15 @@ fi
     REPORT_PATH=$(echo "$LOG" | grep "TESTPILOT_REPORT_PATH=" | tail -1 | sed 's/.*TESTPILOT_REPORT_PATH=//' || true)
 
     if [[ -z "$REPORT_PATH" ]]; then
-      echo "Error: Analysis produced no report. Test likely failed."
-      echo "Xcodebuild log saved to: $XCODE_LOG"
+      echo "Error: Analysis produced no report — the run likely failed to start."
+      if grep -qi "authentication\|unauthorized\|api key\|401" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: Check your API key — authentication error detected."
+      elif grep -qi "No booted\|device not found\|Unable to find" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: Device not found. Run: xcrun simctl list devices booted"
+      elif grep -qi "does not exist\|bundle not found\|could not be launched" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: App not found on device. Check --app matches the installed app name."
+      fi
+      echo "Log saved to: $XCODE_LOG"
       echo "--- Key lines ---"
       grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
       exit 1
@@ -408,7 +422,15 @@ elif [[ "$PLATFORM" == "android" ]]; then
     -w "$PACKAGE/androidx.test.runner.AndroidJUnitRunner" 2>&1 || true)
 
   if echo "$INSTRUMENT_OUTPUT" | grep -q "FAILURES\|Error"; then
-    echo "Error: Analysis failed. Output:"
+    echo "Error: Analysis failed."
+    if echo "$INSTRUMENT_OUTPUT" | grep -qi "authentication\|unauthorized\|api key\|401"; then
+      echo "Hint: Check your API key — authentication failed."
+    elif echo "$INSTRUMENT_OUTPUT" | grep -qi "no such file\|ClassNotFoundException\|NoClassDefFound"; then
+      echo "Hint: App may not have the TestPilot SDK installed. Check your build."
+    elif echo "$INSTRUMENT_OUTPUT" | grep -qi "INSTRUMENTATION_ABORTED\|process crashed"; then
+      echo "Hint: Instrumentation was aborted. Try force-stopping the app first: adb shell am force-stop $PACKAGE"
+    fi
+    echo "--- Output ---"
     echo "$INSTRUMENT_OUTPUT"
     exit 1
   fi
@@ -459,7 +481,12 @@ elif [[ "$PLATFORM" == "web" ]]; then
     RESULT_LINE=$(grep "^TESTPILOT_RESULT:" "$WEB_LOG" | tail -1)
     rm -f "$WEB_LOG"
     if [[ -z "$RESULT_LINE" && "$RUNNER_EXIT" -ne 0 ]]; then
-      echo "Error: Web runner crashed (exit $RUNNER_EXIT). Check output above."
+      echo "Error: Web runner crashed (exit $RUNNER_EXIT) without producing a result."
+      if grep -qi "authentication\|unauthorized\|api key\|401" "$WEB_LOG" 2>/dev/null; then
+        echo "Hint: Check your API key — authentication error detected."
+      elif grep -qi "net::ERR\|ERR_NAME_NOT_RESOLVED\|page.goto" "$WEB_LOG" 2>/dev/null; then
+        echo "Hint: Could not reach the URL. Check --url is accessible and the format is correct."
+      fi
       exit 1
     fi
     if [[ "$RESULT_LINE" == "TESTPILOT_RESULT: PASS"* ]]; then
@@ -469,7 +496,12 @@ elif [[ "$PLATFORM" == "web" ]]; then
     fi
   else
     if [[ "$RUNNER_EXIT" -ne 0 ]]; then
-      echo "Error: Web runner failed (exit $RUNNER_EXIT). Check output above."
+      echo "Error: Web runner failed (exit $RUNNER_EXIT)."
+      if grep -qi "authentication\|unauthorized\|api key\|401" "$WEB_LOG" 2>/dev/null; then
+        echo "Hint: Check your API key — authentication error detected."
+      elif grep -qi "net::ERR\|ERR_NAME_NOT_RESOLVED\|page.goto" "$WEB_LOG" 2>/dev/null; then
+        echo "Hint: Could not reach the URL. Check --url is accessible and the format is correct."
+      fi
       rm -f "$WEB_LOG"
       exit 1
     fi
