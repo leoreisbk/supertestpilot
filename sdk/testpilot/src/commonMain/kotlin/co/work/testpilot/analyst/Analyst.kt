@@ -11,14 +11,6 @@ class Analyst(
     private val aiClient: AIClient,
     private val config: Config,
 ) {
-    // Lightweight fingerprint: sample every 200th byte to detect identical screens.
-    private fun fingerprint(png: ByteArray): Int {
-        var sum = 0
-        var i = 0
-        while (i < png.size) { sum += png[i].toInt(); i += 200 }
-        return sum
-    }
-
     suspend fun run(
         objective: String,
         onStep: ((String) -> Unit)? = null,
@@ -34,7 +26,7 @@ class Analyst(
         for (i in 0 until config.maxSteps) {
             if (done) break
             val screenshot = driver.screenshotPng()
-            val fp = fingerprint(screenshot)
+            val fp = screenFingerprint(screenshot)
 
             stuckCount = if (fp == lastFingerprint) stuckCount + 1 else 0
             lastFingerprint = fp

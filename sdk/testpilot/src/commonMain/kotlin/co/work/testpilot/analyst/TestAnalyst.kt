@@ -9,13 +9,6 @@ class TestAnalyst(
     private val aiClient: AIClient,
     private val config: Config,
 ) {
-    private fun fingerprint(png: ByteArray): Int {
-        var sum = 0
-        var i = 0
-        while (i < png.size) { sum += png[i].toInt(); i += 200 }
-        return sum
-    }
-
     suspend fun run(
         objective: String,
         onStep: ((message: String) -> Unit)? = null,
@@ -24,18 +17,26 @@ class TestAnalyst(
         val steps = mutableListOf<String>()
         var stuckCount = 0
         var lastFingerprint = Int.MIN_VALUE
+        var scrollRecoveryCount = 0
 
         for (i in 0 until config.maxSteps) {
             val screenshot = driver.screenshotPng()
-            val fp = fingerprint(screenshot)
+            val fp = screenFingerprint(screenshot)
 
             stuckCount = if (fp == lastFingerprint) stuckCount + 1 else 0
             lastFingerprint = fp
 
             if (stuckCount >= 5) {
-                val reason = "Stuck — screen unchanged for 5 consecutive steps"
-                onStep?.invoke(reason)
-                return TestResult(passed = false, reason = reason, steps = steps)
+                if (scrollRecoveryCount >= 3) {
+                    val reason = "Stuck — screen unchanged after recovery attempts"
+                    onStep?.invoke(reason)
+                    return TestResult(passed = false, reason = reason, steps = steps)
+                }
+                val direction = if (scrollRecoveryCount % 2 == 0) "up" else "down"
+                driver.scroll(direction)
+                scrollRecoveryCount++
+                stuckCount = 0
+                continue
             }
 
             val action = prompt(objective, screenshot, steps)
