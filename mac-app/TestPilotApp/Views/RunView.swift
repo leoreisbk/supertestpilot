@@ -96,7 +96,7 @@ struct RunView: View {
                 }
 
                 Stepper("Max steps: \(config.maxSteps)",
-                        value: $config.maxSteps, in: 1...100)
+                        value: $config.maxSteps, in: 1...60)
 
                 if config.mode == .analyze {
                     HStack {
