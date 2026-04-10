@@ -142,12 +142,14 @@ See [docs/comparativo-ferramentas.md](docs/comparativo-ferramentas.md) for a det
 Each step of the loop:
 
 1. Takes a screenshot of the app
-2. Sends the screenshot + objective to the AI
+2. Captures the accessibility tree (list of UI elements with types and labels) and sends both alongside the objective to the AI
 3. AI returns the next action: tap, scroll, type, or a verdict (analyze: done / test: pass or fail)
 4. The action is executed on the device
 5. Repeat until the objective is complete or `maxSteps` is reached
 
 In **analyze** mode, the AI acts as a UX analyst — it explores freely and accumulates observations. At the end, a second AI call generates a written summary. Output is an HTML report with all screenshots inline.
+
+**iOS screenshot optimization:** on iOS, screenshots are captured as PNG, then converted via UIKit to JPEG at 50% resolution and quality 0.75, reducing file size ~4-6x compared to full PNG. The HTML report auto-detects JPEG vs PNG by magic bytes and uses the correct MIME type.
 
 In **test** mode, the AI acts as a deterministic test evaluator — it terminates as soon as it has enough evidence to issue a verdict. No report is generated.
 

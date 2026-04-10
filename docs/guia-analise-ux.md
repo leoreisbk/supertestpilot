@@ -93,7 +93,7 @@ Ambos os modos funcionam em **iPhone/iPad** (aparelho físico ou simulador), **A
 
 Não precisa saber disso para usar — mas se tiver curiosidade:
 
-A cada passo, o TestPilot tira uma captura de tela do app e manda para a IA junto com o objetivo. A IA analisa a imagem como um humano faria — lê os textos, identifica botões, entende a hierarquia visual — e decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo, ou emitir um veredicto.
+A cada passo, o TestPilot tira uma captura de tela do app e extrai a lista de elementos de interface disponíveis — botões, campos, links, títulos — com seus tipos e rótulos (a "árvore de acessibilidade"). Ambos são enviados para a IA junto com o objetivo. A IA analisa a imagem como um humano faria — lê os textos, identifica botões, entende a hierarquia visual — e também lê diretamente os rótulos dos elementos pelo nome. Isso combina visão com leitura precisa da interface para tomar decisões mais acertadas.
 
 Nenhum elemento da tela precisa ter um identificador especial. Se está visível, a IA consegue interagir.
 
@@ -287,8 +287,8 @@ Após pressionar Enter, a sessão é salva e reutilizada em todas as execuções
 Não precisa saber disso para usar — mas se tiver curiosidade:
 
 1. O TestPilot abre o app no simulador ou no aparelho
-2. Tira uma captura de tela da tela atual
-3. Manda a imagem para a IA junto com o seu objetivo
+2. Tira uma captura de tela da tela atual e coleta a lista de elementos de interface (botões, campos, links) com seus rótulos
+3. Manda a imagem e a lista de elementos para a IA junto com o seu objetivo
 4. A IA decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo — ou emitir um veredicto (análise: *concluído*; teste: *passou/falhou*)
 5. A ação é executada no app
 6. Repete isso até concluir o objetivo ou chegar ao limite de ações

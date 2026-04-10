@@ -13,7 +13,7 @@ Esta versão estendeu essa base com uma arquitetura significativamente mais ampl
 | | TestPilot original | Esta versão |
 |---|---|---|
 | Entrada | Instruções pré-definidas | Objetivo em linguagem natural |
-| Percepção | Não se aplica | Screenshot + IA visão a cada step |
+| Percepção | Não se aplica | Screenshot + árvore de acessibilidade a cada step |
 | Modo análise | Não existia | `Analyst` + `HtmlReportWriter` |
 | Modo teste | Não existia | `TestAnalyst` + `CachingAIClient` |
 | Plataformas | iOS, Android | iOS, Android, Web (Playwright/JVM) |
@@ -189,6 +189,7 @@ Localização: `sdk/testpilot/src/commonMain/…/analyst/Analyst.kt`
 ```kotlin
 for (i in 0 until config.maxSteps) {
     val screenshot = driver.screenshotPng()
+    val tree = driver.accessibilityTree()  // árvore de elementos de UI
 
     // Detecção de tela travada
     val fp = fingerprint(screenshot)
@@ -197,7 +198,7 @@ for (i in 0 until config.maxSteps) {
     if (stuckCount >= 5) { driver.scroll("up"); stuckCount = 0; continue }
 
     // Consulta à IA
-    val action = VisionPrompt.run(config, aiClient, screenshot, observations, stuckCount)
+    val action = VisionPrompt.run(config, aiClient, screenshot, observations, stuckCount, tree)
 
     // Execução da ação
     when (action) {
@@ -300,6 +301,7 @@ O prompt de sistema instrui a IA a agir como analista de UX explorando um app. O
 - O objetivo da análise
 - As observações dos steps anteriores (contexto acumulado)
 - A screenshot atual (base64)
+- A árvore de acessibilidade (seção "UI Element Tree"), quando não vazia — lista de elementos com tipo, label e valor
 - Aviso de tela travada se `stuckCount >= 1`
 
 A IA deve responder com um JSON estruturado:
@@ -324,6 +326,7 @@ O prompt de sistema instrui a IA a agir como avaliador determinístico:
 - Cada step: descreve o que está visível e decide a próxima ação
 - Quando há evidência suficiente: retorna `pass` ou `fail` imediatamente, sem explorar mais
 - `temperature = 0.0`
+- O prompt do usuário inclui a árvore de acessibilidade (seção "UI Element Tree") quando não vazia, permitindo que a IA leia os labels dos elementos diretamente sem depender apenas da interpretação visual
 
 A IA responde no mesmo formato JSON, mas com dois novos valores de `action`:
 
@@ -416,7 +419,9 @@ O relatório é um **HTML autossuficiente**: screenshots embutidas como data URI
 
 **Localização:** labels em inglês (padrão) ou pt-BR, selecionados via `config.language`.
 
-**Tamanho típico:** 5–20 MB dependendo da quantidade de steps e resolução do device.
+**Detecção de formato de imagem:** o writer detecta JPEG vs PNG pelos magic bytes (`0xFF 0xD8` = JPEG) e usa o MIME type correto (`data:image/jpeg` ou `data:image/png`) nas data URIs dos `<img>` tags. Isso é necessário porque o iOS agora captura JPEG em vez de PNG.
+
+**Tamanho típico:** 2–10 MB no iOS (screenshots JPEG, ~4–6x menores que PNG); 5–20 MB em Android e Web dependendo da quantidade de steps e resolução do device.
 
 ---
 
@@ -466,6 +471,10 @@ class AnalystDriverWeb(private val page: Page) : AnalystDriver {
     override suspend fun tap(x, y)       = withContext(Dispatchers.IO) { page.mouse().click(x * 1280, y * 800) }
     override suspend fun scroll(dir)     = withContext(Dispatchers.IO) { page.mouse().wheel(0.0, if (dir == "down") 400.0 else -400.0) }
     override suspend fun type(x, y, t)   = withContext(Dispatchers.IO) { page.mouse().click(x * 1280, y * 800); page.keyboard().type(t) }
+    override suspend fun accessibilityTree() = withContext(Dispatchers.IO) {
+        // JS DOM query: extrai button, link, input, select, [role], heading com nome/valor
+        page.evaluate("/* JS query de elementos interativos e semânticos */").toString()
+    }
 }
 ```
 
@@ -523,7 +532,8 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 | | iOS | Android |
 |---|---|---|
 | Entrypoint | XCTest | AndroidJUnit4 (UIAutomator) |
-| Screenshot | `XCUIScreen.mainScreen.screenshot()` | `UiDevice.takeScreenshot(file)` |
+| Screenshot | PNG → UIKit → JPEG (50% resize, quality 0.75) | `UiDevice.takeScreenshot(file)` |
+| Árvore de acessibilidade | `snapshotWithError()` → texto indentado (max depth 6, max 200 nodes) | `dumpWindowHierarchy()` → parse XML |
 | Tap | `XCUICoordinate.tap()` | `UiDevice.click(x, y)` em pixels |
 | Scroll | `XCUIApplication.swipeUp/Down()` | `UiDevice.swipe()` |
 | Type | `XCUICoordinate.typeText()` | `Instrumentation.sendStringSync()` |
@@ -540,9 +550,9 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 |---------|-----------------|
 | `analyst/Analyst.kt` | Loop exploratório: screenshot, stuck detection, chamada à IA, execução de ação |
 | `analyst/TestAnalyst.kt` | Loop determinístico: termina em Pass/Fail; retorna `TestResult` |
-| `analyst/AnalystDriver.kt` | Interface de driver (screenshot, tap, scroll, type) |
-| `ai/VisionPrompt.kt` | Prompt para modo analyze (exploração livre) |
-| `ai/TestVisionPrompt.kt` | Prompt para modo test (avaliador determinístico) |
+| `analyst/AnalystDriver.kt` | Interface de driver (screenshot, tap, scroll, type, accessibilityTree) |
+| `ai/VisionPrompt.kt` | Prompt para modo analyze (exploração livre); inclui seção "UI Element Tree" quando árvore não vazia |
+| `ai/TestVisionPrompt.kt` | Prompt para modo test (avaliador determinístico); inclui seção "UI Element Tree" quando árvore não vazia |
 | `analyst/AnalysisAction.kt` | Sealed class: Tap/Scroll/Type/Done/Pass/Fail + reparo de JSON truncado |
 | `analyst/TestResult.kt` | `data class TestResult(passed, reason, steps)` |
 | `analyst/HtmlReportWriter.kt` | Geração do HTML com screenshots inline (apenas modo analyze) |
@@ -555,7 +565,7 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 | `analyst/AnalystIOS.kt` | Entrypoint analyze: login pre-step opcional; inicializa HttpClient(Darwin), AIClient; salva relatório |
 | `analyst/TestAnalystIOS.kt` | Entrypoint test: login pre-step opcional; emite marcadores stdout; usa CachingAIClient |
 | `ai/CachingAIClient.kt` | Decorator: FNV-1a hash key, NSCachesDirectory store |
-| `analyst/AnalystDriverIOS.kt` | Implementa driver via XCUIApplication/XCUIScreen |
+| `analyst/AnalystDriverIOS.kt` | Implementa driver via XCUIApplication/XCUIScreen; screenshots em JPEG via UIKit (50% resize, quality 0.75); árvore de acessibilidade via `snapshotWithError()` |
 | `harness/AnalystTests/AnalystTests.swift` | Gerado pelo CLI; não versionar mudanças locais |
 
 ### Android (`androidMain`)
@@ -563,7 +573,7 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 | Arquivo | Responsabilidade |
 |---------|-----------------|
 | `analyst/AnalystAndroid.kt` | Setup de instrumentação; login pre-step via `InstrumentationRegistry.getArguments()`; salva relatório |
-| `analyst/AnalystDriverAndroid.kt` | Implementa driver via UiDevice |
+| `analyst/AnalystDriverAndroid.kt` | Implementa driver via UiDevice; árvore de acessibilidade via `dumpWindowHierarchy()` + parse XML |
 
 ### Web (`jvmMain`)
 
@@ -571,7 +581,7 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 |---------|-----------------|
 | `analyst/AnalystWeb.kt` | Entrypoint analyze: browser headed; login pre-step ou sessão carregada; emite `TESTPILOT_REPORT_PATH=` |
 | `analyst/TestAnalystWeb.kt` | Entrypoint test: browser headless; login pre-step usa browser headed separado; CachingAIClientJvm |
-| `analyst/AnalystDriverWeb.kt` | Implementa driver via Playwright for Java (viewport 1280×800) |
+| `analyst/AnalystDriverWeb.kt` | Implementa driver via Playwright for Java (viewport 1280×800); árvore de acessibilidade via JS DOM query |
 | `analyst/WebSession.kt` | `sessionPath()`, `loadContext()`, `saveSession()`, `interactiveLogin()` |
 | `analyst/WebAIClientFactory.kt` | `buildWebAIClient()` — factory compartilhada entre AnalystWeb e TestAnalystWeb |
 | `ai/CachingAIClientJvm.kt` | Decorator: FNV-1a hash key (idêntico ao iOS), armazenamento via `java.io.File` |

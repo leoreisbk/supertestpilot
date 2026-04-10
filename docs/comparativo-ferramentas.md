@@ -17,6 +17,7 @@ Este documento compara o TestPilot com duas ferramentas populares — **Maestro*
 | **Integração CI** | Sim (exit codes) | Sim | Sim |
 | **Depende de IA** | Sim (Gemini, Claude, OpenAI) | Não | Parcialmente |
 | **Cache de respostas** | Sim (reruns instantâneos) | N/A | Sim |
+| **Árvore de acessibilidade** | Sim (iOS, Android, Web) | Não | Sim |
 
 ---
 
@@ -99,6 +100,8 @@ flowdeck assert --visible "Tela principal"
 **2. Times não-técnicos** — designers e PMs conseguem rodar análises diretamente, sem depender de engenheiros para escrever scripts.
 
 **3. Manutenção zero de scripts** — quando a interface do app muda, o TestPilot se adapta automaticamente porque toma decisões a cada passo. Maestro e FlowDeck quebram quando a UI muda.
+
+**6. Árvore de acessibilidade integrada** — além da captura de tela, o TestPilot envia a lista de elementos de interface (botões, campos, links com seus rótulos) para a IA a cada passo. A IA lê os labels dos elementos diretamente, sem depender apenas da interpretação visual — o mesmo nível de precisão que o FlowDeck oferece com a árvore de acessibilidade, mas combinado com visão e sem exigir scripts.
 
 **4. Três provedores de IA** — funciona com Gemini, Anthropic Claude ou OpenAI. Você escolhe o que o time já usa.
 
