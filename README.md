@@ -102,7 +102,7 @@ Opens a browser window. Log in manually, then press Enter to save the session.
 | `--objective` | — | What to analyze or assert |
 | `--username` | — | Username for automatic login pre-step (`web` only) |
 | `--password` | — | Password for automatic login pre-step (`web` only) |
-| `--max-steps` | `20` | Maximum AI actions before stopping |
+| `--max-steps` | `40` | Maximum AI actions before stopping |
 | `--output` | `./report.html` | Report path (`analyze` only) |
 | `--provider` | via `.env` | AI provider: `anthropic` or `openai` (web); `anthropic`, `openai`, or `gemini` (mobile) |
 | `--api-key` | via `.env` | AI API key |
