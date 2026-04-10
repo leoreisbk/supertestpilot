@@ -12,6 +12,7 @@
 		3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */; };
 		A1F2E3D4C5B6A7980011AABB /* ArtifactManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E3D4C5A6F7089100CCDDEE /* ArtifactManager.swift */; };
 		C3D4E5F6A7B8C9D0E1F2A3B4 /* IOSRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* IOSRunner.swift */; };
+		FRFT2H6F2TME7MCYTU2IUB3A /* WebRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = O2YHLQ9H24I0B1MY1ALYNZMV /* WebRunner.swift */; };
 		4A5EF25384470A19F0008425 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */; };
 		5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */; };
 		78421CB2880D4DD6B7A09871 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2394908B8A714FE44470FD9 /* SettingsStoreTests.swift */; };
@@ -47,6 +48,7 @@
 		4D5E6F7A8B9C0D1E2F3A4B5C /* AnalysisRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisRunner.swift; sourceTree = "<group>"; };
 		B2E3D4C5A6F7089100CCDDEE /* ArtifactManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactManager.swift; sourceTree = "<group>"; };
 		D4E5F6A7B8C9D0E1F2A3B4C5 /* IOSRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRunner.swift; sourceTree = "<group>"; };
+		O2YHLQ9H24I0B1MY1ALYNZMV /* WebRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebRunner.swift; sourceTree = "<group>"; };
 		6467E336163CC33E741CC71E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunConfigTests.swift; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 				B2E3D4C5A6F7089100CCDDEE /* ArtifactManager.swift */,
 				6F7A8B9C0D1E2F3A4B5C6D7E /* DeviceDetector.swift */,
 				D4E5F6A7B8C9D0E1F2A3B4C5 /* IOSRunner.swift */,
+				O2YHLQ9H24I0B1MY1ALYNZMV /* WebRunner.swift */,
 				D69990ABFADC8F4F410613BF /* HistoryStore.swift */,
 				B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */,
 			);
