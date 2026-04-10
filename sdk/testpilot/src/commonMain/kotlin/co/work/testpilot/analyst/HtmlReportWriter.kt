@@ -51,7 +51,7 @@ object HtmlReportWriter {
                 <span class="action">${step.action.htmlEscape()}</span>
                 $coordHtml
               </div>
-              <img src="data:image/png;base64,$base64" alt="${lbl.step} ${index + 1}" loading="lazy" />
+              <img src="data:${step.screenshotData.imageMimeType()};base64,$base64" alt="${lbl.step} ${index + 1}" loading="lazy" />
               $obsHtml
             </div>
             """.trimIndent()
@@ -124,6 +124,11 @@ object HtmlReportWriter {
         </body>
         </html>
         """.trimIndent()
+    }
+
+    private fun ByteArray.imageMimeType(): String = when {
+        size >= 2 && this[0] == 0xFF.toByte() && this[1] == 0xD8.toByte() -> "image/jpeg"
+        else -> "image/png"
     }
 
     private fun String.htmlEscape(): String = this

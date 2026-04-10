@@ -39,7 +39,8 @@ class TestAnalyst(
                 continue
             }
 
-            val action = prompt(objective, screenshot, steps)
+            val tree = driver.accessibilityTree()
+            val action = prompt(objective, screenshot, steps, tree)
 
             when (action) {
                 is AnalysisAction.Pass -> {

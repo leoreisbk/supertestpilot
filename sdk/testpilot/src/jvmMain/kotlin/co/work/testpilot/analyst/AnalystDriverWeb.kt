@@ -27,6 +27,37 @@ class AnalystDriverWeb(private val page: Page) : AnalystDriver {
         page.keyboard().type(text)
     }
 
+    override suspend fun accessibilityTree(): String = withContext(Dispatchers.IO) {
+        try {
+            page.evaluate("""
+                () => {
+                    const items = [];
+                    const seen = new Set();
+                    document.querySelectorAll(
+                        'button, a[href], input, select, textarea, [role], h1, h2, h3, h4, label'
+                    ).forEach(el => {
+                        if (items.length >= 200) return;
+                        const tag = el.tagName.toLowerCase();
+                        const role = el.getAttribute('role') || tag;
+                        const ariaLabel = el.getAttribute('aria-label') || '';
+                        const text = (el.innerText || el.textContent || '').trim()
+                            .replace(/\s+/g, ' ').substring(0, 80);
+                        const placeholder = el.getAttribute('placeholder') || '';
+                        const name = (ariaLabel || text || placeholder).substring(0, 80);
+                        if (!name || seen.has(name)) return;
+                        seen.add(name);
+                        const value = (tag === 'input' || tag === 'textarea')
+                            ? (el.value || '').substring(0, 40) : '';
+                        items.push(value ? role + ' "' + name + '" [' + value + ']' : role + ' "' + name + '"');
+                    });
+                    return items.join('\n');
+                }
+            """) as? String ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     companion object {
         const val VIEWPORT_WIDTH = 1280
         const val VIEWPORT_HEIGHT = 800

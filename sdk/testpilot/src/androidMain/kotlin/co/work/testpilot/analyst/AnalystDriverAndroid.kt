@@ -2,6 +2,7 @@ package co.work.testpilot.analyst
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 class AnalystDriverAndroid : AnalystDriver {
@@ -44,4 +45,37 @@ class AnalystDriverAndroid : AnalystDriver {
         instrumentation.sendStringSync(text)
         device.waitForIdle()
     }
+
+    override suspend fun accessibilityTree(): String {
+        return try {
+            val stream = ByteArrayOutputStream()
+            device.dumpWindowHierarchy(stream)
+            simplifyHierarchy(stream.toString("UTF-8"))
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun simplifyHierarchy(xml: String): String {
+        val sb = StringBuilder()
+        var count = 0
+        for (line in xml.lines()) {
+            if (!line.contains("<node ")) continue
+            if (count >= 200) break
+            val text = extractAttr(line, "text")
+            val contentDesc = extractAttr(line, "content-desc")
+            val cls = extractAttr(line, "class")?.substringAfterLast(".") ?: continue
+            val label = when {
+                !text.isNullOrEmpty() -> text
+                !contentDesc.isNullOrEmpty() -> contentDesc
+                else -> continue
+            }
+            sb.appendLine("$cls \"${label.take(80)}\"")
+            count++
+        }
+        return sb.toString().trimEnd()
+    }
+
+    private fun extractAttr(line: String, attr: String): String? =
+        Regex("""$attr="([^"]*)"""").find(line)?.groupValues?.get(1)?.takeIf { it.isNotEmpty() }
 }

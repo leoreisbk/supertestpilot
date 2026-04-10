@@ -20,4 +20,7 @@ interface AnalystDriver {
 
     /** Tap a field at relative coordinates, then type text. */
     suspend fun type(x: Double, y: Double, text: String)
+
+    /** Return a compact text representation of the UI element tree, or empty string if unavailable. */
+    suspend fun accessibilityTree(): String = ""
 }

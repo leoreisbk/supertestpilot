@@ -12,6 +12,7 @@ class VisionPrompt(
         screenshotPng: ByteArray,
         observationsSoFar: List<String>,
         stuckCount: Int = 0,
+        accessibilityTree: String = "",
     ): AnalysisAction {
         val observationsText = if (observationsSoFar.isEmpty()) {
             "None yet."
@@ -48,6 +49,10 @@ class VisionPrompt(
         else
             "You have visited $screensSeen screens. Call \"done\" only after covering the main flows."
 
+        val treeSection = if (accessibilityTree.isNotEmpty())
+            "\nUI Element Tree (use this to identify interactive elements by name):\n$accessibilityTree"
+        else ""
+
         val userPrompt = """
             Objective: $objective
 
@@ -56,7 +61,7 @@ class VisionPrompt(
 
             $stuckNote
             $explorationNote
-
+            $treeSection
             Look at the screenshot and decide what to do next.
 
             Respond with a JSON object:

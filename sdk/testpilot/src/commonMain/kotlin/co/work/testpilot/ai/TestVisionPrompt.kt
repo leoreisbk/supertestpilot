@@ -11,6 +11,7 @@ class TestVisionPrompt(
         objective: String,
         screenshotPng: ByteArray,
         stepsSoFar: List<String>,
+        accessibilityTree: String = "",
     ): AnalysisAction {
         val stepsText = if (stepsSoFar.isEmpty()) {
             "None yet."
@@ -35,12 +36,16 @@ class TestVisionPrompt(
             $languageInstruction
         """.trimIndent()
 
+        val treeSection = if (accessibilityTree.isNotEmpty())
+            "\nUI Element Tree (use this to identify interactive elements by name):\n$accessibilityTree"
+        else ""
+
         val userPrompt = """
             Test objective: $objective
 
             Steps taken so far:
             $stepsText
-
+            $treeSection
             Look at the screenshot and decide what to do next.
 
             Respond with a JSON object:

@@ -41,8 +41,9 @@ class Analyst(
                 continue
             }
 
+            val tree = driver.accessibilityTree()
             val observationsSoFar = steps.mapNotNull { it.observation }
-            val action = visionPrompt(objective, screenshot, observationsSoFar, stuckCount)
+            val action = visionPrompt(objective, screenshot, observationsSoFar, stuckCount, tree)
 
             steps.add(
                 AnalysisStep(
