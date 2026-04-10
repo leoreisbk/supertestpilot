@@ -171,7 +171,7 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 |-------|--------|-----------|
 | `--app` | — | Nome do app |
 | `--objective` | — | O que você quer analisar ou verificar (em texto livre) |
-| `--max-steps` | `20` | Quantas ações a IA pode tomar antes de parar |
+| `--max-steps` | `40` | Quantas ações a IA pode tomar antes de parar |
 | `--output` | `./report.html` | Onde salvar o relatório gerado (apenas `analyze`) |
 | `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |

@@ -284,7 +284,7 @@ ConfigBuilder()
     .apiHeader("X-Custom", "value")       // headers extras
     .maxTokens(1024)
     .temperature(0.0)                     // resposta determinística
-    .maxSteps(20)
+    .maxSteps(40)
     .language("pt-BR")
     .build()
 ```
@@ -601,11 +601,11 @@ O Android não tem a restrição de permissão do iOS — UIAutomator já tem ac
 object ConfigDefaults {
     const val maxTokens   = 200   // tokens por step (ação + observação)
     const val temperature = 0.0   // resposta determinística
-    const val maxSteps    = 10    // profundidade de exploração padrão
+    const val maxSteps    = 40    // profundidade de exploração padrão
 }
 ```
 
-O CLI sobrescreve `maxSteps` via `--max-steps` (padrão `20` no bash, sobrepõe o Kotlin default).
+O CLI sobrescreve `maxSteps` via `--max-steps` (padrão `40` no bash, sobrepõe o Kotlin default).
 
 ---
 
