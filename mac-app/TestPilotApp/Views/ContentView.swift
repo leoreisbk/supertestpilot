@@ -35,10 +35,11 @@ struct ContentView: View {
                 .frame(minWidth: 560, minHeight: 440)
         }
         .onChange(of: runner.state) { _, newState in
+            let displayName = config.platform == .web ? config.url : config.appName
             switch newState {
             case .completed(let path):
                 history.append(RunRecord(
-                    appName: config.appName,
+                    appName: displayName,
                     platform: config.platform,
                     objective: config.objective,
                     reportPath: path,
@@ -46,7 +47,7 @@ struct ContentView: View {
                 ))
             case .testPassed(let reason, _):
                 history.append(RunRecord(
-                    appName: config.appName,
+                    appName: displayName,
                     platform: config.platform,
                     objective: config.objective,
                     reportPath: "",
@@ -55,7 +56,7 @@ struct ContentView: View {
                 ))
             case .testFailed(let reason, _):
                 history.append(RunRecord(
-                    appName: config.appName,
+                    appName: displayName,
                     platform: config.platform,
                     objective: config.objective,
                     reportPath: "",
