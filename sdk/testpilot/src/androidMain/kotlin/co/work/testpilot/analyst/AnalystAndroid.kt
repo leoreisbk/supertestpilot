@@ -69,7 +69,7 @@ class AnalystAndroid(private val config: Config) {
         val report = analyst.run(objective) { observation ->
             println("TESTPILOT_STEP: $observation")
         }
-        val html = HtmlReportWriter.generate(report)
+        val html = HtmlReportWriter.generate(report, config.language)
 
         val reportDir = InstrumentationRegistry.getInstrumentation().targetContext
             .getExternalFilesDir(null)

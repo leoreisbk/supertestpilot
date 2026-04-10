@@ -64,7 +64,7 @@ class TestVisionPrompt(
         val response = aiClient.chatCompletion(
             messages = messages,
             maxTokens = maxOf(config.maxTokens, 512),
-            temperature = 0.0,
+            temperature = config.temperature,
             imageBytes = screenshotPng,
         )
 
