@@ -50,3 +50,4 @@ local.properties
 sdk/testpilot/build
 sdk/build
 build/
+.worktrees
