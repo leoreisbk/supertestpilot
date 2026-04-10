@@ -262,6 +262,7 @@
 				3C4D5E6F7A8B9C0D1E2F3A4B /* AnalysisRunner.swift in Sources */,
 				A1F2E3D4C5B6A7980011AABB /* ArtifactManager.swift in Sources */,
 				C3D4E5F6A7B8C9D0E1F2A3B4 /* IOSRunner.swift in Sources */,
+				FRFT2H6F2TME7MCYTU2IUB3A /* WebRunner.swift in Sources */,
 				5E6F7A8B9C0D1E2F3A4B5C6D /* DeviceDetector.swift in Sources */,
 				7A8B9C0D1E2F3A4B5C6D7E8F /* NeuralOrbView.swift in Sources */,
 				A9B0C1D2E3F4A5B6C7D8E9F0 /* RunningView.swift in Sources */,

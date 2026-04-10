@@ -22,6 +22,7 @@ struct WebRunner {
     let config: RunConfig
     let settings: SettingsStore
 
+    @MainActor
     func makeProcess() throws -> Process {
         let jreJava = cacheDir.appendingPathComponent("web/jre/bin/java")
         let jar     = cacheDir.appendingPathComponent("web/testpilot-web.jar")
@@ -55,6 +56,7 @@ struct WebRunner {
         return proc
     }
 
+    @MainActor
     func makeWebLoginProcess() throws -> Process {
         let jreJava = cacheDir.appendingPathComponent("web/jre/bin/java")
         let jar     = cacheDir.appendingPathComponent("web/testpilot-web.jar")
