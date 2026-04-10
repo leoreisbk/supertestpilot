@@ -51,7 +51,7 @@ object HtmlReportWriter {
                 <span class="action">${step.action.htmlEscape()}</span>
                 $coordHtml
               </div>
-              <img src="data:image/png;base64,$base64" alt="${lbl.step} ${index + 1}" />
+              <img src="data:image/png;base64,$base64" alt="${lbl.step} ${index + 1}" loading="lazy" />
               $obsHtml
             </div>
             """.trimIndent()
@@ -92,6 +92,19 @@ object HtmlReportWriter {
                       height: auto; margin: 0 auto; }
           .obs { padding: 12px 16px; font-size: 14px; color: #3a3a3c;
                  border-top: 1px solid #f2f2f7; }
+          @media (prefers-color-scheme: dark) {
+            body { background: #1c1c1e; color: #f5f5f7; }
+            .header { background: #2c2c2e; border-bottom-color: #3a3a3c; }
+            .header .objective { color: #aeaeb2; }
+            .meta { color: #636366; }
+            .summary-box { background: #2c2c2e; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+            .summary-box p { color: #ebebf0; }
+            .step { background: #2c2c2e; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+            .step-header { background: #3a3a3c; }
+            .step-num { color: #636366; }
+            .coord { color: #636366; }
+            .obs { color: #ebebf0; border-top-color: #3a3a3c; }
+          }
         </style>
         </head>
         <body>
