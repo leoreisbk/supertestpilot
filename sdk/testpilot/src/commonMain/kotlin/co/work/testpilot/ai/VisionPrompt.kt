@@ -86,7 +86,8 @@ class VisionPrompt(
         return try {
             AnalysisAction.parse(response)
         } catch (e: Exception) {
-            AnalysisAction.Done(observation = "Could not parse AI response: ${e.message}")
+            val preview = response.take(200).replace("\n", " ")
+            AnalysisAction.Done(observation = "AI returned an unexpected response format — check your API key and model ID. Raw: \"$preview\"")
         }
     }
 }

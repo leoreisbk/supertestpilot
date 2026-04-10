@@ -71,7 +71,8 @@ class TestVisionPrompt(
         return try {
             AnalysisAction.parse(response)
         } catch (e: Exception) {
-            AnalysisAction.Fail(reason = "Could not parse AI response: ${e.message}")
+            val preview = response.take(200).replace("\n", " ")
+            AnalysisAction.Fail(reason = "AI returned an unexpected response format — check your API key and model ID. Raw: \"$preview\"")
         }
     }
 }
