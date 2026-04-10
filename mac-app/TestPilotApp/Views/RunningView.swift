@@ -82,7 +82,7 @@ struct RunningView: View {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 64))
                     .foregroundStyle(.red)
-                Text("Analysis failed")
+                Text(config.mode == .test ? "Test failed" : "Analysis failed")
                     .font(.title3.weight(.medium))
                 Text(error)
                     .font(.caption)

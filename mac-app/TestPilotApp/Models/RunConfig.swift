@@ -54,7 +54,8 @@ final class RunConfig {
     var isValid: Bool {
         guard !objective.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
         if platform == .web {
-            return !url.trimmingCharacters(in: .whitespaces).isEmpty
+            let trimmed = url.trimmingCharacters(in: .whitespaces).lowercased()
+            return trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://")
         }
         return selectedDevice != nil
             && !appName.trimmingCharacters(in: .whitespaces).isEmpty
