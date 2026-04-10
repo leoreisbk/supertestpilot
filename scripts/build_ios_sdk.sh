@@ -23,3 +23,16 @@ done
 # Build iOS SDK
 cd sdk
 ./gradlew ${TASK:-testpilot:assembleTestPilotSharedDebugXCFramework}
+
+# Deploy built artifacts to ~/.testpilot/ so harness can find them
+CACHE_DIR="$HOME/.testpilot"
+mkdir -p "$CACHE_DIR/ios" "$CACHE_DIR/harness"
+
+FRAMEWORK_SRC="$(pwd)/testpilot/build/XCFrameworks/debug/TestPilotShared.xcframework"
+rm -rf "$CACHE_DIR/ios/TestPilotShared.xcframework"
+cp -R "$FRAMEWORK_SRC" "$CACHE_DIR/ios/TestPilotShared.xcframework"
+
+rsync -a --exclude="AnalystTests/AnalystTests.swift" \
+    "$(cd .. && pwd)/harness/" "$CACHE_DIR/harness/"
+
+echo "Artifacts deployed to $CACHE_DIR"

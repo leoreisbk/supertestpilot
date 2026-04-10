@@ -43,7 +43,7 @@
 /* Begin PBXFileReference section */
 		AA0002000000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AA0002000000000000000002 /* AnalystTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalystTests.swift; sourceTree = "<group>"; };
-		AA0002000000000000000003 /* TestPilotShared.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = TestPilotShared.xcframework; path = "../sdk/testpilot/build/XCFrameworks/debug/TestPilotShared.xcframework"; sourceTree = "<group>"; };
+		AA0002000000000000000003 /* TestPilotShared.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = TestPilotShared.xcframework; path = "$(HOME)/.testpilot/ios/TestPilotShared.xcframework"; sourceTree = "<group>"; };
 		AA0002000000000000000004 /* HarnessApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HarnessApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0002000000000000000005 /* AnalystTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AnalystTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0002000000000000000006 /* HarnessApp-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -269,7 +269,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = HarnessApp;
-				FRAMEWORK_SEARCH_PATHS = "$(inherited) $(SRCROOT)/../sdk/testpilot/build/XCFrameworks/debug";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited) $(HOME)/.testpilot/ios";
 			};
 			name = Debug;
 		};
@@ -288,7 +288,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = HarnessApp;
-				FRAMEWORK_SEARCH_PATHS = "$(inherited) $(SRCROOT)/../sdk/testpilot/build/XCFrameworks/debug";
+				FRAMEWORK_SEARCH_PATHS = "$(inherited) $(HOME)/.testpilot/ios";
 			};
 			name = Release;
 		};
