@@ -1,23 +1,23 @@
 import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
-    case newAnalysis = "New Analysis"
-    case history     = "History"
-    case settings    = "Settings"
+    case newRun  = "New Run"
+    case history = "History"
+    case settings = "Settings"
 
     var id: String { rawValue }
 
     var icon: String {
         switch self {
-        case .newAnalysis: return "plus.circle"
-        case .history:     return "clock"
-        case .settings:    return "gear"
+        case .newRun:  return "plus.circle"
+        case .history: return "clock"
+        case .settings: return "gear"
         }
     }
 }
 
 struct ContentView: View {
-    @State private var selection: SidebarItem? = .newAnalysis
+    @State private var selection: SidebarItem? = .newRun
     @State private var config   = RunConfig()
     @State private var runner   = AnalysisRunner()
     @State private var settings = SettingsStore()
@@ -72,7 +72,7 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         switch selection {
-        case .newAnalysis, .none:
+        case .newRun, .none:
             switch runner.state {
             case .idle:
                 RunView(config: config, detector: detector,

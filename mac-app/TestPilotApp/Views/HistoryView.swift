@@ -8,9 +8,9 @@ struct HistoryView: View {
         Group {
             if store.records.isEmpty {
                 ContentUnavailableView(
-                    "No analyses yet",
+                    "No runs yet",
                     systemImage: "clock",
-                    description: Text("Run an analysis to see it here.")
+                    description: Text("Run an analysis or test to see it here.")
                 )
             } else {
                 List(store.records) { record in
