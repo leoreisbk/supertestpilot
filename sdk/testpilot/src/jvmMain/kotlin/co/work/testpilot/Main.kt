@@ -27,7 +27,7 @@ fun main(args: Array<String>) {
             "analyze", "test" -> {
                 val apiKey    = requireEnv("TESTPILOT_API_KEY")
                 val provider  = env("TESTPILOT_PROVIDER") ?: "anthropic"
-                val maxSteps  = env("TESTPILOT_MAX_STEPS")?.toIntOrNull() ?: 20
+                val maxSteps  = env("TESTPILOT_MAX_STEPS")?.toIntOrNull() ?: 40
                 val lang      = env("TESTPILOT_LANG") ?: "en"
                 val objective = requireEnv("TESTPILOT_OBJECTIVE")
                 val username  = env("TESTPILOT_WEB_USERNAME")?.takeIf { it.isNotEmpty() }

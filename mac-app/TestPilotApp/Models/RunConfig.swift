@@ -45,7 +45,7 @@ final class RunConfig {
     var password: String = ""
     var objective: String = ""
     var language: Language = .en
-    var maxSteps: Int = 20
+    var maxSteps: Int = 40
     // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
     var providerOverride: AIProvider? = nil
