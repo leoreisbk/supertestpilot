@@ -56,9 +56,9 @@ class AnalystDriverIOS(private val xcApp: XCUIApplication) : AnalystDriver {
     override suspend fun type(x: Double, y: Double, text: String) {
         withContext(Dispatchers.Main) {
             val vector = cValue<CGVector> { dx = x; dy = y }
-            val coord = xcApp.coordinateWithNormalizedOffset(vector)
-            coord.tap()
-            coord.typeText(text)
+            xcApp.coordinateWithNormalizedOffset(vector).tap()
+            // typeText must be called on an XCUIElement, not XCUICoordinate
+            xcApp.typeText(text)
         }
         delay(800) // wait for keyboard and text to settle
     }

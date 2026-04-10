@@ -191,7 +191,6 @@ typedef struct CGVector { CGFloat dx; CGFloat dy; } CGVector;
 // ---------------------------------------------------------------------------
 @interface XCUICoordinate : NSObject
 - (void)tap;
-- (void)typeText:(NSString *)text;
 @end
 
 // ---------------------------------------------------------------------------
