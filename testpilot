@@ -62,23 +62,75 @@ if [[ -f ".env" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TESTPILOT_CACHE="$HOME/.testpilot"
+MANIFEST_URL="https://github.com/workco/testpilot/releases/latest/download/artifacts-manifest.json"
+
+_ensure_artifact() {
+  local platform="$1"
+  local dest="$TESTPILOT_CACHE/$platform"
+
+  # If artifact already exists locally, use it (no version check in CLI)
+  case "$platform" in
+    ios)
+      [[ -d "$dest/TestPilotShared.xcframework" && -d "$TESTPILOT_CACHE/harness/Harness.xcodeproj" ]] && return 0
+      ;;
+    web)
+      [[ -f "$dest/testpilot-web.jar" && -x "$dest/jre/bin/java" ]] && return 0
+      ;;
+  esac
+
+  echo "Downloading $platform components..."
+
+  # Fetch manifest
+  local manifest
+  manifest=$(curl -fsSL "$MANIFEST_URL" 2>/dev/null) \
+    || { echo "Error: Could not download artifacts manifest. Check your internet connection."; exit 1; }
+
+  local url sha256
+  url=$(echo "$manifest" | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['artifacts']['$platform']['url'])")
+  sha256=$(echo "$manifest" | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['artifacts']['$platform']['sha256'])")
+
+  [[ -z "$url" ]] && { echo "Error: No artifact URL for platform $platform in manifest."; exit 1; }
+
+  # Download to temp file
+  local tmp
+  tmp=$(mktemp /tmp/testpilot_artifact_XXXXXX)
+  trap 'rm -f "$tmp"' RETURN
+  curl -fL --progress-bar "$url" -o "$tmp" \
+    || { echo "Error: Failed to download $url"; exit 1; }
+
+  # Verify SHA256
+  local actual
+  actual=$(shasum -a 256 "$tmp" | awk '{print $1}')
+  [[ "$actual" == "$sha256" ]] || { echo "Error: SHA256 mismatch for $platform artifact."; exit 1; }
+
+  # Unpack
+  mkdir -p "$dest"
+  case "$url" in
+    *.zip)    unzip -q "$tmp" -d "$dest" ;;
+    *.tar.gz) tar -xzf "$tmp" -C "$dest" ;;
+  esac
+
+  echo "$sha256" > "$dest/.sha256"
+  echo "$platform components ready."
+}
+
 # Resolve OUTPUT to an absolute path so it's correct regardless of working directory
 OUTPUT="$(cd "$(dirname "$OUTPUT")" 2>/dev/null && pwd)/$(basename "$OUTPUT")" 2>/dev/null || OUTPUT="$(pwd)/$(basename "$OUTPUT")"
 
 # ── web-login: establish browser session without running a test ──────────────
 if [[ "$COMMAND" == "web-login" ]]; then
   [[ -z "$URL" ]] && { echo "Error: --url required for web-login"; exit 1; }
-  command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
 
-  echo "Building web runner..."
-  (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
-    || { echo "Error: JVM build failed."; exit 1; }
+  _ensure_artifact web
+  JAVA_BIN="$TESTPILOT_CACHE/web/jre/bin/java"
+  WEB_JAR="$TESTPILOT_CACHE/web/testpilot-web.jar"
 
   (
     export TESTPILOT_MODE="login"
     export TESTPILOT_WEB_URL="$URL"
     export TESTPILOT_API_KEY="${API_KEY:-dummy}"
-    cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:runWebRunner
+    "$JAVA_BIN" -jar "$WEB_JAR"
   )
   exit $?
 fi
@@ -190,17 +242,14 @@ else:
 
   echo "Found: $BUNDLE_ID"
 
-  # ── Build SDK ────────────────────────────────────────────────────────────────
-  echo "Building SDK..."
-  (cd "$SCRIPT_DIR" && scripts/build_ios_sdk.sh) >/dev/null 2>&1 \
-    || { echo "Error: SDK build failed. Run scripts/build_ios_sdk.sh manually for details."; exit 1; }
+  # ── Ensure artifacts present ─────────────────────────────────────────────────
+  _ensure_artifact ios
 
   # ── Prepare test file ────────────────────────────────────────────────────────
   DERIVED_DATA=$(mktemp -d)
-  TEST_SWIFT="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift"
-  TEST_SWIFT_BACKUP="$SCRIPT_DIR/harness/AnalystTests/AnalystTests.swift.bak"
-  cp "$TEST_SWIFT" "$TEST_SWIFT_BACKUP"
-  trap 'cp "$TEST_SWIFT_BACKUP" "$TEST_SWIFT"; rm -f "$TEST_SWIFT_BACKUP"; [[ -f "$DERIVED_DATA/xcodebuild.log" ]] && cp "$DERIVED_DATA/xcodebuild.log" /tmp/testpilot_last_xcodebuild.log; rm -rf "$DERIVED_DATA"' EXIT
+  TEST_SWIFT="$TESTPILOT_CACHE/harness/AnalystTests/AnalystTests.swift"
+  mkdir -p "$(dirname "$TEST_SWIFT")"
+  trap '[[ -f "$DERIVED_DATA/xcodebuild.log" ]] && cp "$DERIVED_DATA/xcodebuild.log" /tmp/testpilot_last_xcodebuild.log; rm -rf "$DERIVED_DATA"' EXIT
 
   _swift_esc() {
     local s="$1"
@@ -313,7 +362,7 @@ fi
   # Stream xcodebuild output in real-time: emit TESTPILOT_STEP/RESULT markers as
   # they appear so the macOS app can update its UI without waiting for completion.
   xcodebuild test \
-      -project "$SCRIPT_DIR/harness/Harness.xcodeproj" \
+      -project "$TESTPILOT_CACHE/harness/Harness.xcodeproj" \
       -scheme AnalystTests \
       -destination "$DESTINATION" \
       -derivedDataPath "$DERIVED_DATA" \
@@ -485,18 +534,9 @@ elif [[ "$PLATFORM" == "android" ]]; then
   fi
 
 elif [[ "$PLATFORM" == "web" ]]; then
-  command -v java >/dev/null 2>&1 || { echo "Error: java not found — install JDK 11+"; exit 1; }
-
-  echo "Building web runner..."
-  (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:jvmMainClasses) \
-    || { echo "Error: JVM build failed."; exit 1; }
-
-  # Install Playwright browsers on first run
-  if [[ ! -d "$HOME/.cache/ms-playwright" && ! -d "$HOME/Library/Caches/ms-playwright" ]]; then
-    echo "Installing Playwright browsers (first time only)..."
-    (cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:installPlaywrightBrowsers) \
-      || { echo "Error: Could not install Playwright browsers."; exit 1; }
-  fi
+  _ensure_artifact web
+  JAVA_BIN="$TESTPILOT_CACHE/web/jre/bin/java"
+  WEB_JAR="$TESTPILOT_CACHE/web/testpilot-web.jar"
 
   WEB_LOG=$(mktemp)
   WEB_EXIT_FILE=$(mktemp)
@@ -513,10 +553,9 @@ elif [[ "$PLATFORM" == "web" ]]; then
     export TESTPILOT_OUTPUT="$OUTPUT"
     export TESTPILOT_WEB_USERNAME="$USERNAME"
     export TESTPILOT_WEB_PASSWORD="$PASSWORD"
-    cd "$SCRIPT_DIR/sdk" && ./gradlew -q testpilot:runWebRunner 2>&1
+    "$JAVA_BIN" -jar "$WEB_JAR" 2>&1
     echo $? >"$WEB_EXIT_FILE"
-  ) | grep -v -E "^(FAILURE:|> Run with|> Get more help at|Execution failed for task|> Process '.*' finished with non-zero|BUILD FAILED|\* What went wrong:|\* Try:|[0-9]+ actionable task)" \
-    | tee "$WEB_LOG"
+  ) | tee "$WEB_LOG"
   RUNNER_EXIT=$(cat "$WEB_EXIT_FILE" 2>/dev/null || echo "1")
 
   if [[ "$TEST_MODE" == "true" ]]; then
