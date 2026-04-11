@@ -7,13 +7,11 @@ import Observation
 final class SettingsStore {
     var provider: AIProvider = .anthropic
     var teamId: String = ""
-    var scriptPath: String = ""
 
     private let keychainService = "com.workco.testpilot"
     private let keychainAccount = "api-key"
     private let providerKey = "tp_provider"
     private let teamIdKey = "tp_teamId"
-    private let scriptPathKey = "tp_scriptPath"
 
     private var envFileURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -50,9 +48,6 @@ final class SettingsStore {
             return p
         }()
         teamId = UserDefaults.standard.string(forKey: "tp_teamId") ?? ""
-        scriptPath = UserDefaults.standard.string(forKey: "tp_scriptPath")
-            ?? SettingsStore.discoverScriptPath()
-            ?? ""
         // Bootstrap from .env if it exists and we have no saved provider yet
         if let contents = try? String(contentsOf: envFileURL) {
             let parsed = SettingsStore.parseEnv(contents)
@@ -67,7 +62,6 @@ final class SettingsStore {
     func save() {
         UserDefaults.standard.set(provider.rawValue, forKey: providerKey)
         UserDefaults.standard.set(teamId, forKey: teamIdKey)
-        UserDefaults.standard.set(scriptPath, forKey: scriptPathKey)
         writeEnvFile()
     }
 
@@ -110,44 +104,6 @@ final class SettingsStore {
         return lines.joined(separator: "\n")
     }
 
-    /// Searches common repo locations for a `testpilot` script that has its
-    /// expected `scripts/build_ios_sdk.sh` sibling — i.e. it's the real repo root script.
-    /// Searches common repo locations (1–2 levels deep) for a `testpilot` script
-    /// that has its expected `scripts/build_ios_sdk.sh` sibling.
-    nonisolated static func discoverScriptPath() -> String? {
-        let fm = FileManager.default
-        let home = fm.homeDirectoryForCurrentUser.path
-        let searchRoots = [
-            "\(home)/Projects",
-            "\(home)/Developer",
-            "\(home)/dev",
-            "\(home)/code",
-            "\(home)/src",
-            home,
-        ]
-
-        func check(_ dir: String) -> String? {
-            let candidate = "\(dir)/testpilot"
-            let marker    = "\(dir)/scripts/build_ios_sdk.sh"
-            guard fm.isExecutableFile(atPath: candidate),
-                  fm.fileExists(atPath: marker) else { return nil }
-            return candidate
-        }
-
-        for root in searchRoots {
-            guard let level1 = try? fm.contentsOfDirectory(atPath: root) else { continue }
-            for d1 in level1 {
-                let dir1 = "\(root)/\(d1)"
-                if let found = check(dir1) { return found }
-                // one level deeper
-                guard let level2 = try? fm.contentsOfDirectory(atPath: dir1) else { continue }
-                for d2 in level2 {
-                    if let found = check("\(dir1)/\(d2)") { return found }
-                }
-            }
-        }
-        return nil
-    }
 
     // MARK: - Keychain
 
