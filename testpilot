@@ -104,11 +104,13 @@ _ensure_artifact() {
   actual=$(shasum -a 256 "$tmp" | awk '{print $1}')
   [[ "$actual" == "$sha256" ]] || { echo "Error: SHA256 mismatch for $platform artifact."; exit 1; }
 
-  # Unpack
-  mkdir -p "$dest"
+  # Unpack (ios artifact contains ios/ and harness/ subdirs — unpack to cache root)
+  local unpack_dest="$dest"
+  [[ "$platform" == "ios" ]] && unpack_dest="$TESTPILOT_CACHE"
+  mkdir -p "$unpack_dest"
   case "$url" in
-    *.zip)    unzip -q "$tmp" -d "$dest" ;;
-    *.tar.gz) tar -xzf "$tmp" -C "$dest" ;;
+    *.zip)    unzip -q "$tmp" -d "$unpack_dest" ;;
+    *.tar.gz) tar -xzf "$tmp" -C "$unpack_dest" ;;
   esac
 
   echo "$sha256" > "$dest/.sha256"

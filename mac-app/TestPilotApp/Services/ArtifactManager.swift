@@ -131,20 +131,22 @@ final class ArtifactManager {
             throw ArtifactError.sha256Mismatch(expected: expectedSHA256, actual: hash)
         }
 
-        // Unpack into ~/.testpilot/<key>/
+        // ios artifact contains ios/ and harness/ subdirs — unpack to cache root
+        let unpackDest = key == "ios" ? artifactDir : artifactDir.appendingPathComponent(key)
         let destDir = artifactDir.appendingPathComponent(key)
         try? FileManager.default.removeItem(at: destDir)
-        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: unpackDest, withIntermediateDirectories: true)
 
         let filename = url.lastPathComponent
         if filename.hasSuffix(".zip") {
-            try await runCommand("/usr/bin/unzip", args: ["-q", tempFile.path, "-d", destDir.path])
+            try await runCommand("/usr/bin/unzip", args: ["-q", tempFile.path, "-d", unpackDest.path])
         } else if filename.hasSuffix(".tar.gz") {
-            try await runCommand("/usr/bin/tar", args: ["-xzf", tempFile.path, "-C", destDir.path])
+            try await runCommand("/usr/bin/tar", args: ["-xzf", tempFile.path, "-C", unpackDest.path])
         }
 
         // Write SHA256 marker so future launches skip this artifact
         let markerPath = destDir.appendingPathComponent(".sha256")
+        try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
         try expectedSHA256.write(to: markerPath, atomically: true, encoding: .utf8)
     }
 
