@@ -1,0 +1,212 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # required to create GitHub release
+
+jobs:
+  # ── Build iOS XCFramework + harness ──────────────────────────────────────────
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build XCFramework
+        run: scripts/build_ios_sdk.sh
+
+      - name: Package ios artifact (framework + harness skeleton)
+        run: |
+          mkdir -p dist/ios
+          cp -R sdk/testpilot/build/XCFrameworks/debug/TestPilotShared.xcframework dist/ios/
+          rsync -a --exclude="AnalystTests/AnalystTests.swift" harness/ dist/harness/
+          cd dist
+          zip -qr TestPilotShared.xcframework.zip ios/ harness/
+          echo "SHA256_IOS=$(shasum -a 256 TestPilotShared.xcframework.zip | awk '{print $1}')" >> $GITHUB_ENV
+          mv TestPilotShared.xcframework.zip ../
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-artifact
+          path: TestPilotShared.xcframework.zip
+
+  # ── Build Web fat-jar + jlink JRE ────────────────────────────────────────────
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Generate .def files (needed for KMP compilation)
+        run: |
+          export XCTEST_STUB_HEADER="$(pwd)/sdk/testpilot/src/iosMain/xctest_stub.h"
+          for f in xctest_iosArm64 xctest_iosSimulatorArm64 xctest_iosX64; do
+            envsubst < "sdk/testpilot/src/iosMain/$f.templ" > "sdk/testpilot/src/iosMain/$f.def"
+          done
+        # Note: iOS compilation is skipped on Linux; .def files just need to exist.
+
+      - name: Build fat-jar
+        run: |
+          cd sdk
+          ./gradlew testpilot:shadowJar
+
+      - name: Create jlink JRE
+        run: |
+          JAR=sdk/testpilot/build/libs/testpilot-web.jar
+          MODULES=$(jdeps --multi-release 21 \
+            --ignore-missing-deps \
+            --print-module-deps \
+            "$JAR" 2>/dev/null || echo "")
+          REQUIRED="java.base,java.net.http,java.sql,java.desktop,java.logging,java.management,java.naming,java.xml,jdk.crypto.ec,jdk.unsupported"
+          COMBINED="${MODULES:+$MODULES,}$REQUIRED"
+          FINAL=$(echo "$COMBINED" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+          jlink --no-header-files --no-man-pages --compress=2 \
+            --add-modules "$FINAL" \
+            --output testpilot-jre
+
+      - name: Package web artifact
+        run: |
+          mkdir -p dist/web
+          cp sdk/testpilot/build/libs/testpilot-web.jar dist/web/
+          cp -R testpilot-jre dist/web/jre
+          tar -czf testpilot-web-runner.tar.gz -C dist web/
+          echo "SHA256_WEB=$(sha256sum testpilot-web-runner.tar.gz | awk '{print $1}')" >> $GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-artifact
+          path: testpilot-web-runner.tar.gz
+
+  # ── Build, sign, and notarize Mac app DMG ────────────────────────────────────
+  build-mac-app:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import signing certificate
+        env:
+          CERT_P12: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          echo "$CERT_P12" | base64 --decode > /tmp/cert.p12
+          security import /tmp/cert.p12 -k "$KEYCHAIN_PATH" \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+      - name: Build and archive Mac app
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -project mac-app/TestPilot.xcodeproj \
+            -scheme TestPilotApp \
+            -configuration Release \
+            -destination "generic/platform=macOS" \
+            -archivePath /tmp/TestPilot.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$TEAM_ID"
+
+      - name: Export app
+        run: |
+          cat > /tmp/export.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>developer-id</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath /tmp/TestPilot.xcarchive \
+            -exportPath /tmp/TestPilotExport \
+            -exportOptionsPlist /tmp/export.plist
+
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "TestPilot" -srcfolder /tmp/TestPilotExport/TestPilotApp.app \
+            -ov -format UDZO /tmp/TestPilot.dmg
+
+      - name: Notarize DMG
+        env:
+          ASC_API_KEY_ID: ${{ secrets.APPLE_ASC_API_KEY_ID }}
+          ASC_API_KEY_ISSUER: ${{ secrets.APPLE_ASC_API_KEY_ISSUER }}
+          ASC_API_KEY_P8: ${{ secrets.APPLE_ASC_API_KEY_P8 }}
+        run: |
+          echo "$ASC_API_KEY_P8" | base64 --decode > /tmp/asc_key.p8
+          xcrun notarytool submit /tmp/TestPilot.dmg \
+            --key /tmp/asc_key.p8 \
+            --key-id "$ASC_API_KEY_ID" \
+            --issuer "$ASC_API_KEY_ISSUER" \
+            --wait
+          xcrun stapler staple /tmp/TestPilot.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-dmg
+          path: /tmp/TestPilot.dmg
+
+  # ── Create GitHub release with all artifacts ─────────────────────────────────
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-ios, build-web, build-mac-app]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Compute SHA256s
+        run: |
+          echo "SHA256_IOS=$(sha256sum TestPilotShared.xcframework.zip | awk '{print $1}')" >> $GITHUB_ENV
+          echo "SHA256_WEB=$(sha256sum testpilot-web-runner.tar.gz | awk '{print $1}')" >> $GITHUB_ENV
+
+      - name: Generate manifest.json
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          BASE="https://github.com/${{ github.repository }}/releases/download/$TAG"
+          cat > artifacts-manifest.json <<EOF
+          {
+            "version": "$TAG",
+            "artifacts": {
+              "ios": {
+                "sha256": "$SHA256_IOS",
+                "url": "$BASE/TestPilotShared.xcframework.zip"
+              },
+              "web": {
+                "sha256": "$SHA256_WEB",
+                "url": "$BASE/testpilot-web-runner.tar.gz"
+              }
+            }
+          }
+          EOF
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            TestPilotShared.xcframework.zip
+            testpilot-web-runner.tar.gz
+            TestPilot.dmg
+            artifacts-manifest.json
+          generate_release_notes: true
