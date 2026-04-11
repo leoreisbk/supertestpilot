@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var settings = SettingsStore()
     @State private var history  = HistoryStore()
     @State private var detector = DeviceDetector()
+    @State private var artifactManager = ArtifactManager()
 
     var body: some View {
         NavigationSplitView {
@@ -33,6 +34,10 @@ struct ContentView: View {
         } detail: {
             detail
                 .frame(minWidth: 560, minHeight: 440)
+        }
+        .task { await artifactManager.ensureArtifacts() }
+        .sheet(isPresented: .constant(!artifactManager.isReady)) {
+            SetupSheet(manager: artifactManager)
         }
         .onChange(of: runner.state) { _, newState in
             let displayName = config.platform == .web ? config.url : config.appName
@@ -83,7 +88,59 @@ struct ContentView: View {
         case .history:
             HistoryView(store: history)
         case .settings:
-            SettingsView(store: settings)
+            SettingsView(store: settings, onCheckForUpdates: {
+                Task { await artifactManager.ensureArtifacts() }
+            })
+        }
+    }
+}
+
+// MARK: - SetupSheet
+
+struct SetupSheet: View {
+    let manager: ArtifactManager
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: 48))
+                .foregroundStyle(.blue)
+
+            Text("Setting up TestPilot")
+                .font(.title2.bold())
+
+            stateContent
+        }
+        .padding(40)
+        .frame(width: 400)
+    }
+
+    @ViewBuilder
+    private var stateContent: some View {
+        switch manager.state {
+        case .checking:
+            ProgressView("Checking for updates…")
+        case .downloading(let artifact, let progress):
+            VStack(spacing: 12) {
+                Text(artifact)
+                    .font(.body)
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+            }
+        case .failed(let msg):
+            VStack(spacing: 16) {
+                Text(msg)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                Button("Retry") {
+                    Task { await manager.ensureArtifacts() }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        case .ready:
+            EmptyView()
+        case .unknown:
+            ProgressView()
         }
     }
 }
