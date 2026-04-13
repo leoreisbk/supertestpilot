@@ -99,6 +99,16 @@ struct IOSRunner {
             args += ["-allowProvisioningUpdates", "DEVELOPMENT_TEAM=\(settings.teamId)"]
         }
 
+        // Pass credentials via test environment — they are read by the generated Swift at runtime
+        // and never stored as string literals in the test file on disk.
+        args += ["-testenv", "TESTPILOT_API_KEY=\(settings.apiKey)"]
+        if !config.username.isEmpty {
+            args += ["-testenv", "TESTPILOT_USERNAME=\(config.username)"]
+        }
+        if !config.password.isEmpty {
+            args += ["-testenv", "TESTPILOT_PASSWORD=\(config.password)"]
+        }
+
         var env = ProcessInfo.processInfo.environment
         let extraPaths = ["/opt/homebrew/bin", "/usr/local/bin"]
         let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
@@ -178,13 +188,10 @@ struct IOSRunner {
     @MainActor
     private func buildTestSwift(bundleId: String) -> String {
         let provider = (config.providerOverride ?? settings.provider).rawValue
-        let apiKey   = swiftEsc(settings.apiKey)
         let provEsc  = swiftEsc(provider)
         let objEsc   = swiftEsc(config.objective)
         let langEsc  = swiftEsc(config.language.rawValue)
         let bidOpt   = bundleId.isEmpty ? "nil" : "\"\(swiftEsc(bundleId))\""
-        let userOpt  = config.username.isEmpty ? "nil" : "\"\(swiftEsc(config.username))\""
-        let passOpt  = config.password.isEmpty ? "nil" : "\"\(swiftEsc(config.password))\""
         let xcAppInit = bundleId.isEmpty
             ? "XCUIApplication()"
             : "XCUIApplication(bundleIdentifier: \(bidOpt))"
@@ -192,6 +199,14 @@ struct IOSRunner {
 
         let providerExpr =
             "\"\(provEsc)\" == \"openai\" ? .openai : (\"\(provEsc)\" == \"gemini\" ? .gemini : .anthropic)"
+
+        // Credentials are read from the test environment at runtime — never hardcoded in this file.
+        let credentialsBlock = """
+        let env = ProcessInfo.processInfo.environment
+        let apiKey   = env["TESTPILOT_API_KEY"] ?? ""
+        let username: String? = env["TESTPILOT_USERNAME"].flatMap { $0.isEmpty ? nil : $0 }
+        let password: String? = env["TESTPILOT_PASSWORD"].flatMap { $0.isEmpty ? nil : $0 }
+"""
 
         if config.mode == .test {
             return """
@@ -207,9 +222,10 @@ class AnalystTests: XCTestCase {
         super.setUp()
         xcApp = \(xcAppInit)
         let provider: AIProvider = \(providerExpr)
+\(credentialsBlock)
         let config = ConfigBuilder()
             .provider(provider: provider)
-            .apiKey(key: "\(apiKey)")
+            .apiKey(key: apiKey)
             .maxSteps(steps: \(maxSteps))
             .language(lang: "\(langEsc)")
             .build()
@@ -220,8 +236,8 @@ class AnalystTests: XCTestCase {
         let _ = try await analyst.run(
             objective: "\(objEsc)",
             xcApp: xcApp,
-            username: \(userOpt),
-            password: \(passOpt)
+            username: username,
+            password: password
         )
     }
 }
@@ -240,9 +256,10 @@ class AnalystTests: XCTestCase {
         super.setUp()
         xcApp = \(xcAppInit)
         let provider: AIProvider = \(providerExpr)
+\(credentialsBlock)
         let config = ConfigBuilder()
             .provider(provider: provider)
-            .apiKey(key: "\(apiKey)")
+            .apiKey(key: apiKey)
             .maxSteps(steps: \(maxSteps))
             .language(lang: "\(langEsc)")
             .build()
@@ -253,8 +270,8 @@ class AnalystTests: XCTestCase {
         let _ = try await analyst.run(
             objective: "\(objEsc)",
             xcApp: xcApp,
-            username: \(userOpt),
-            password: \(passOpt)
+            username: username,
+            password: password
         )
     }
 }

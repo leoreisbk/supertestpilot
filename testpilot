@@ -261,22 +261,25 @@ else:
     s="${s//$'\r'/}"     # strip carriage returns
     printf '%s' "$s"
   }
-  API_KEY_ESC=$(_swift_esc "$API_KEY")
   PROVIDER_ESC=$(_swift_esc "$PROVIDER")
   OBJECTIVE_ESC=$(_swift_esc "$OBJECTIVE")
   LANG_ESC=$(_swift_esc "$LANG_CODE")
   BUNDLE_ID_OPT="nil"
   [[ -n "$BUNDLE_ID" ]] && BUNDLE_ID_OPT="\"$(_swift_esc "$BUNDLE_ID")\""
-  USERNAME_OPT="nil"
-  [[ -n "$USERNAME" ]] && USERNAME_OPT="\"$(_swift_esc "$USERNAME")\""
-  PASSWORD_OPT="nil"
-  [[ -n "$PASSWORD" ]] && PASSWORD_OPT="\"$(_swift_esc "$PASSWORD")\""
 
   # XCUIApplication(bundleIdentifier:) calls XCUIWaitAndAssert internally on Xcode 26+,
   # which conflicts with the async test runner's outer XCTWaiter. Creating it in the
   # synchronous setUp() avoids this — setUp() runs before the async waiter is pushed.
   XCAPP_INIT="XCUIApplication()"
   [[ "$BUNDLE_ID_OPT" != "nil" ]] && XCAPP_INIT="XCUIApplication(bundleIdentifier: $BUNDLE_ID_OPT)"
+
+  # Credentials are passed via -testenv at xcodebuild time and read from the
+  # process environment at runtime — never stored as literals in the Swift file.
+  CREDENTIALS_BLOCK='
+        let env = ProcessInfo.processInfo.environment
+        let apiKey   = env["TESTPILOT_API_KEY"] ?? ""
+        let username: String? = env["TESTPILOT_USERNAME"].flatMap { $0.isEmpty ? nil : $0 }
+        let password: String? = env["TESTPILOT_PASSWORD"].flatMap { $0.isEmpty ? nil : $0 }'
 
 if [[ "$TEST_MODE" == "true" ]]; then
   cat > "$TEST_SWIFT" <<SWIFT
@@ -293,9 +296,10 @@ class AnalystTests: XCTestCase {
         super.setUp()
         xcApp = $XCAPP_INIT
         let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
+$CREDENTIALS_BLOCK
         let config = ConfigBuilder()
             .provider(provider: provider)
-            .apiKey(key: "$API_KEY_ESC")
+            .apiKey(key: apiKey)
             .maxSteps(steps: $MAX_STEPS)
             .language(lang: "$LANG_ESC")
             .build()
@@ -306,8 +310,8 @@ class AnalystTests: XCTestCase {
         let _ = try await analyst.run(
             objective: "$OBJECTIVE_ESC",
             xcApp: xcApp,
-            username: $USERNAME_OPT,
-            password: $PASSWORD_OPT
+            username: username,
+            password: password
         )
     }
 }
@@ -327,9 +331,10 @@ class AnalystTests: XCTestCase {
         super.setUp()
         xcApp = $XCAPP_INIT
         let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
+$CREDENTIALS_BLOCK
         let config = ConfigBuilder()
             .provider(provider: provider)
-            .apiKey(key: "$API_KEY_ESC")
+            .apiKey(key: apiKey)
             .maxSteps(steps: $MAX_STEPS)
             .language(lang: "$LANG_ESC")
             .build()
@@ -340,8 +345,8 @@ class AnalystTests: XCTestCase {
         let _ = try await analyst.run(
             objective: "$OBJECTIVE_ESC",
             xcApp: xcApp,
-            username: $USERNAME_OPT,
-            password: $PASSWORD_OPT
+            username: username,
+            password: password
         )
     }
 }
@@ -360,6 +365,10 @@ fi
   if [[ "$USE_DEVICE" == "true" ]]; then
     XCODE_EXTRA_ARGS+=(-allowProvisioningUpdates "DEVELOPMENT_TEAM=$TEAM_ID")
   fi
+  # Pass credentials via test environment so they are never stored in the Swift file on disk
+  XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_API_KEY=$API_KEY")
+  [[ -n "$USERNAME" ]] && XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_USERNAME=$USERNAME")
+  [[ -n "$PASSWORD" ]] && XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_PASSWORD=$PASSWORD")
 
   # Stream xcodebuild output in real-time: emit TESTPILOT_STEP/RESULT markers as
   # they appear so the macOS app can update its UI without waiting for completion.
