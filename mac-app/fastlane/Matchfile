@@ -2,5 +2,6 @@
 git_url("git@github.com:leoreisbk/certificates.git")
 storage_mode("git")
 type("developer_id")
+platform("macos")
 app_identifier("com.leonardoreis.testpilot")
 username(ENV["APPLE_ID"] || "leoreisbk@gmail.com")
