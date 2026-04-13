@@ -106,7 +106,7 @@ struct RunView: View {
                             panel.allowedContentTypes = [.html]
                             panel.nameFieldStringValue = "report.html"
                             if panel.runModal() == .OK, let url = panel.url {
-                                config.outputPath = url.path
+                                config.outputPath = (url.path as NSString).abbreviatingWithTildeInPath
                             }
                         }
                         .buttonStyle(.bordered)

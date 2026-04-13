@@ -130,7 +130,8 @@ final class AnalysisRunner {
                     if let r = line.range(of: "TESTPILOT_STEP: ") {
                         let msg = String(line[r.upperBound...])
                         let cached = msg.hasPrefix("(cached)")
-                        let clean = cached ? String(msg.dropFirst("(cached) ".count)) : msg
+                        let raw   = cached ? String(msg.dropFirst("(cached) ".count)) : msg
+                        let clean = self.beautify(raw)
                         let step = TestStep(message: clean, cached: cached)
                         withAnimation(.easeInOut(duration: 0.4)) {
                             switch self.state {
@@ -155,9 +156,7 @@ final class AnalysisRunner {
                         self.lastReportPath = String(line[r.upperBound...])
                             .trimmingCharacters(in: .whitespacesAndNewlines)
                     } else {
-                        if case .running = self.state {
-                            self.state = .running(statusLine: line)
-                        }
+                        // Raw xcodebuild output — do not update the displayed ticker message
                     }
                 }
             }
@@ -249,5 +248,28 @@ final class AnalysisRunner {
         do { try p.run() } catch {
             state = .failed(error: error.localizedDescription)
         }
+    }
+
+    // MARK: - Message cleanup
+
+    private func beautify(_ message: String) -> String {
+        var s = message
+
+        func replace(_ pattern: String, with replacement: String) {
+            guard let re = try? NSRegularExpression(pattern: pattern) else { return }
+            let range = NSRange(s.startIndex..., in: s)
+            s = re.stringByReplacingMatches(in: s, range: range, withTemplate: replacement)
+        }
+
+        replace(#"(?i)\btouch\s*\([^)]*\)"#,              with: "Tap")  // touch(...) → Tap
+        replace(#"\(\s*\d+\.?\d*\s*,\s*\d+\.?\d*\s*\)"#, with: "")     // (x, y) coordinates
+        replace(#"~?/[\w\-._/]+"#,                         with: "")     // file paths
+
+        s = s.components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return s.isEmpty ? message : s
     }
 }

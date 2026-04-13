@@ -22,28 +22,34 @@ struct RunningView: View {
             // State-driven content
             switch runner.state {
             case .running(let statusLine):
-                NeuralOrbView()
-                Text(statusLine)
-                    .id(statusLine)
-                    .transition(.opacity)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 360)
+                NeuralOrbView(platform: config.platform)
+                ZStack {
+                    Text(statusLine)
+                        .id(statusLine)
+                        .transition(.opacity)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 400)
+                }
+                .animation(.easeInOut(duration: 0.4), value: statusLine)
                 Button("Cancel") { runner.cancel() }
                     .buttonStyle(.bordered)
 
             case .testRunning(let steps):
-                NeuralOrbView()
-                if let current = steps.last {
-                    Text(current.message)
-                        .id(steps.count)
-                        .transition(.opacity)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 360)
+                NeuralOrbView(platform: config.platform)
+                ZStack {
+                    if let current = steps.last {
+                        Text(current.message)
+                            .id(steps.count)
+                            .transition(.opacity)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 400)
+                    }
                 }
+                .animation(.easeInOut(duration: 0.4), value: steps.count)
                 Button("Cancel") { runner.cancel() }
                     .buttonStyle(.bordered)
 
@@ -56,6 +62,7 @@ struct RunningView: View {
                     .font(.title3.weight(.medium))
                 if !runner.analyzeSteps.isEmpty {
                     StepListView(steps: runner.analyzeSteps)
+                        .layoutPriority(1)
                 }
                 HStack(spacing: 16) {
                     Button("Open Report") {
@@ -69,12 +76,14 @@ struct RunningView: View {
             case .testPassed(let reason, let steps):
                 VerdictBannerView(passed: true, reason: reason)
                 StepListView(steps: steps)
+                    .layoutPriority(1)
                 Button("Run Again") { runner.reset() }
                     .buttonStyle(.bordered)
 
             case .testFailed(let reason, let steps):
                 VerdictBannerView(passed: false, reason: reason)
                 StepListView(steps: steps)
+                    .layoutPriority(1)
                 Button("Run Again") { runner.reset() }
                     .buttonStyle(.bordered)
 
@@ -96,7 +105,7 @@ struct RunningView: View {
                 EmptyView()
 
             case .webLoginPending:
-                NeuralOrbView()
+                NeuralOrbView(platform: config.platform)
                 Text("Browser open — log in and tap Save Session")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -133,7 +142,7 @@ private struct StepListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 8)
         }
-        .frame(maxWidth: 400, maxHeight: 200)
+        .frame(maxWidth: .infinity)
     }
 }
 
