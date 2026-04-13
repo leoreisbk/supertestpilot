@@ -38,9 +38,10 @@ object HtmlReportWriter {
         val lbl = labelsFor(language)
         val stepsHtml = report.steps.mapIndexed { index, step ->
             val base64 = Base64.encode(step.screenshotData)
-            val obsHtml = step.observation
-                ?.let { "<p class=\"obs\">${it.htmlEscape()}</p>" }
-                ?: ""
+            val obsContent = step.observation
+                ?.takeIf { it.isNotBlank() }
+                ?.let { "<p>${it.htmlEscape()}</p>" }
+                ?: "<p class=\"step-obs-empty\">—</p>"
             val coordHtml = step.coordinates
                 ?.let { (x, y) -> "<span class=\"coord\">(${fmtCoord(x)}, ${fmtCoord(y)})</span>" }
                 ?: ""
@@ -51,8 +52,14 @@ object HtmlReportWriter {
                 <span class="action">${step.action.htmlEscape()}</span>
                 $coordHtml
               </div>
-              <img src="data:${step.screenshotData.imageMimeType()};base64,$base64" alt="${lbl.step} ${index + 1}" loading="lazy" />
-              $obsHtml
+              <div class="step-body">
+                <div class="step-img-col">
+                  <img src="data:${step.screenshotData.imageMimeType()};base64,$base64" alt="${lbl.step} ${index + 1}" loading="lazy" />
+                </div>
+                <div class="step-obs-col">
+                  $obsContent
+                </div>
+              </div>
             </div>
             """.trimIndent()
         }.joinToString("\n")
@@ -81,17 +88,24 @@ object HtmlReportWriter {
           .steps { padding: 0 40px 40px; }
           .steps h2 { font-size: 15px; font-weight: 600; margin: 24px 0 12px; }
           .step { background: #fff; border-radius: 12px; margin-bottom: 16px;
-                  overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+                  box-shadow: 0 1px 3px rgba(0,0,0,.08); }
           .step-header { display: flex; align-items: center; gap: 10px;
-                         padding: 12px 16px; background: #f2f2f7; }
+                         padding: 12px 16px; background: #f2f2f7;
+                         border-radius: 12px 12px 0 0; }
           .step-num { font-size: 12px; color: #8e8e93; }
           .action { font-size: 13px; font-weight: 600; background: #007aff;
                     color: #fff; padding: 2px 8px; border-radius: 4px; }
           .coord { font-size: 12px; color: #8e8e93; font-family: monospace; }
-          .step img { display: block; width: 100%; max-width: 390px;
-                      height: auto; margin: 0 auto; }
-          .obs { padding: 12px 16px; font-size: 14px; color: #3a3a3c;
-                 border-top: 1px solid #f2f2f7; }
+          .step-body { display: flex; flex-direction: row; align-items: flex-start; }
+          .step-img-col { flex: 0 0 40%; padding: 12px; }
+          .step-img-col img { display: block; width: 100%; height: auto; border-radius: 8px; }
+          .step-obs-col { flex: 1; padding: 16px 16px 16px 8px;
+                          font-size: 14px; line-height: 1.6; color: #3a3a3c; }
+          .step-obs-empty { color: #aeaeb2; font-style: italic; }
+          @media (max-width: 600px) {
+            .step-body { flex-direction: column; }
+            .step-img-col { flex: none; width: 100%; }
+          }
           @media (prefers-color-scheme: dark) {
             body { background: #1c1c1e; color: #f5f5f7; }
             .header { background: #2c2c2e; border-bottom-color: #3a3a3c; }
@@ -103,7 +117,7 @@ object HtmlReportWriter {
             .step-header { background: #3a3a3c; }
             .step-num { color: #636366; }
             .coord { color: #636366; }
-            .obs { color: #ebebf0; border-top-color: #3a3a3c; }
+            .step-obs-col { color: #ebebf0; }
           }
         </style>
         </head>
