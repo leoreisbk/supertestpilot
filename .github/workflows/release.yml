@@ -97,6 +97,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.MATCH_SSH_PRIVATE_KEY }}
+
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
@@ -107,12 +111,11 @@ jobs:
         run: bundle exec fastlane build_and_notarize
         working-directory: mac-app
         env:
-          MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
-          MATCH_SSH_PRIVATE_KEY: ${{ secrets.MATCH_SSH_PRIVATE_KEY }}
-          ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
-          ASC_KEY_ISSUER_ID:             ${{ secrets.ASC_KEY_ISSUER_ID }}
-          ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
-          APPLE_TEAM_ID:                 ${{ secrets.APPLE_TEAM_ID }}
+          MATCH_PASSWORD:   ${{ secrets.MATCH_PASSWORD }}
+          ASC_KEY_ID:       ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_ISSUER_ID: ${{ secrets.ASC_KEY_ISSUER_ID }}
+          ASC_KEY_CONTENT:  ${{ secrets.ASC_KEY_CONTENT }}
+          APPLE_TEAM_ID:    ${{ secrets.APPLE_TEAM_ID }}
 
       - uses: actions/upload-artifact@v4
         with:
