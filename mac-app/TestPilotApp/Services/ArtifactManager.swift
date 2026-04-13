@@ -3,7 +3,7 @@ import Foundation
 import Observation
 import CryptoKit
 
-private let manifestURLString = "https://github.com/workco/testpilot/releases/latest/download/artifacts-manifest.json"
+private let manifestURLString = "https://github.com/leoreisbk/supertestpilot/releases/latest/download/artifacts-manifest.json"
 private let artifactDir = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent(".testpilot")
 

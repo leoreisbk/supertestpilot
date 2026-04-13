@@ -63,7 +63,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TESTPILOT_CACHE="$HOME/.testpilot"
-MANIFEST_URL="https://github.com/workco/testpilot/releases/latest/download/artifacts-manifest.json"
+MANIFEST_URL="https://github.com/leoreisbk/supertestpilot/releases/latest/download/artifacts-manifest.json"
 
 _ensure_artifact() {
   local platform="$1"
