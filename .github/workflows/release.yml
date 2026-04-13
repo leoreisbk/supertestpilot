@@ -22,12 +22,12 @@ jobs:
           java-version: '17'
 
       - name: Build XCFramework
-        run: scripts/build_ios_sdk.sh
+        run: scripts/build_ios_sdk.sh testpilot:assembleTestPilotSharedReleaseXCFramework
 
       - name: Package ios artifact (framework + harness skeleton)
         run: |
           mkdir -p dist/ios
-          cp -R sdk/testpilot/build/XCFrameworks/debug/TestPilotShared.xcframework dist/ios/
+          cp -R sdk/testpilot/build/XCFrameworks/release/TestPilotShared.xcframework dist/ios/
           rsync -a --exclude="AnalystTests/AnalystTests.swift" harness/ dist/harness/
           cd dist
           zip -qr TestPilotShared.xcframework.zip ios/ harness/
