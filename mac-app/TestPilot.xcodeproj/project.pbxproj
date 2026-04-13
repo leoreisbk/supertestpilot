@@ -427,7 +427,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.workco.testpilot;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leonardoreis.testpilot;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
 			};
@@ -444,7 +444,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.workco.TestPilotTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leonardoreis.TestPilotTests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TestPilotApp.app/Contents/MacOS/TestPilotApp";
@@ -464,7 +464,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.workco.testpilot;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leonardoreis.testpilot;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
 			};
@@ -481,7 +481,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.workco.TestPilotTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.leonardoreis.TestPilotTests;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TestPilotApp.app/Contents/MacOS/TestPilotApp";
