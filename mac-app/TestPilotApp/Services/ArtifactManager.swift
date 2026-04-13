@@ -53,6 +53,11 @@ final class ArtifactManager {
     var isReady: Bool { state == .ready }
 
     func ensureArtifacts() async {
+        #if DEBUG
+        state = .ready
+        return
+        #endif
+
         state = .checking
 
         guard let manifestURL = URL(string: manifestURLString) else { return }
