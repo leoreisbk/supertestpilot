@@ -4,13 +4,17 @@ default_platform(:mac)
 platform :mac do
   lane :sync_certs do |options|
     match(
-      type:     "developer_id",
-      readonly: is_ci,
-      api_key:  options[:api_key]
+      type:              "developer_id",
+      readonly:          is_ci,
+      api_key:           options[:api_key],
+      keychain_name:     "CI",
+      keychain_password: "ci_temp"
     )
   end
 
   lane :build_and_notarize do
+    setup_ci(provider: "travis") # creates a temporary CI keychain
+
     api_key = app_store_connect_api_key(
       key_id:                ENV["ASC_KEY_ID"],
       issuer_id:             ENV["ASC_KEY_ISSUER_ID"],
@@ -24,7 +28,8 @@ platform :mac do
       configuration:    "Release",
       export_method:    "developer-id",
       output_directory: "/tmp/TestPilotExport",
-      output_name:      "TestPilotApp"
+      output_name:      "TestPilotApp",
+      xcargs:           "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Developer ID Application' DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}"
     )
     sh("hdiutil create -volname TestPilot -srcfolder /tmp/TestPilotExport/TestPilotApp.app -ov -format UDZO /tmp/TestPilot.dmg")
     notarize(
