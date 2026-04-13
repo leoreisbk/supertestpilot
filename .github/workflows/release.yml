@@ -97,70 +97,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Import signing certificate
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+        working-directory: mac-app
+
+      - name: Build and notarize Mac app
+        run: bundle exec fastlane build_and_notarize
+        working-directory: mac-app
         env:
-          CERT_P12: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_P12 }}
-          CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
-        run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain
-          security create-keychain -p "" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "" "$KEYCHAIN_PATH"
-          echo "$CERT_P12" | base64 --decode > /tmp/cert.p12
-          security import /tmp/cert.p12 -k "$KEYCHAIN_PATH" \
-            -P "$CERT_PASSWORD" -T /usr/bin/codesign
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-      - name: Build and archive Mac app
-        env:
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          xcodebuild archive \
-            -project mac-app/TestPilot.xcodeproj \
-            -scheme TestPilotApp \
-            -configuration Release \
-            -destination "generic/platform=macOS" \
-            -archivePath /tmp/TestPilot.xcarchive \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Developer ID Application" \
-            DEVELOPMENT_TEAM="$TEAM_ID"
-
-      - name: Export app
-        run: |
-          cat > /tmp/export.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>developer-id</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
-          </dict>
-          </plist>
-          EOF
-          xcodebuild -exportArchive \
-            -archivePath /tmp/TestPilot.xcarchive \
-            -exportPath /tmp/TestPilotExport \
-            -exportOptionsPlist /tmp/export.plist
-
-      - name: Create DMG
-        run: |
-          hdiutil create -volname "TestPilot" -srcfolder /tmp/TestPilotExport/TestPilotApp.app \
-            -ov -format UDZO /tmp/TestPilot.dmg
-
-      - name: Notarize DMG
-        env:
-          ASC_API_KEY_ID: ${{ secrets.APPLE_ASC_API_KEY_ID }}
-          ASC_API_KEY_ISSUER: ${{ secrets.APPLE_ASC_API_KEY_ISSUER }}
-          ASC_API_KEY_P8: ${{ secrets.APPLE_ASC_API_KEY_P8 }}
-        run: |
-          echo "$ASC_API_KEY_P8" | base64 --decode > /tmp/asc_key.p8
-          xcrun notarytool submit /tmp/TestPilot.dmg \
-            --key /tmp/asc_key.p8 \
-            --key-id "$ASC_API_KEY_ID" \
-            --issuer "$ASC_API_KEY_ISSUER" \
-            --wait
-          xcrun stapler staple /tmp/TestPilot.dmg
+          MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_ISSUER_ID:             ${{ secrets.ASC_KEY_ISSUER_ID }}
+          ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+          APPLE_TEAM_ID:                 ${{ secrets.APPLE_TEAM_ID }}
 
       - uses: actions/upload-artifact@v4
         with:
