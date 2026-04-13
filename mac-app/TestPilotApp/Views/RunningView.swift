@@ -26,8 +26,8 @@ struct RunningView: View {
                 Text(statusLine)
                     .id(statusLine)
                     .transition(.opacity)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 360)
                 Button("Cancel") { runner.cancel() }
@@ -39,8 +39,8 @@ struct RunningView: View {
                     Text(current.message)
                         .id(steps.count)
                         .transition(.opacity)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.footnote)
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 360)
                 }
@@ -56,6 +56,7 @@ struct RunningView: View {
                     .font(.title3.weight(.medium))
                 if !runner.analyzeSteps.isEmpty {
                     StepListView(steps: runner.analyzeSteps)
+                        .layoutPriority(1)
                 }
                 HStack(spacing: 16) {
                     Button("Open Report") {
@@ -69,12 +70,14 @@ struct RunningView: View {
             case .testPassed(let reason, let steps):
                 VerdictBannerView(passed: true, reason: reason)
                 StepListView(steps: steps)
+                    .layoutPriority(1)
                 Button("Run Again") { runner.reset() }
                     .buttonStyle(.bordered)
 
             case .testFailed(let reason, let steps):
                 VerdictBannerView(passed: false, reason: reason)
                 StepListView(steps: steps)
+                    .layoutPriority(1)
                 Button("Run Again") { runner.reset() }
                     .buttonStyle(.bordered)
 
@@ -133,7 +136,7 @@ private struct StepListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 8)
         }
-        .frame(maxWidth: 400, maxHeight: 200)
+        .frame(maxWidth: .infinity)
     }
 }
 

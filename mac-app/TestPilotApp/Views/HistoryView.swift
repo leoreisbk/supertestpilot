@@ -51,7 +51,7 @@ private struct HistoryRowView: View {
                 Text(record.objective)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(3)
                 Text(record.date, format: .dateTime.month(.abbreviated).day().hour().minute())
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -71,9 +71,8 @@ private struct HistoryRowView: View {
                     Text(outcome.reason)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
                         .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 180)
+                        .frame(maxWidth: 220)
                 } else {
                     Button("Open Report") {
                         let path = record.reportPath
