@@ -22,28 +22,34 @@ struct RunningView: View {
             // State-driven content
             switch runner.state {
             case .running(let statusLine):
-                NeuralOrbView()
-                Text(statusLine)
-                    .id(statusLine)
-                    .transition(.opacity)
-                    .font(.footnote)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 360)
+                NeuralOrbView(platform: config.platform)
+                ZStack {
+                    Text(statusLine)
+                        .id(statusLine)
+                        .transition(.opacity)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 400)
+                }
+                .animation(.easeInOut(duration: 0.4), value: statusLine)
                 Button("Cancel") { runner.cancel() }
                     .buttonStyle(.bordered)
 
             case .testRunning(let steps):
-                NeuralOrbView()
-                if let current = steps.last {
-                    Text(current.message)
-                        .id(steps.count)
-                        .transition(.opacity)
-                        .font(.footnote)
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 360)
+                NeuralOrbView(platform: config.platform)
+                ZStack {
+                    if let current = steps.last {
+                        Text(current.message)
+                            .id(steps.count)
+                            .transition(.opacity)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 400)
+                    }
                 }
+                .animation(.easeInOut(duration: 0.4), value: steps.count)
                 Button("Cancel") { runner.cancel() }
                     .buttonStyle(.bordered)
 
@@ -99,7 +105,7 @@ struct RunningView: View {
                 EmptyView()
 
             case .webLoginPending:
-                NeuralOrbView()
+                NeuralOrbView(platform: config.platform)
                 Text("Browser open — log in and tap Save Session")
                     .font(.caption)
                     .foregroundStyle(.secondary)
