@@ -127,19 +127,19 @@ Se você não sabe como fazer algum dos passos de mobile, peça ajuda a alguém 
 
 **2. Tenha uma chave de acesso à IA**
 
-O TestPilot precisa de uma chave de acesso para usar a inteligência artificial. Essa chave é como uma senha que permite ao TestPilot se comunicar com o serviço de IA escolhido.
+O TestPilot precisa de uma chave de acesso para usar a inteligência artificial. O TestPilot funciona com três serviços de IA diferentes — escolha um:
+- **Google Gemini** → `gemini`
+- **Anthropic Claude** → `anthropic`
+- **OpenAI (ChatGPT)** → `openai`
 
-Peça ao time de desenvolvimento para criar um arquivo chamado `.env` na pasta do projeto com o seguinte conteúdo:
+**No app macOS:** abra o menu **Settings**, cole a chave no campo **API Key** e escolha o provedor. Nenhum arquivo precisa ser criado.
+
+**No terminal:** peça ao time de desenvolvimento para criar um arquivo `.env` na pasta do projeto:
 
 ```
 TESTPILOT_API_KEY=sua-chave-aqui
 TESTPILOT_PROVIDER=gemini
 ```
-
-O TestPilot funciona com três serviços de IA diferentes — escolha um:
-- **Google Gemini** → use `gemini`
-- **Anthropic Claude** → use `anthropic`
-- **OpenAI (ChatGPT)** → use `openai`
 
 ---
 
@@ -313,6 +313,7 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 | `--password` | — | Senha para login automático (opcional; exige `--username`) |
 | `--max-steps` | `40` | Quantas ações a IA pode tomar antes de parar |
 | `--output` | `./report.html` | Onde salvar o relatório gerado (apenas `analyze`) |
+| `--lang` | `en` | Idioma do relatório: `en` (inglês) ou `pt-BR` (português) |
 | `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |

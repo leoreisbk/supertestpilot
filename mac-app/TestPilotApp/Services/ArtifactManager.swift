@@ -136,8 +136,9 @@ final class ArtifactManager {
             throw ArtifactError.sha256Mismatch(expected: expectedSHA256, actual: hash)
         }
 
-        // ios artifact contains ios/ and harness/ subdirs — unpack to cache root
-        let unpackDest = key == "ios" ? artifactDir : artifactDir.appendingPathComponent(key)
+        // ios and web artifacts contain their subdir inside the zip — unpack to cache root
+        // so ios/harness/ and web/ land directly under ~/.testpilot/
+        let unpackDest = (key == "ios" || key == "web") ? artifactDir : artifactDir.appendingPathComponent(key)
         let destDir = artifactDir.appendingPathComponent(key)
         try? FileManager.default.removeItem(at: destDir)
         try FileManager.default.createDirectory(at: unpackDest, withIntermediateDirectories: true)

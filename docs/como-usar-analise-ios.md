@@ -1,4 +1,4 @@
-# Como rodar uma análise de UX no iOS e Android
+# Como rodar uma análise de UX no iOS, Android e Web
 
 ## O que é o TestPilot?
 
@@ -20,38 +20,60 @@ O TestPilot tem dois modos:
 
 **Exemplo:** *"o botão de compra está habilitado na tela do produto"*
 
-Ambos funcionam em **iPhone/iPad** (aparelho físico ou simulador) e **Android** (aparelho físico ou emulador).
+Ambos funcionam em **iPhone/iPad** (aparelho físico ou simulador), **Android** (aparelho físico ou emulador) e **Web** (qualquer URL acessível no navegador — incluindo protótipos no ProtoPie, Figma ou ambientes de staging).
+
+---
+
+## Como usar o TestPilot
+
+Há duas formas de usar: pelo **app macOS** (recomendado para designers e PMs) ou pelo **terminal** (recomendado para QAs e integração com CI).
+
+### Pelo app macOS
+
+O app macOS é a forma mais simples — sem linha de comando, sem configuração manual.
+
+1. Escolha o **modo** (Analyze ou Test) e a **plataforma** (iOS, Android ou Web)
+2. Selecione o dispositivo ou informe a URL do site
+3. Escreva o objetivo em texto livre
+4. Clique em **Run Analysis** ou **Run Test**
+
+O resultado aparece em tempo real. Para análise, o relatório abre no navegador ao final; para teste, cada passo aparece na tela com o veredicto final em destaque.
+
+### Pelo terminal
+
+Para quem prefere linha de comando ou precisa integrar com CI, todos os recursos estão disponíveis via `./testpilot`. Os exemplos nas seções abaixo usam essa forma.
 
 ---
 
 ## Antes de usar pela primeira vez
 
-**1. Tenha o app aberto no aparelho ou simulador**
+**1. Tenha o app aberto no aparelho, simulador ou a URL em mãos**
 
 - **iPhone/iPad físico:** conecte o aparelho ao Mac com o cabo USB e abra o Xcode para que ele reconheça o aparelho.
 - **Simulador de iPhone/iPad:** abra o Xcode, suba um simulador e certifique-se de que o app está instalado nele.
 - **Aparelho Android físico:** conecte o aparelho ao computador com o cabo USB. Nas configurações do aparelho, ative o **Modo de desenvolvedor** e dentro dele ative a opção **Depuração USB**.
 - **Emulador Android:** abra o Android Studio, suba um emulador e certifique-se de que o app está instalado nele.
+- **Web:** basta ter a URL em mãos — nenhuma instalação adicional é necessária.
 
-Se você não sabe como fazer algum desses passos, peça ajuda a alguém do time de desenvolvimento.
+Se você não sabe como fazer algum dos passos de mobile, peça ajuda a alguém do time de desenvolvimento.
 
 ---
 
 **2. Tenha uma chave de acesso à IA**
 
-O TestPilot precisa de uma chave de acesso para usar a inteligência artificial. Essa chave é como uma senha que permite ao TestPilot se comunicar com o serviço de IA escolhido.
+O TestPilot precisa de uma chave de acesso para usar a inteligência artificial. O TestPilot funciona com três serviços de IA diferentes — escolha um:
+- **Google Gemini** → `gemini`
+- **Anthropic Claude** → `anthropic`
+- **OpenAI (ChatGPT)** → `openai`
 
-Peça ao time de desenvolvimento para criar um arquivo chamado `.env` na pasta do projeto com o seguinte conteúdo:
+**No app macOS:** abra o menu **Settings**, cole a chave no campo **API Key** e escolha o provedor. Nenhum arquivo precisa ser criado.
+
+**No terminal:** crie um arquivo `.env` na pasta do projeto:
 
 ```
 TESTPILOT_API_KEY=sua-chave-aqui
 TESTPILOT_PROVIDER=gemini
 ```
-
-O TestPilot funciona com três serviços de IA diferentes — escolha um:
-- **Google Gemini** → use `gemini`
-- **Anthropic Claude** → use `anthropic`
-- **OpenAI (ChatGPT)** → use `openai`
 
 ---
 
@@ -94,6 +116,14 @@ Abra o Terminal e, dentro da pasta do projeto, rode um dos comandos abaixo:
   --objective "o que você quer analisar"
 ```
 
+**Web — qualquer URL:**
+```bash
+./testpilot analyze \
+  --platform web \
+  --url https://seu-app.com \
+  --objective "como é fácil encontrar o fluxo de checkout"
+```
+
 Enquanto a análise roda, você pode acompanhar a IA navegando pelo app em tempo real. Ao terminar, o relatório abre automaticamente no navegador.
 
 ---
@@ -120,6 +150,22 @@ Use `./testpilot test` quando quiser uma resposta objetiva de **passou** ou **fa
   --team-id <seu código de desenvolvedor Apple>
 ```
 
+**Android — emulador ou aparelho físico:**
+```bash
+./testpilot test \
+  --platform android \
+  --app "Nome do App" \
+  --objective "o botão de compra está habilitado na tela do produto"
+```
+
+**Web — qualquer URL:**
+```bash
+./testpilot test \
+  --platform web \
+  --url https://seu-app.com \
+  --objective "o botão de compra está habilitado na tela do produto"
+```
+
 O resultado aparece no terminal em tempo real, passo a passo, e ao final:
 
 ```
@@ -139,14 +185,15 @@ Execuções repetidas do mesmo teste são mais rápidas porque o TestPilot guard
 
 Não precisa saber disso para usar — mas se tiver curiosidade:
 
-1. O TestPilot abre o app no simulador ou no aparelho
-2. Tira uma captura de tela da tela atual
-3. Manda a imagem para a IA junto com o seu objetivo
-4. A IA decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo — ou emitir um veredicto (análise: *concluído*; teste: *passou/falhou*)
-5. A ação é executada no app
-6. Repete isso até concluir ou chegar ao limite de ações
-7. **Análise:** gera um relatório com capturas de tela e observações de cada passo
-7. **Teste:** exibe PASSOU ou FALHOU com o motivo
+1. O TestPilot abre o app no simulador, aparelho ou navegador
+2. Tira uma captura de tela da tela atual e coleta a lista de elementos de interface disponíveis (botões, campos, links, títulos) com seus rótulos — a "árvore de acessibilidade"
+3. Manda a imagem e a lista de elementos para a IA junto com o seu objetivo
+4. A IA analisa a imagem como um humano faria — lê textos, identifica botões, entende a hierarquia visual — e também lê diretamente os rótulos dos elementos pelo nome
+5. A IA decide o que fazer: tocar em algum lugar, rolar a tela, digitar algo — ou emitir um veredicto (análise: *concluído*; teste: *passou/falhou*)
+6. A ação é executada no app
+7. Repete isso até concluir ou chegar ao limite de ações
+8. **Análise:** gera um relatório HTML com capturas de tela e observações de cada passo
+8. **Teste:** exibe PASSOU ou FALHOU com o motivo
 
 ---
 
@@ -169,10 +216,15 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 
 | Opção | Padrão | O que faz |
 |-------|--------|-----------|
-| `--app` | — | Nome do app |
+| `--platform` | — | `ios`, `android` ou `web` |
+| `--app` | — | Nome do app (iOS e Android) |
+| `--url` | — | Endereço do site ou protótipo (Web) |
 | `--objective` | — | O que você quer analisar ou verificar (em texto livre) |
+| `--username` | — | Usuário para login automático antes da análise (opcional) |
+| `--password` | — | Senha para login automático (opcional; exige `--username`) |
 | `--max-steps` | `40` | Quantas ações a IA pode tomar antes de parar |
 | `--output` | `./report.html` | Onde salvar o relatório gerado (apenas `analyze`) |
+| `--lang` | `en` | Idioma do relatório: `en` (inglês) ou `pt-BR` (português) |
 | `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |
