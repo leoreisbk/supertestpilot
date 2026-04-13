@@ -4,11 +4,9 @@ default_platform(:mac)
 platform :mac do
   lane :sync_certs do |options|
     match(
-      type:              "developer_id",
-      readonly:          is_ci,
-      api_key:           options[:api_key],
-      keychain_name:     "CI",
-      keychain_password: "ci_temp"
+      type:     "developer_id",
+      readonly: is_ci,
+      api_key:  options[:api_key]
     )
   end
 
