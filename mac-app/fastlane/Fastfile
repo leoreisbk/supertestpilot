@@ -27,7 +27,7 @@ platform :mac do
       export_method:    "developer-id",
       output_directory: "/tmp/TestPilotExport",
       output_name:      "TestPilotApp",
-      xcargs:           "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Developer ID Application' DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} ENABLE_HARDENED_RUNTIME=YES"
+      xcargs:           "CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Developer ID Application' DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} ENABLE_HARDENED_RUNTIME=YES CODE_SIGN_ENTITLEMENTS=TestPilotApp/TestPilotApp.entitlements"
     )
     sh("hdiutil create -volname TestPilot -srcfolder /tmp/TestPilotExport/TestPilotApp.app -ov -format UDZO /tmp/TestPilot.dmg")
     notarize(
