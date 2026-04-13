@@ -144,7 +144,8 @@ final class ArtifactManager {
 
         let filename = url.lastPathComponent
         if filename.hasSuffix(".zip") {
-            try await runCommand("/usr/bin/unzip", args: ["-q", tempFile.path, "-d", unpackDest.path])
+            // ditto preserves extended attributes and code signatures (unzip strips them)
+            try await runCommand("/usr/bin/ditto", args: ["-xk", tempFile.path, unpackDest.path])
         } else if filename.hasSuffix(".tar.gz") {
             try await runCommand("/usr/bin/tar", args: ["-xzf", tempFile.path, "-C", unpackDest.path])
         }
