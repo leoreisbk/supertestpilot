@@ -1,4 +1,4 @@
 # mac-app/fastlane/Appfile
 app_identifier("com.leonardoreis.testpilot")
-apple_id("leoreisbk@gmail.com")
+apple_id(ENV["APPLE_ID"] || "leoreisbk@gmail.com")
 team_id(ENV["APPLE_TEAM_ID"])

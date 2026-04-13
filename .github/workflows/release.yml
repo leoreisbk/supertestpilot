@@ -101,7 +101,7 @@ jobs:
         with:
           ruby-version: '3.3'
           bundler-cache: true
-        working-directory: mac-app
+          working-directory: mac-app
 
       - name: Build and notarize Mac app
         run: bundle exec fastlane build_and_notarize
