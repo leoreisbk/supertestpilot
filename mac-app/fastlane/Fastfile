@@ -19,7 +19,7 @@ platform :mac do
     )
     sync_certs(api_key: api_key)
     build_mac_app(
-      project:          "../TestPilot.xcodeproj",
+      project:          "TestPilot.xcodeproj",
       scheme:           "TestPilotApp",
       configuration:    "Release",
       export_method:    "developer-id",
