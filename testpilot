@@ -14,6 +14,7 @@ OUTPUT="./report.html"
 LANG_CODE="en"
 DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omitted)
 TEAM_ID=""       # Apple Developer Team ID (required for physical device)
+PERSONA_FILE=""
 
 COMMAND="${1:-}"
 if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-login" ]]; then
