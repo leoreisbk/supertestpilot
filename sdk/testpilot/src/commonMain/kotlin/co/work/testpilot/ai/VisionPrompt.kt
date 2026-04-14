@@ -23,6 +23,19 @@ class VisionPrompt(
         val languageInstruction = if (config.language == "en") "" else
             "All observations, reasons, and summaries must be written in ${config.language}."
 
+        val personaSection = config.personaMarkdown
+            ?.takeIf { it.isNotBlank() }
+            ?.let { persona ->
+                """
+
+                ## Persona
+                You are evaluating this app from the perspective of the following user. Let their goals, behaviors, and pain points shape which flows you prioritize, what you notice, and how you assess the UX.
+
+                <persona>
+                $persona
+                </persona>""".trimIndent()
+            } ?: ""
+
         val systemPrompt = """
             You are a senior UX researcher conducting a structured usability evaluation of a live mobile app. Your findings will be used by product managers and designers to make product decisions — they must be specific, evidence-based, and actionable.
 
@@ -43,7 +56,7 @@ class VisionPrompt(
             - If stuck, scroll or navigate back to find a new path
 
             Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.
-            $languageInstruction
+            $languageInstruction$personaSection
         """.trimIndent()
 
         val screensSeen = observationsSoFar.size
