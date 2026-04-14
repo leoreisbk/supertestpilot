@@ -303,6 +303,8 @@ import TestPilotShared
 class AnalystTests: XCTestCase {
     var analyst: TestAnalystIOS!
     var xcApp: XCUIApplication!
+    var username: String?
+    var password: String?
 
     override func setUp() {
         super.setUp()
@@ -338,6 +340,8 @@ import TestPilotShared
 class AnalystTests: XCTestCase {
     var analyst: AnalystIOS!
     var xcApp: XCUIApplication!
+    var username: String?
+    var password: String?
 
     override func setUp() {
         super.setUp()
@@ -379,13 +383,14 @@ fi
   if [[ "$USE_DEVICE" == "true" ]]; then
     XCODE_EXTRA_ARGS+=(-allowProvisioningUpdates "DEVELOPMENT_TEAM=$TEAM_ID")
   fi
-  # Pass credentials via test environment so they are never stored in the Swift file on disk
-  XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_API_KEY=$API_KEY")
-  [[ -n "$USERNAME" ]] && XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_USERNAME=$USERNAME")
-  [[ -n "$PASSWORD" ]] && XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_PASSWORD=$PASSWORD")
+  # Pass credentials via TEST_RUNNER_ prefix — XCTest strips the prefix automatically,
+  # so the generated Swift reads env["TESTPILOT_API_KEY"] as usual.
+  # (-testenv was removed in Xcode 26; TEST_RUNNER_ is the supported alternative.)
+  export TEST_RUNNER_TESTPILOT_API_KEY="$API_KEY"
+  [[ -n "$USERNAME" ]] && export TEST_RUNNER_TESTPILOT_USERNAME="$USERNAME"
+  [[ -n "$PASSWORD" ]] && export TEST_RUNNER_TESTPILOT_PASSWORD="$PASSWORD"
   if [[ -n "$PERSONA_FILE" ]] && [[ "$TEST_MODE" != "true" ]]; then
-    PERSONA_B64=$(base64 < "$PERSONA_FILE")
-    XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_PERSONA_B64=$PERSONA_B64")
+    export TEST_RUNNER_TESTPILOT_PERSONA_B64=$(base64 < "$PERSONA_FILE")
   fi
 
   # Stream xcodebuild output in real-time: emit TESTPILOT_STEP/RESULT markers as

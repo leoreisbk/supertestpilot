@@ -99,23 +99,20 @@ struct IOSRunner {
             args += ["-allowProvisioningUpdates", "DEVELOPMENT_TEAM=\(settings.teamId)"]
         }
 
-        // Pass credentials via test environment — they are read by the generated Swift at runtime
-        // and never stored as string literals in the test file on disk.
-        args += ["-testenv", "TESTPILOT_API_KEY=\(settings.apiKey)"]
-        if !config.username.isEmpty {
-            args += ["-testenv", "TESTPILOT_USERNAME=\(config.username)"]
-        }
-        if !config.password.isEmpty {
-            args += ["-testenv", "TESTPILOT_PASSWORD=\(config.password)"]
-        }
+        var env = ProcessInfo.processInfo.environment
+
+        // Pass credentials via TEST_RUNNER_ prefix — XCTest strips the prefix automatically,
+        // so the generated Swift reads env["TESTPILOT_API_KEY"] as usual.
+        // (-testenv was removed in Xcode 26; TEST_RUNNER_ is the supported alternative.)
+        env["TEST_RUNNER_TESTPILOT_API_KEY"] = settings.apiKey
+        if !config.username.isEmpty { env["TEST_RUNNER_TESTPILOT_USERNAME"] = config.username }
+        if !config.password.isEmpty { env["TEST_RUNNER_TESTPILOT_PASSWORD"] = config.password }
 
         // Persona is only used in analyze mode
         if config.mode == .analyze, let personaContent = config.personaContent,
            let personaData = personaContent.data(using: .utf8) {
-            args += ["-testenv", "TESTPILOT_PERSONA_B64=\(personaData.base64EncodedString())"]
+            env["TEST_RUNNER_TESTPILOT_PERSONA_B64"] = personaData.base64EncodedString()
         }
-
-        var env = ProcessInfo.processInfo.environment
         let extraPaths = ["/opt/homebrew/bin", "/usr/local/bin"]
         let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
         env["PATH"] = extraPaths.joined(separator: ":") + ":" + currentPath
@@ -206,12 +203,13 @@ struct IOSRunner {
         let providerExpr =
             "\"\(provEsc)\" == \"openai\" ? .openai : (\"\(provEsc)\" == \"gemini\" ? .gemini : .anthropic)"
 
-        // Credentials are read from the test environment at runtime — never hardcoded in this file.
+        // Credentials and persona are read from the test environment at runtime.
+        // username/password are class properties so testAnalyze() can access them.
         let credentialsBlock = """
         let env = ProcessInfo.processInfo.environment
-        let apiKey   = env["TESTPILOT_API_KEY"] ?? ""
-        let username: String? = env["TESTPILOT_USERNAME"].flatMap { $0.isEmpty ? nil : $0 }
-        let password: String? = env["TESTPILOT_PASSWORD"].flatMap { $0.isEmpty ? nil : $0 }
+        let apiKey = env["TESTPILOT_API_KEY"] ?? ""
+        username = env["TESTPILOT_USERNAME"].flatMap { $0.isEmpty ? nil : $0 }
+        password = env["TESTPILOT_PASSWORD"].flatMap { $0.isEmpty ? nil : $0 }
 """
 
         // Persona is only used in analyze mode — test mode always gets nil.
@@ -235,6 +233,8 @@ import TestPilotShared
 class AnalystTests: XCTestCase {
     var analyst: TestAnalystIOS!
     var xcApp: XCUIApplication!
+    var username: String?
+    var password: String?
 
     override func setUp() {
         super.setUp()
@@ -269,6 +269,8 @@ import TestPilotShared
 class AnalystTests: XCTestCase {
     var analyst: AnalystIOS!
     var xcApp: XCUIApplication!
+    var username: String?
+    var password: String?
 
     override func setUp() {
         super.setUp()
