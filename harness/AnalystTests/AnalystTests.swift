@@ -1,23 +1,43 @@
-// This file is overwritten by the testpilot CLI before each run.
-// Do not edit manually.
+// This file is overwritten by TestPilot before each run. Do not edit manually.
+// This placeholder matches the format generated at runtime — kept in sync for
+// Xcode development and contributor reference. CI excludes this file from the
+// packaged artifact (see release.yml: rsync --exclude).
 import XCTest
 import TestPilotShared
 
 class AnalystTests: XCTestCase {
-    func testAnalyze() async throws {
+    var analyst: AnalystIOS!
+    var xcApp: XCUIApplication!
+    var username: String?
+    var password: String?
+
+    override func setUp() {
+        super.setUp()
+        xcApp = XCUIApplication()
+        let provider: AIProvider = .anthropic
         let env = ProcessInfo.processInfo.environment
-        let providerStr = env["TESTPILOT_PROVIDER"] ?? "anthropic"
-        let provider: AIProvider = providerStr == "openai" ? .openai : .anthropic
-        let maxSteps = Int32(env["TESTPILOT_MAX_STEPS"].flatMap(Int.init) ?? 20)
+        let apiKey = env["TESTPILOT_API_KEY"] ?? ""
+        username = env["TESTPILOT_USERNAME"].flatMap { $0.isEmpty ? nil : $0 }
+        password = env["TESTPILOT_PASSWORD"].flatMap { $0.isEmpty ? nil : $0 }
+        let personaB64 = env["TESTPILOT_PERSONA_B64"]
+        let persona: String? = personaB64.flatMap { Data(base64Encoded: $0) }
+            .flatMap { String(data: $0, encoding: .utf8) }
         let config = ConfigBuilder()
             .provider(provider: provider)
-            .apiKey(key: env["TESTPILOT_API_KEY"] ?? "")
-            .maxSteps(steps: maxSteps)
+            .apiKey(key: apiKey)
+            .maxSteps(steps: 40)
+            .language(lang: "en")
+            .persona(markdown: persona)
             .build()
-        let analyst = AnalystIOS(config: config)
+        analyst = AnalystIOS(config: config)
+    }
+
+    func testAnalyze() async throws {
         let _ = try await analyst.run(
-            objective: env["TESTPILOT_OBJECTIVE"] ?? "",
-            bundleId: env["TESTPILOT_BUNDLE_ID"]
+            objective: "",
+            xcApp: xcApp,
+            username: username,
+            password: password
         )
     }
 }
