@@ -139,7 +139,14 @@ if [[ "$COMMAND" == "web-login" ]]; then
 fi
 
 [[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios, android, or web)"; exit 1; }
-[[ -z "$OBJECTIVE" ]] && { echo "Error: --objective required"; exit 1; }
+# Objective is optional for analyze when a persona is provided; fall back to a generic goal
+if [[ -z "$OBJECTIVE" ]]; then
+  if [[ "$COMMAND" == "analyze" ]] && [[ -n "$PERSONA_FILE" ]]; then
+    OBJECTIVE="Explore the app from the perspective of the persona."
+  else
+    echo "Error: --objective required"; exit 1
+  fi
+fi
 if [[ -n "$PERSONA_FILE" ]] && [[ ! -f "$PERSONA_FILE" ]]; then
   echo "Error: persona file not found: $PERSONA_FILE"; exit 1
 fi

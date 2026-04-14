@@ -192,7 +192,10 @@ struct IOSRunner {
     private func buildTestSwift(bundleId: String) -> String {
         let provider = (config.providerOverride ?? settings.provider).rawValue
         let provEsc  = swiftEsc(provider)
-        let objEsc   = swiftEsc(config.objective)
+        let effectiveObjective = config.objective.trimmingCharacters(in: .whitespaces).isEmpty
+            ? "Explore the app from the perspective of the persona."
+            : config.objective
+        let objEsc   = swiftEsc(effectiveObjective)
         let langEsc  = swiftEsc(config.language.rawValue)
         let bidOpt   = bundleId.isEmpty ? "nil" : "\"\(swiftEsc(bundleId))\""
         let xcAppInit = bundleId.isEmpty

@@ -60,7 +60,8 @@ final class RunConfig {
     var mode: RunMode = .analyze
 
     var isValid: Bool {
-        guard !objective.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        let objectiveRequired = mode == .test || personaPath.isEmpty
+        if objectiveRequired && objective.trimmingCharacters(in: .whitespaces).isEmpty { return false }
         if platform == .web {
             let trimmed = url.trimmingCharacters(in: .whitespaces).lowercased()
             return trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://")

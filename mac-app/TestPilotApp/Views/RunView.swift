@@ -62,7 +62,9 @@ struct RunView: View {
                     if config.objective.isEmpty {
                         let placeholder = config.mode == .test
                             ? "Check if the Buy button is enabled on the product page…"
-                            : "Describe what to analyze…"
+                            : config.personaPath.isEmpty
+                                ? "Describe what to analyze…"
+                                : "Optional — persona defines the focus. Add a specific goal to narrow it down."
                         Text(placeholder)
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 8)
