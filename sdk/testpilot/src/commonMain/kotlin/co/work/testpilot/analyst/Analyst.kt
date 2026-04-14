@@ -73,6 +73,7 @@ class Analyst(
             stepCount = steps.size,
             durationMs = durationMs,
             steps = steps,
+            persona = config.personaMarkdown,
         )
     }
 
@@ -82,6 +83,15 @@ class Analyst(
 
         val languageInstruction = if (config.language == "en") "" else
             "Write your entire response in ${config.language}."
+
+        val personaContext = if (config.personaMarkdown.isNullOrBlank()) "" else """
+
+This evaluation was conducted from the perspective of:
+<persona>
+${config.personaMarkdown}
+</persona>
+
+Frame your findings through the lens of this persona's goals and pain points.""".trimIndent()
 
         val prompt = """
             You conducted a UX evaluation of a mobile app with this objective: "$objective"
@@ -105,7 +115,7 @@ class Analyst(
             **Recommendation**: One concrete next step the team should prioritize.
 
             Be specific. Each bullet must name the screen/flow and the concrete problem or pattern. Do not generalize.
-            $languageInstruction
+            $languageInstruction$personaContext
         """.trimIndent()
 
         return aiClient.chatCompletion(
