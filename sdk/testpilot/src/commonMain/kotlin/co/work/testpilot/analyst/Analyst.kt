@@ -17,6 +17,7 @@ class Analyst(
     ): AnalysisReport {
         val mark = TimeSource.Monotonic.markNow()
         val steps = mutableListOf<AnalysisStep>()
+        val seenObservations = mutableSetOf<String>()
         val visionPrompt = VisionPrompt(aiClient, config)
         var done = false
         var stuckCount = 0
@@ -25,7 +26,7 @@ class Analyst(
 
         for (i in 0 until config.maxSteps) {
             if (done) break
-            val screenshot = driver.screenshotPng()
+            val (screenshot, tree) = driver.captureStep()
             val fp = screenFingerprint(screenshot)
 
             stuckCount = if (fp == lastFingerprint) stuckCount + 1 else 0
@@ -41,12 +42,11 @@ class Analyst(
                 continue
             }
 
-            val tree = driver.accessibilityTree()
             val observationsSoFar = steps.mapNotNull { it.observation }.takeLast(10)
             val action = visionPrompt(objective, screenshot, observationsSoFar, stuckCount, tree)
 
             val obs = action.observation
-            if (obs != null && steps.none { it.observation == obs }) {
+            if (obs != null && seenObservations.add(obs)) {
                 steps.add(
                     AnalysisStep(
                         screenshotData = screenshot,
