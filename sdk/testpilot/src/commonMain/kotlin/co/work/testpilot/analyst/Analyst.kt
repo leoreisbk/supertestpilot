@@ -46,7 +46,7 @@ class Analyst(
             val action = visionPrompt(objective, screenshot, observationsSoFar, stuckCount, tree)
 
             val obs = action.observation
-            if (obs != null) {
+            if (obs != null && steps.none { it.observation == obs }) {
                 steps.add(
                     AnalysisStep(
                         screenshotData = screenshot,
