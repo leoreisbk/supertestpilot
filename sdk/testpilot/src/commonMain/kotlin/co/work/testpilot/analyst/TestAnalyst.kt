@@ -24,7 +24,7 @@ class TestAnalyst(
         val recentTaps = ArrayDeque<TapPoint>()
 
         for (i in 0 until config.maxSteps) {
-            val screenshot = driver.screenshotPng()
+            val (screenshot, tree) = driver.captureStep()
             val fp = screenFingerprint(screenshot)
 
             stuckCount = if (fp == lastFingerprint) stuckCount + 1 else 0
@@ -43,7 +43,6 @@ class TestAnalyst(
                 continue
             }
 
-            val tree = driver.accessibilityTree()
             val action = prompt(objective, screenshot, steps, tree)
 
             when (action) {
