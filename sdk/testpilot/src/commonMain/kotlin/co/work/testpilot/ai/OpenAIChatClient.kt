@@ -48,7 +48,7 @@ class OpenAIChatClient(
                 val content: List<OpenAIContentBlock> = if (isLast && msg.role == ChatMessage.ROLE_USER) {
                     listOf(
                         OpenAIContentBlock.ImageUrl(
-                            imageUrl = OpenAIImageUrl(url = "data:image/png;base64,$base64Image")
+                            imageUrl = OpenAIImageUrl(url = "data:${imageBytes.imageMimeType()};base64,$base64Image")
                         ),
                         OpenAIContentBlock.Text(text = msg.content),
                     )

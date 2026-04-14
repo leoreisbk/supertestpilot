@@ -40,7 +40,7 @@ class GeminiChatClient(
             val parts: List<GeminiPart> = if (isLast && imageBytes != null) {
                 listOf(
                     GeminiPart(inlineData = GeminiInlineData(
-                        mimeType = "image/png",
+                        mimeType = imageBytes.imageMimeType(),
                         data = Base64.encode(imageBytes),
                     )),
                     GeminiPart(text = msg.content),

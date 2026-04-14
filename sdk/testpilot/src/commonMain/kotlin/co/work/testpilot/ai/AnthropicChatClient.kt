@@ -164,6 +164,3 @@ class AnthropicChatClient(
         val text: String = "",
     )
 }
-
-private fun ByteArray.imageMimeType(): String =
-    if (size >= 2 && this[0] == 0xFF.toByte() && this[1] == 0xD8.toByte()) "image/jpeg" else "image/png"
