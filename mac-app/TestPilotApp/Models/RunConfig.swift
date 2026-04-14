@@ -48,6 +48,14 @@ final class RunConfig {
     var maxSteps: Int = 40
     // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
+    var personaPath: String = ""
+
+    /// Returns the persona markdown content, or nil if no persona is set.
+    var personaContent: String? {
+        guard !personaPath.isEmpty else { return nil }
+        let expanded = NSString(string: personaPath).expandingTildeInPath
+        return try? String(contentsOfFile: expanded, encoding: .utf8)
+    }
     var providerOverride: AIProvider? = nil
     var mode: RunMode = .analyze
 

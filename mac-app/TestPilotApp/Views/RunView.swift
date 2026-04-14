@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 struct RunView: View {
     @Bindable var config: RunConfig
@@ -86,6 +87,38 @@ struct RunView: View {
                     .help("Open a browser to log in manually — useful for SSO or OAuth")
                     .disabled(config.url.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+            if config.mode == .analyze {
+                HStack {
+                    if config.personaPath.isEmpty {
+                        Text("No persona")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(URL(fileURLWithPath: config.personaPath).lastPathComponent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .lineLimit(1)
+                        Button {
+                            config.personaPath = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Remove persona")
+                    }
+                    Button("Persona…") {
+                        let panel = NSOpenPanel()
+                        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .text]
+                        panel.allowsMultipleSelection = false
+                        panel.canChooseDirectories = false
+                        panel.title = "Choose Persona File"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            config.personaPath = url.path
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
             }
 
             DisclosureGroup("Advanced Options", isExpanded: $showAdvanced) {
