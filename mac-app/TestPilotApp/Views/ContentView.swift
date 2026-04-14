@@ -36,8 +36,9 @@ struct ContentView: View {
                 .frame(minWidth: 560, minHeight: 440)
         }
         .task { await artifactManager.ensureArtifacts() }
-        .sheet(isPresented: .constant(!artifactManager.isReady)) {
-            SetupSheet(manager: artifactManager)
+        .overlay(alignment: .bottom) {
+            ArtifactToastView(manager: artifactManager)
+                .padding(.bottom, 16)
         }
         .onChange(of: runner.state) { _, newState in
             let displayName = config.platform == .web ? config.url : config.appName
@@ -95,52 +96,109 @@ struct ContentView: View {
     }
 }
 
-// MARK: - SetupSheet
+// MARK: - ArtifactToastView
 
-struct SetupSheet: View {
+private struct ArtifactToastView: View {
     let manager: ArtifactManager
 
+    @State private var showReady = false
+    @State private var visible   = false
+
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "arrow.down.circle")
-                .font(.system(size: 48))
-                .foregroundStyle(.blue)
-
-            Text("Setting up TestPilot")
-                .font(.title2.bold())
-
-            stateContent
+        Group {
+            if visible {
+                toastContent
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal:   .move(edge: .bottom).combined(with: .opacity)
+                    ))
+            }
         }
-        .padding(40)
-        .frame(width: 400)
+        .animation(.spring(duration: 0.35), value: visible)
+        .onChange(of: manager.state) { _, state in
+            handleStateChange(state)
+        }
+        .onAppear {
+            handleStateChange(manager.state)
+        }
     }
 
     @ViewBuilder
-    private var stateContent: some View {
+    private var toastContent: some View {
         switch manager.state {
         case .checking:
-            ProgressView("Checking for updates…")
+            HStack(spacing: 8) {
+                ProgressView().scaleEffect(0.8)
+                Text("Checking for updates…")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
         case .downloading(let artifact, let progress):
-            VStack(spacing: 12) {
-                Text(artifact)
-                    .font(.body)
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    ProgressView().scaleEffect(0.8)
+                    Text("Downloading \(artifact)…")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
                 ProgressView(value: progress)
                     .progressViewStyle(.linear)
+                    .frame(width: 200)
+                    .tint(.blue)
             }
+
         case .failed(let msg):
-            VStack(spacing: 16) {
-                Text(msg)
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.circle.fill")
                     .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
+                Text(msg)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+                    .frame(maxWidth: 260, alignment: .leading)
                 Button("Retry") {
                     Task { await manager.ensureArtifacts() }
                 }
+                .font(.caption.weight(.medium))
                 .buttonStyle(.borderedProminent)
+                .controlSize(.mini)
             }
-        case .ready:
+
+        case .ready where showReady:
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("Ready")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+        default:
             EmptyView()
+        }
+    }
+
+    private func handleStateChange(_ state: ArtifactState) {
+        switch state {
+        case .checking, .downloading, .failed:
+            visible = true
+            showReady = false
+        case .ready:
+            showReady = true
+            visible = true
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                withAnimation { visible = false }
+                try? await Task.sleep(for: .milliseconds(400))
+                showReady = false
+            }
         case .unknown:
-            ProgressView()
+            visible = false
         }
     }
 }
