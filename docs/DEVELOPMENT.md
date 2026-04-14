@@ -148,6 +148,21 @@ dependencies {
 
 ---
 
+## Performance Characteristics
+
+### Token cost (Anthropic)
+
+- **Prompt caching**: `AnthropicChatClient` sends the system prompt with `cache_control: ephemeral`. `VisionPrompt` builds the system prompt string once at construction (a `private val`) so the string is byte-identical on every call — a requirement for Anthropic's cache to hit. Step 1 creates the cache entry; every subsequent step reads it at ~10× cheaper rate (~820 cached tokens × 39 steps per run).
+- **Image format**: Screenshots are sent as JPEG (encoded at 0.7 quality, ~3–5× smaller than PNG). The media type is detected from magic bytes (`0xFF 0xD8` → `image/jpeg`) rather than hardcoded.
+- **Observation dedup**: Duplicate observations are filtered with a `HashSet<String>` — O(1) lookup per step.
+- **Cache metrics**: Each response logs `Anthropic usage — in:N out:N cache_read:N cache_create:N` via `Logging.info`. A non-zero `cache_read` value on step 2+ confirms caching is working.
+
+### iOS step latency
+
+`AnalystDriverIOS` overlaps JPEG encoding with accessibility tree capture. After the raw PNG is captured on the main thread, encoding is dispatched to `Dispatchers.Default` (`async`) while the tree snapshot runs concurrently on the main thread. The two results are joined with `await`. Saves ~100ms per step (~4 seconds over a 40-step run).
+
+---
+
 ## stdout Markers
 
 The Kotlin runners emit structured lines that both the CLI and the Mac app parse:
