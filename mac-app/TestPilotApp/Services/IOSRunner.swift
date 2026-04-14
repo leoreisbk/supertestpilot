@@ -109,6 +109,12 @@ struct IOSRunner {
             args += ["-testenv", "TESTPILOT_PASSWORD=\(config.password)"]
         }
 
+        // Persona is only used in analyze mode
+        if config.mode == .analyze, let personaContent = config.personaContent,
+           let personaData = personaContent.data(using: .utf8) {
+            args += ["-testenv", "TESTPILOT_PERSONA_B64=\(personaData.base64EncodedString())"]
+        }
+
         var env = ProcessInfo.processInfo.environment
         let extraPaths = ["/opt/homebrew/bin", "/usr/local/bin"]
         let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
@@ -208,6 +214,18 @@ struct IOSRunner {
         let password: String? = env["TESTPILOT_PASSWORD"].flatMap { $0.isEmpty ? nil : $0 }
 """
 
+        // Persona is only used in analyze mode — test mode always gets nil.
+        let personaBlock: String
+        if config.mode == .analyze && config.personaContent != nil {
+            personaBlock = """
+        let personaB64 = env["TESTPILOT_PERSONA_B64"]
+        let persona: String? = personaB64.flatMap { Data(base64Encoded: $0) }
+            .flatMap { String(data: $0, encoding: .utf8) }
+"""
+        } else {
+            personaBlock = "        let persona: String? = nil\n"
+        }
+
         if config.mode == .test {
             return """
 // This file is overwritten by TestPilot before each run. Do not edit manually.
@@ -257,11 +275,13 @@ class AnalystTests: XCTestCase {
         xcApp = \(xcAppInit)
         let provider: AIProvider = \(providerExpr)
 \(credentialsBlock)
+\(personaBlock)
         let config = ConfigBuilder()
             .provider(provider: provider)
             .apiKey(key: apiKey)
             .maxSteps(steps: \(maxSteps))
             .language(lang: "\(langEsc)")
+            .persona(markdown: persona)
             .build()
         analyst = AnalystIOS(config: config)
     }
