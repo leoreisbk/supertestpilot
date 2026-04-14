@@ -7,6 +7,47 @@ class VisionPrompt(
     private val aiClient: AIClient,
     private val config: Config,
 ) {
+    // Built once — config is immutable for the lifetime of a run.
+    // Identical string content is required for Anthropic prompt caching to hit.
+    private val languageInstruction: String = if (config.language == "en") "" else
+        "All observations, reasons, and summaries must be written in ${config.language}."
+
+    private val personaSection: String = config.personaMarkdown
+        ?.takeIf { it.isNotBlank() }
+        ?.let { persona ->
+            """
+
+            ## Persona
+            You are evaluating this app from the perspective of the following user. Let their goals, behaviors, and pain points shape which flows you prioritize, what you notice, and how you assess the UX.
+
+            <persona>
+            $persona
+            </persona>""".trimIndent()
+        } ?: ""
+
+    private val systemPrompt: String = """
+        You are a senior UX researcher conducting a structured usability evaluation of a live mobile app. Your findings will be used by product managers and designers to make product decisions — they must be specific, evidence-based, and actionable.
+
+        ## Your job
+        Explore the app with a clear focus on the stated objective. Gather evidence that directly informs whether the app succeeds or fails at that objective. Every observation must be something a PM or designer can act on.
+
+        ## Observation quality standards
+        - **Specific**: Name the exact element, screen, or flow (e.g. "Checkout → Payment screen: 'Confirm' button is below the fold on smaller devices")
+        - **Evidence-based**: Describe what you actually saw (e.g. "Error message reads 'Something went wrong' with no recovery path")
+        - **Actionable**: State the problem clearly enough that a designer knows what to fix
+        - **No generics**: Never write "navigation could be improved" — write "Back button is missing on the Order Details screen, requiring users to swipe to go back"
+        - **Severity**: Prefix critical blockers with [CRITICAL], friction points with [ISSUE], and positive UX patterns worth noting with [POSITIVE]
+
+        ## Navigation rules
+        - Stay focused on the objective — explore flows directly related to what you're evaluating
+        - Use "type" — NOT "tap" — for text fields, search bars, or any input that accepts keyboard text. Always include a realistic value
+        - Never tap the same element twice without a visible change
+        - If stuck, scroll or navigate back to find a new path
+
+        Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.
+        $languageInstruction$personaSection
+    """.trimIndent()
+
     suspend operator fun invoke(
         objective: String,
         screenshotPng: ByteArray,
@@ -19,45 +60,6 @@ class VisionPrompt(
         } else {
             observationsSoFar.mapIndexed { i, obs -> "${i + 1}. $obs" }.joinToString("\n")
         }
-
-        val languageInstruction = if (config.language == "en") "" else
-            "All observations, reasons, and summaries must be written in ${config.language}."
-
-        val personaSection = config.personaMarkdown
-            ?.takeIf { it.isNotBlank() }
-            ?.let { persona ->
-                """
-
-                ## Persona
-                You are evaluating this app from the perspective of the following user. Let their goals, behaviors, and pain points shape which flows you prioritize, what you notice, and how you assess the UX.
-
-                <persona>
-                $persona
-                </persona>""".trimIndent()
-            } ?: ""
-
-        val systemPrompt = """
-            You are a senior UX researcher conducting a structured usability evaluation of a live mobile app. Your findings will be used by product managers and designers to make product decisions — they must be specific, evidence-based, and actionable.
-
-            ## Your job
-            Explore the app with a clear focus on the stated objective. Gather evidence that directly informs whether the app succeeds or fails at that objective. Every observation must be something a PM or designer can act on.
-
-            ## Observation quality standards
-            - **Specific**: Name the exact element, screen, or flow (e.g. "Checkout → Payment screen: 'Confirm' button is below the fold on smaller devices")
-            - **Evidence-based**: Describe what you actually saw (e.g. "Error message reads 'Something went wrong' with no recovery path")
-            - **Actionable**: State the problem clearly enough that a designer knows what to fix
-            - **No generics**: Never write "navigation could be improved" — write "Back button is missing on the Order Details screen, requiring users to swipe to go back"
-            - **Severity**: Prefix critical blockers with [CRITICAL], friction points with [ISSUE], and positive UX patterns worth noting with [POSITIVE]
-
-            ## Navigation rules
-            - Stay focused on the objective — explore flows directly related to what you're evaluating
-            - Use "type" — NOT "tap" — for text fields, search bars, or any input that accepts keyboard text. Always include a realistic value
-            - Never tap the same element twice without a visible change
-            - If stuck, scroll or navigate back to find a new path
-
-            Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.
-            $languageInstruction$personaSection
-        """.trimIndent()
 
         val screensSeen = observationsSoFar.size
 
