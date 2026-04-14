@@ -81,25 +81,39 @@ class Analyst(
         if (observations.isEmpty()) return "No observations recorded."
 
         val languageInstruction = if (config.language == "en") "" else
-            "Write your response in ${config.language}."
+            "Write your entire response in ${config.language}."
 
         val prompt = """
-            You analyzed a mobile app with the following objective: "$objective"
+            You conducted a UX evaluation of a mobile app with this objective: "$objective"
 
-            These are your observations from the session:
+            Raw observations from the session:
             ${observations.mapIndexed { i, obs -> "${i + 1}. $obs" }.joinToString("\n")}
 
-            Write a concise 2–4 sentence summary of the overall UX quality based on these observations.
-            Focus on the most important friction points and positive aspects.
+            Write a structured evaluation report for a product team (PMs, designers, QA leads). Format it exactly as follows:
+
+            **Overall verdict**: One sentence stating whether the app succeeds or fails at the objective and why.
+
+            **Critical issues** (blockers that prevent the objective from being met — list only if any exist):
+            - [item]
+
+            **Friction points** (problems that make the objective harder but not impossible):
+            - [item]
+
+            **Positive patterns** (things the app does well related to the objective — list only if any exist):
+            - [item]
+
+            **Recommendation**: One concrete next step the team should prioritize.
+
+            Be specific. Each bullet must name the screen/flow and the concrete problem or pattern. Do not generalize.
             $languageInstruction
         """.trimIndent()
 
         return aiClient.chatCompletion(
             messages = listOf(
-                ChatMessage(role = ChatMessage.ROLE_SYSTEM, content = "You are a UX analyst. Be concise and direct."),
+                ChatMessage(role = ChatMessage.ROLE_SYSTEM, content = "You are a senior UX researcher writing a structured product evaluation. Be specific, evidence-based, and actionable."),
                 ChatMessage(role = ChatMessage.ROLE_USER, content = prompt),
             ),
-            maxTokens = 300,
+            maxTokens = 800,
             temperature = 0.0,
         )
     }

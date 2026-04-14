@@ -30,7 +30,7 @@ data class Config(
 )
 
 object ConfigDefaults {
-    const val maxTokens = 200
+    const val maxTokens = 1024
     const val temperature = 0.0
     const val maxSteps = 40
 }
