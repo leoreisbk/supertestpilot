@@ -32,9 +32,9 @@ O resultado é uma ferramenta que qualquer pessoa do time consegue usar de acord
 
 Cada área do time tem uma forma de expectativa diferente sobre o produto. O TestPilot atende a todas:
 
-**Designer** — quer entender se a experiência de uso está como foi projetada. Usa o modo *análise* com um objetivo aberto:
+**Designer** — quer entender se a experiência de uso está como foi projetada. Usa o modo *análise* com um objetivo aberto — e pode incluir uma persona para ver o app pelos olhos de um usuário específico:
 > *"como é a experiência de criar uma conta pela primeira vez"*
-> A IA navega livremente e gera um relatório com capturas de tela e observações sobre cada passo.
+> A IA navega livremente e gera um relatório com capturas de tela e observações sobre cada passo. Com uma persona, as observações refletem os objetivos e as dores daquele perfil de usuário.
 
 **Product Manager** — quer validar se um fluxo específico está funcionando antes de um lançamento. Usa o modo *teste* com uma afirmação objetiva:
 > *"o usuário consegue finalizar uma compra sem precisar criar conta"*
@@ -78,6 +78,8 @@ O TestPilot tem dois modos de operação:
 A IA navega pelo app como se fosse um usuário real e, ao final, gera um relatório com capturas de tela e observações sobre a experiência de uso. Você só precisa dizer **o que quer analisar** — a IA faz o resto.
 
 **Exemplo de objetivo:** *"como é fácil encontrar a aba de treino e iniciar uma atividade"*
+
+Opcionalmente, você pode incluir uma **persona** — um arquivo `.md` descrevendo o perfil de um usuário. A IA então navega e observa o app do ponto de vista daquele usuário: seus objetivos, comportamentos típicos e possíveis dificuldades. O relatório mostra a persona usada e enquadra os achados na perspectiva dela.
 
 ### Teste determinístico (`./testpilot test`)
 
@@ -193,6 +195,41 @@ Abra o Terminal e, dentro da pasta do projeto, rode um dos comandos abaixo:
 O modo web abre um navegador visível para que você possa acompanhar a IA navegando em tempo real.
 
 Ao terminar, o relatório abre automaticamente no navegador.
+
+---
+
+## Análise com persona
+
+Uma persona é um arquivo `.md` com a descrição de um perfil de usuário — em texto livre, sem formato obrigatório. A IA lê a persona e adapta a navegação e as observações para refletir os objetivos, comportamentos e possíveis dificuldades daquele perfil.
+
+**Exemplo de arquivo de persona (`persona-joana.md`):**
+
+```markdown
+# Joana, 42 anos — Gerente de compras
+
+Usa o app uma vez por semana para aprovar pedidos do time.
+Não é usuária de tecnologia: já perdeu pedidos por não encontrar onde confirmar.
+Prioridade: rapidez. Se não consegue fazer o que precisa em menos de 3 minutos, desiste.
+Acessa sempre pelo celular, nunca pelo computador.
+```
+
+A IA vai priorizar os fluxos de aprovação, prestar atenção nos pontos onde alguém com baixa familiaridade com tecnologia poderia travar, e enquadrar o resumo final na perspectiva de Joana.
+
+**No app macOS:** no modo Analyze, clique em **Persona…** e selecione o arquivo `.md`.
+
+**No terminal:**
+
+```bash
+./testpilot analyze \
+  --platform web \
+  --url https://seu-app.com \
+  --objective "como é fácil aprovar um pedido de compra" \
+  --persona persona-joana.md
+```
+
+O relatório gerado inclui um card de persona no cabeçalho identificando sob qual perspectiva a análise foi feita. Cada observação é classificada automaticamente com **CRITICAL**, **ISSUE** ou **POSITIVE**. O resumo final é enquadrado pelas metas e dores da persona.
+
+> Personas funcionam apenas no modo `analyze` — o modo `test` é sempre objetivo e independente de perspectiva.
 
 ---
 
@@ -316,5 +353,6 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 | `--lang` | `en` | Idioma do relatório: `en` (inglês) ou `pt-BR` (português) |
 | `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |
+| `--persona` | — | Caminho para um arquivo `.md` com o perfil de persona (apenas `analyze`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |
 | `--team-id` | — | Código de desenvolvedor Apple (obrigatório ao usar `--device`) |

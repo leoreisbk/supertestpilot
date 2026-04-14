@@ -137,7 +137,7 @@ dependencies {
 | `sdk/testpilot/src/commonMain/…/analyst/Analyst.kt` | Explore loop (analyze mode) |
 | `sdk/testpilot/src/commonMain/…/analyst/TestAnalyst.kt` | Deterministic loop (test mode) |
 | `sdk/testpilot/src/commonMain/…/analyst/HtmlReportWriter.kt` | HTML report with inline screenshots |
-| `sdk/testpilot/src/commonMain/…/ai/VisionPrompt.kt` | Prompt for exploratory analysis |
+| `sdk/testpilot/src/commonMain/…/ai/VisionPrompt.kt` | Prompt for exploratory analysis (injects persona when present) |
 | `sdk/testpilot/src/commonMain/…/ai/TestVisionPrompt.kt` | Prompt for pass/fail evaluation |
 | `sdk/testpilot/src/iosMain/…/ai/CachingAIClient.kt` | FNV-1a hash cache, persists to `NSCachesDirectory` |
 | `mac-app/TestPilotApp/Services/AnalysisRunner.swift` | Parses `TESTPILOT_STEP:` / `TESTPILOT_RESULT:` in real-time |

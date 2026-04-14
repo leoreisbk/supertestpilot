@@ -12,7 +12,7 @@ Com o tempo, adicionamos também um segundo modo: o **teste determinístico**, q
 
 O TestPilot tem dois modos:
 
-**Análise de UX (`./testpilot analyze`):** a IA navega pelo app como se fosse um usuário real e gera um relatório com capturas de tela e observações sobre a experiência de uso. Você só precisa dizer **o que quer analisar** — a IA faz o resto.
+**Análise de UX (`./testpilot analyze`):** a IA navega pelo app como se fosse um usuário real e gera um relatório com capturas de tela e observações sobre a experiência de uso. Você só precisa dizer **o que quer analisar** — a IA faz o resto. Opcionalmente, inclua uma **persona** para que a análise seja feita sob a perspectiva de um perfil de usuário específico.
 
 **Exemplo:** *"como é fácil encontrar a aba de treino e iniciar uma atividade"*
 
@@ -126,6 +126,29 @@ Abra o Terminal e, dentro da pasta do projeto, rode um dos comandos abaixo:
 
 Enquanto a análise roda, você pode acompanhar a IA navegando pelo app em tempo real. Ao terminar, o relatório abre automaticamente no navegador.
 
+### Análise com persona
+
+Adicione `--persona` com o caminho de um arquivo `.md` descrevendo o perfil de um usuário. A IA vai navegar e observar o app pelo ponto de vista daquele perfil — priorizando os fluxos relevantes para ele e enquadrando os achados nas suas metas e dificuldades.
+
+```bash
+./testpilot analyze \
+  --platform web \
+  --url https://seu-app.com \
+  --objective "como é fácil aprovar um pedido de compra" \
+  --persona persona-joana.md
+```
+
+O arquivo `.md` é livre — escreva o que fizer sentido para o perfil. Exemplo:
+
+```markdown
+# Joana, 42 anos — Gerente de compras
+Usa o app uma vez por semana para aprovar pedidos.
+Não é muito familiarizada com tecnologia — já perdeu pedidos por não achar onde confirmar.
+Acessa sempre pelo celular.
+```
+
+> No app macOS, no modo Analyze, clique em **Persona…** para selecionar o arquivo.
+
 ---
 
 ## Como rodar um teste determinístico
@@ -227,5 +250,6 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 | `--lang` | `en` | Idioma do relatório: `en` (inglês) ou `pt-BR` (português) |
 | `--provider` | via `.env` | Qual IA usar: `gemini`, `anthropic` ou `openai` |
 | `--api-key` | via `.env` | Chave de acesso à IA (alternativa ao arquivo `.env`) |
+| `--persona` | — | Caminho para um arquivo `.md` com o perfil de persona (apenas `analyze`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |
 | `--team-id` | — | Código de desenvolvedor Apple (obrigatório ao usar `--device`) |
