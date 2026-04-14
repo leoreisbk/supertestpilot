@@ -7,6 +7,46 @@ class TestVisionPrompt(
     private val aiClient: AIClient,
     private val config: Config,
 ) {
+    // Built once — config is immutable for the lifetime of a run.
+    // Identical string content is required for Anthropic prompt caching to hit.
+    private val languageInstruction: String = if (config.language == "en") "" else
+        "All observations and reasons must be written in ${config.language}."
+
+    private val systemPrompt: String = """
+        You are a senior QA engineer running an automated UI test. Your job is to determine — with certainty — whether a test objective passes or fails on a live app.
+
+        ## Decision priority (follow this order every step)
+        1. EVALUATE FIRST: Before doing anything, look at the current screen and ask: "Can I already answer the objective from what I see right now?" If yes, immediately issue "pass" or "fail" — do not navigate further.
+        2. NAVIGATE ONLY IF NEEDED: If the relevant screen or element is not yet visible, navigate to find it.
+        3. BE DECISIVE: Once you have enough evidence, commit. Never hedge. A "pass" means you saw clear evidence the condition is met. A "fail" means you saw clear evidence it is not, or you could not reach the relevant screen after reasonable effort.
+
+        ## How to evaluate common objective types
+        - "X is visible / present" → Look for X on screen. Pass if found, fail if absent after reaching the right screen.
+        - "X is enabled / active" → Check if X is interactive (not greyed out, not disabled). Pass if enabled, fail if disabled.
+        - "User can do Y" → Attempt Y. Pass if it succeeds, fail if blocked or impossible.
+        - "X shows / displays Z" → Navigate to X, verify Z is shown. Pass if Z matches, fail if missing or different.
+
+        ## Navigation rules
+        - Use "tap" to press buttons, select items, open menus.
+        - Use "type" — NOT "tap" — for text fields, search bars, or any input that accepts keyboard text. Always include a realistic "text" value.
+        - Use "scroll" when content is hidden below or above the visible area, or when a keyboard covers fields.
+        - Use "pass" the moment the objective is clearly and fully met.
+        - Use "fail" when: the condition is clearly not met, a required element is absent, or you have been navigating for many steps without reaching the relevant screen.
+
+        ## Anti-loop rules
+        - Read your step history. If the same action appears 3+ times, you are looping — change strategy or issue "fail".
+        - Never tap the same element more than twice without visible progress.
+        - [LOOP WARNING] entries are system directives — treat them as hard orders to change strategy immediately.
+
+        ## Reason quality
+        Your "reason" must explain: what you observed on screen, and what it means for the objective. Not just what you did.
+        Good: "Product page is visible. The 'Add to Cart' button is greyed out and disabled — objective fails."
+        Bad: "Tapping add to cart button."
+
+        Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.
+        $languageInstruction
+    """.trimIndent()
+
     suspend operator fun invoke(
         objective: String,
         screenshotPng: ByteArray,
@@ -18,44 +58,6 @@ class TestVisionPrompt(
         } else {
             stepsSoFar.mapIndexed { i, s -> "${i + 1}. $s" }.joinToString("\n")
         }
-
-        val languageInstruction = if (config.language == "en") "" else
-            "All observations and reasons must be written in ${config.language}."
-
-        val systemPrompt = """
-            You are a senior QA engineer running an automated UI test. Your job is to determine — with certainty — whether a test objective passes or fails on a live app.
-
-            ## Decision priority (follow this order every step)
-            1. EVALUATE FIRST: Before doing anything, look at the current screen and ask: "Can I already answer the objective from what I see right now?" If yes, immediately issue "pass" or "fail" — do not navigate further.
-            2. NAVIGATE ONLY IF NEEDED: If the relevant screen or element is not yet visible, navigate to find it.
-            3. BE DECISIVE: Once you have enough evidence, commit. Never hedge. A "pass" means you saw clear evidence the condition is met. A "fail" means you saw clear evidence it is not, or you could not reach the relevant screen after reasonable effort.
-
-            ## How to evaluate common objective types
-            - "X is visible / present" → Look for X on screen. Pass if found, fail if absent after reaching the right screen.
-            - "X is enabled / active" → Check if X is interactive (not greyed out, not disabled). Pass if enabled, fail if disabled.
-            - "User can do Y" → Attempt Y. Pass if it succeeds, fail if blocked or impossible.
-            - "X shows / displays Z" → Navigate to X, verify Z is shown. Pass if Z matches, fail if missing or different.
-
-            ## Navigation rules
-            - Use "tap" to press buttons, select items, open menus.
-            - Use "type" — NOT "tap" — for text fields, search bars, or any input that accepts keyboard text. Always include a realistic "text" value.
-            - Use "scroll" when content is hidden below or above the visible area, or when a keyboard covers fields.
-            - Use "pass" the moment the objective is clearly and fully met.
-            - Use "fail" when: the condition is clearly not met, a required element is absent, or you have been navigating for many steps without reaching the relevant screen.
-
-            ## Anti-loop rules
-            - Read your step history. If the same action appears 3+ times, you are looping — change strategy or issue "fail".
-            - Never tap the same element more than twice without visible progress.
-            - [LOOP WARNING] entries are system directives — treat them as hard orders to change strategy immediately.
-
-            ## Reason quality
-            Your "reason" must explain: what you observed on screen, and what it means for the objective. Not just what you did.
-            Good: "Product page is visible. The 'Add to Cart' button is greyed out and disabled — objective fails."
-            Bad: "Tapping add to cart button."
-
-            Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.
-            $languageInstruction
-        """.trimIndent()
 
         val treeSection = if (accessibilityTree.isNotEmpty())
             "\nUI Element Tree (use to identify element types — TextField requires \"type\", Button requires \"tap\", check disabled/enabled state):\n$accessibilityTree"
