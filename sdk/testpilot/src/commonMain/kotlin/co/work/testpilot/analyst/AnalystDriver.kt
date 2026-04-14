@@ -23,4 +23,12 @@ interface AnalystDriver {
 
     /** Return a compact text representation of the UI element tree, or empty string if unavailable. */
     suspend fun accessibilityTree(): String = ""
+
+    /**
+     * Capture screenshot and accessibility tree.
+     * Default: sequential. iOS overrides with a parallel implementation that overlaps
+     * JPEG encoding (background thread) with tree capture (main thread).
+     */
+    suspend fun captureStep(): Pair<ByteArray, String> =
+        Pair(screenshotPng(), accessibilityTree())
 }
