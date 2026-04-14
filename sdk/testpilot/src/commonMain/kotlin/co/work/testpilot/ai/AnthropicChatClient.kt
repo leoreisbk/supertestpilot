@@ -45,7 +45,7 @@ class AnthropicChatClient(
                     AnthropicContentBlock.Image(
                         source = AnthropicImageSource(
                             type = "base64",
-                            mediaType = "image/png",
+                            mediaType = imageBytes.imageMimeType(),
                             data = Base64.encode(imageBytes),
                         )
                     ),
@@ -81,6 +81,9 @@ class AnthropicChatClient(
         Logging.info("=====\nCHAT RESPONSE (Anthropic):\n=====\n$responseText")
 
         val parsed = json.decodeFromString<AnthropicResponse>(responseText)
+        parsed.usage?.let { u ->
+            Logging.info("Anthropic usage — in:${u.inputTokens} out:${u.outputTokens} cache_read:${u.cacheReadTokens} cache_create:${u.cacheCreationTokens}")
+        }
         if (parsed.type == "error") {
             val msg = parsed.error?.message ?: responseText
             throw IllegalStateException("Anthropic API error: $msg")
@@ -137,10 +140,19 @@ class AnthropicChatClient(
     )
 
     @Serializable
+    private data class AnthropicUsage(
+        @SerialName("input_tokens") val inputTokens: Int = 0,
+        @SerialName("output_tokens") val outputTokens: Int = 0,
+        @SerialName("cache_read_input_tokens") val cacheReadTokens: Int = 0,
+        @SerialName("cache_creation_input_tokens") val cacheCreationTokens: Int = 0,
+    )
+
+    @Serializable
     private data class AnthropicResponse(
         val type: String = "",
         val content: List<AnthropicResponseContent> = emptyList(),
         val error: AnthropicErrorBody? = null,
+        val usage: AnthropicUsage? = null,
     )
 
     @Serializable
@@ -152,3 +164,6 @@ class AnthropicChatClient(
         val text: String = "",
     )
 }
+
+private fun ByteArray.imageMimeType(): String =
+    if (size >= 2 && this[0] == 0xFF.toByte() && this[1] == 0xD8.toByte()) "image/jpeg" else "image/png"
