@@ -233,6 +233,38 @@ else:
     print('MULTIPLE_' + ','.join(f'{bid}={name}' for bid, name in matches), end='')
 " 2>/dev/null || echo "ERROR_no_match")
     rm -f "$_APPS_JSON"
+    # Fallback: system apps not listed by devicectl
+    if [[ "$BUNDLE_ID" == "ERROR_no_match" ]]; then
+      BUNDLE_ID=$(python3 -c "
+import os
+name_lower = os.environ['TP_APP_NAME'].lower()
+system_apps = {
+  'fitness': 'com.apple.Fitness',
+  'health': 'com.apple.Health',
+  'maps': 'com.apple.Maps',
+  'settings': 'com.apple.Preferences',
+  'safari': 'com.apple.mobilesafari',
+  'messages': 'com.apple.MobileSMS',
+  'mail': 'com.apple.mobilemail',
+  'photos': 'com.apple.mobileslideshow',
+  'camera': 'com.apple.camera',
+  'calendar': 'com.apple.mobilecal',
+  'contacts': 'com.apple.MobileAddressBook',
+  'notes': 'com.apple.mobilenotes',
+  'reminders': 'com.apple.reminders',
+  'clock': 'com.apple.mobiletimer',
+  'weather': 'com.apple.weather',
+  'wallet': 'com.apple.Passbook',
+  'app store': 'com.apple.AppStore',
+  'music': 'com.apple.Music',
+  'podcasts': 'com.apple.podcasts',
+  'tv': 'com.apple.tv',
+  'files': 'com.apple.DocumentsApp',
+}
+match = next((bid for key, bid in system_apps.items() if name_lower in key or key in name_lower), None)
+print(match if match else 'ERROR_no_match', end='')
+" 2>/dev/null || echo "ERROR_no_match")
+    fi
   else
     # Simulator: parse ASCII plist from simctl listapps
     BUNDLE_ID=$(xcrun simctl listapps "$BOOTED_UDID" 2>/dev/null \
