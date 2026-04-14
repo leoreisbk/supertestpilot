@@ -45,15 +45,17 @@ class Analyst(
             val observationsSoFar = steps.mapNotNull { it.observation }
             val action = visionPrompt(objective, screenshot, observationsSoFar, stuckCount, tree)
 
-            steps.add(
-                AnalysisStep(
-                    screenshotData = screenshot,
-                    observation = action.observation,
-                    action = action.actionName,
-                    coordinates = action.coordinates,
+            if (action.observation != null) {
+                steps.add(
+                    AnalysisStep(
+                        screenshotData = screenshot,
+                        observation = action.observation,
+                        action = action.actionName,
+                        coordinates = action.coordinates,
+                    )
                 )
-            )
-            action.observation?.let { onStep?.invoke(it) }
+                onStep?.invoke(action.observation)
+            }
 
             when (action) {
                 is AnalysisAction.Done -> done = true

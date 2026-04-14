@@ -92,14 +92,14 @@ class VisionPrompt(
             - x, y: normalized coordinates 0.0–1.0 (tap/type only)
             - direction: "up" | "down" (scroll only)
             - text: string to type (type only)
-            - observation: one UX finding with [CRITICAL]/[ISSUE]/[POSITIVE] prefix — what you saw and why it matters for the objective. Null only if the screen adds nothing new.
+            - observation: one UX finding with [CRITICAL]/[ISSUE]/[POSITIVE] prefix — what you saw and why it matters for the objective. Required for every step except "done" when the final screen adds nothing new.
             - reason: where you're navigating next and why it's relevant to the objective
 
             Examples:
             {"action":"tap","x":0.5,"y":0.72,"observation":"[ISSUE] Checkout → Cart screen: 'Proceed' button label is vague — users may not understand it triggers payment","reason":"navigating to payment screen to inspect the full checkout flow"}
             {"action":"type","x":0.5,"y":0.3,"text":"john@example.com","observation":"[POSITIVE] Login screen: email field auto-focuses on load, reducing friction for returning users","reason":"filling email to proceed to the main app flow"}
             {"action":"scroll","direction":"down","observation":"[CRITICAL] Profile screen: Save button is not visible without scrolling — changes may be lost","reason":"scrolling to check if save button is reachable"}
-            {"action":"done","observation":null,"reason":"covered all main flows relevant to the objective"}
+            {"action":"done","observation":"[POSITIVE] Settings screen: all previously identified flows completed successfully","reason":"covered all main flows relevant to the objective"}
         """.trimIndent()
 
         val messages = listOf(
