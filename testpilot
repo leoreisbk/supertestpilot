@@ -164,10 +164,27 @@ if [[ "$PLATFORM" == "ios" ]]; then
   # ── Determine target: physical device or simulator ──────────────────────────
   USE_DEVICE=false
   if [[ -n "$DEVICE_UDID" ]]; then
-    USE_DEVICE=true
-    [[ -z "$TEAM_ID" ]] && { echo "Error: --team-id required when targeting a physical device (or set TESTPILOT_TEAM_ID in .env)"; exit 1; }
-    DESTINATION="platform=iOS,id=$DEVICE_UDID"
-    echo "Targeting physical device: $DEVICE_UDID"
+    # Check if the UDID belongs to a simulator
+    IS_SIM=$(xcrun simctl list devices --json 2>/dev/null | python3 -c "
+import json, sys
+devs = json.load(sys.stdin)
+for runtime, devices in devs.get('devices', {}).items():
+    for d in devices:
+        if d.get('udid') == '$DEVICE_UDID':
+            print('yes')
+            exit()
+print('no')
+" 2>/dev/null)
+    if [[ "$IS_SIM" == "yes" ]]; then
+      BOOTED_UDID="$DEVICE_UDID"
+      DESTINATION="platform=iOS Simulator,id=$DEVICE_UDID"
+      echo "Targeting simulator: $DEVICE_UDID"
+    else
+      USE_DEVICE=true
+      [[ -z "$TEAM_ID" ]] && { echo "Error: --team-id required when targeting a physical device (or set TESTPILOT_TEAM_ID in .env)"; exit 1; }
+      DESTINATION="platform=iOS,id=$DEVICE_UDID"
+      echo "Targeting physical device: $DEVICE_UDID"
+    fi
   else
     BOOTED=$(xcrun simctl list devices | grep "(Booted)" | head -1)
     [[ -z "$BOOTED" ]] && { echo "Error: No booted iOS simulator. Boot one in Xcode or with: xcrun simctl boot <UDID>"; exit 1; }
