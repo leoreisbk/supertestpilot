@@ -27,6 +27,7 @@ data class Config(
     val temperature: Double,
     val maxSteps: Int,
     val language: String = "en",
+    val personaMarkdown: String? = null,
 )
 
 object ConfigDefaults {
@@ -47,6 +48,7 @@ class ConfigBuilder {
     var temperature: Double = ConfigDefaults.temperature
     var maxSteps: Int = ConfigDefaults.maxSteps
     var language: String = "en"
+    var personaMarkdown: String? = null
 
     fun provider(provider: AIProvider): ConfigBuilder {
         this.provider = provider
@@ -102,6 +104,12 @@ class ConfigBuilder {
         return this
     }
 
+    @ObjCName("persona")
+    fun persona(markdown: String?): ConfigBuilder {
+        this.personaMarkdown = markdown
+        return this
+    }
+
     fun build(): Config = Config(
         provider = provider,
         apiKey = apiKey ?: throw ConfigurationException.ApiKeyRequired(),
@@ -113,5 +121,6 @@ class ConfigBuilder {
         temperature = temperature,
         maxSteps = maxSteps,
         language = language,
+        personaMarkdown = personaMarkdown,
     )
 }
