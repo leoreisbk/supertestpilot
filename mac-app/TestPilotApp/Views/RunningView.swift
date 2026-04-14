@@ -6,11 +6,11 @@ struct RunningView: View {
     var config: RunConfig
 
     var body: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 24) {
             // Header
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 Text(config.appName)
-                    .font(.headline)
+                    .font(.title2.weight(.semibold))
                 Text(config.objective)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -55,11 +55,11 @@ struct RunningView: View {
 
             case .completed(let path):
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 64))
+                    .font(.system(size: 80))
                     .foregroundStyle(.green)
                     .transition(.scale.combined(with: .opacity))
                 Text("Analysis complete")
-                    .font(.title3.weight(.medium))
+                    .font(.title2.weight(.semibold))
                 if !runner.analyzeSteps.isEmpty {
                     StepListView(steps: runner.analyzeSteps)
                         .layoutPriority(1)
@@ -126,23 +126,24 @@ private struct StepListView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(steps.enumerated()), id: \.offset) { _, step in
-                    HStack(alignment: .top, spacing: 6) {
+                    HStack(alignment: .top, spacing: 8) {
                         Image(systemName: step.cached ? "arrow.triangle.2.circlepath" : "circle.fill")
-                            .font(.system(size: 7))
+                            .font(.system(size: 9))
                             .foregroundStyle(.secondary)
-                            .padding(.top, 4)
+                            .padding(.top, 3)
                         Text(step.message)
-                            .font(.caption)
+                            .font(.callout)
                             .foregroundStyle(.primary)
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -153,7 +154,7 @@ private struct VerdictBannerView: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: passed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 64))
                 .foregroundStyle(passed ? .green : .red)
                 .transition(.scale.combined(with: .opacity))
             Text(passed ? "PASSED" : "FAILED")
