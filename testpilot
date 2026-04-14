@@ -42,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     --username)  USERNAME="$2";     shift 2 ;;
     --password)  PASSWORD="$2";     shift 2 ;;
     --objective) OBJECTIVE="$2";    shift 2 ;;
+    --persona)   PERSONA_FILE="$2"; shift 2 ;;
     --api-key)   API_KEY="$2";      shift 2 ;;
     --provider)  PROVIDER="$2";     shift 2 ;;
     --max-steps) MAX_STEPS="$2";    shift 2 ;;
@@ -139,6 +140,9 @@ fi
 
 [[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios, android, or web)"; exit 1; }
 [[ -z "$OBJECTIVE" ]] && { echo "Error: --objective required"; exit 1; }
+if [[ -n "$PERSONA_FILE" ]] && [[ ! -f "$PERSONA_FILE" ]]; then
+  echo "Error: persona file not found: $PERSONA_FILE"; exit 1
+fi
 [[ -z "$API_KEY" ]]   && { echo "Error: API key required (--api-key or TESTPILOT_API_KEY in .env)"; exit 1; }
 
 if [[ "$PLATFORM" == "web" ]]; then
@@ -281,6 +285,14 @@ else:
         let username: String? = env["TESTPILOT_USERNAME"].flatMap { $0.isEmpty ? nil : $0 }
         let password: String? = env["TESTPILOT_PASSWORD"].flatMap { $0.isEmpty ? nil : $0 }'
 
+  # Persona is only used in analyze mode
+  PERSONA_BLOCK='        let persona: String? = nil'
+  if [[ -n "$PERSONA_FILE" ]] && [[ "$TEST_MODE" != "true" ]]; then
+    PERSONA_BLOCK='        let personaB64 = env["TESTPILOT_PERSONA_B64"]
+        let persona: String? = personaB64.flatMap { Data(base64Encoded: $0) }
+            .flatMap { String(data: $0, encoding: .utf8) }'
+  fi
+
 if [[ "$TEST_MODE" == "true" ]]; then
   cat > "$TEST_SWIFT" <<SWIFT
 // This file is overwritten by the testpilot CLI before each run.
@@ -332,11 +344,13 @@ class AnalystTests: XCTestCase {
         xcApp = $XCAPP_INIT
         let provider: AIProvider = "$PROVIDER_ESC" == "openai" ? .openai : ("$PROVIDER_ESC" == "gemini" ? .gemini : .anthropic)
 $CREDENTIALS_BLOCK
+$PERSONA_BLOCK
         let config = ConfigBuilder()
             .provider(provider: provider)
             .apiKey(key: apiKey)
             .maxSteps(steps: $MAX_STEPS)
             .language(lang: "$LANG_ESC")
+            .persona(markdown: persona)
             .build()
         analyst = AnalystIOS(config: config)
     }
@@ -369,6 +383,10 @@ fi
   XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_API_KEY=$API_KEY")
   [[ -n "$USERNAME" ]] && XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_USERNAME=$USERNAME")
   [[ -n "$PASSWORD" ]] && XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_PASSWORD=$PASSWORD")
+  if [[ -n "$PERSONA_FILE" ]] && [[ "$TEST_MODE" != "true" ]]; then
+    PERSONA_B64=$(base64 < "$PERSONA_FILE")
+    XCODE_EXTRA_ARGS+=(-testenv "TESTPILOT_PERSONA_B64=$PERSONA_B64")
+  fi
 
   # Stream xcodebuild output in real-time: emit TESTPILOT_STEP/RESULT markers as
   # they appear so the macOS app can update its UI without waiting for completion.
