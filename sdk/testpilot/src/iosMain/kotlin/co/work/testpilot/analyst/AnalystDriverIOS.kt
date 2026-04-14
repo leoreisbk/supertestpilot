@@ -14,6 +14,7 @@ import platform.UIKit.UIImageJPEGRepresentation
 import platform.XCTest.XCUIApplication
 import platform.XCTest.XCUIElementSnapshotProtocol
 import platform.XCTest.XCUIElementSnapshotProvidingProtocol
+import platform.XCTest.XCUIElementTypeKeyboard
 import platform.XCTest.XCUIGestureVelocitySlow
 import platform.XCTest.XCUIScreen
 
@@ -57,10 +58,17 @@ class AnalystDriverIOS(private val xcApp: XCUIApplication) : AnalystDriver {
         withContext(Dispatchers.Main) {
             val vector = cValue<CGVector> { dx = x; dy = y }
             xcApp.coordinateWithNormalizedOffset(vector).tap()
-            // typeText must be called on an XCUIElement, not XCUICoordinate
-            xcApp.typeText(text)
         }
-        delay(800) // wait for keyboard and text to settle
+        delay(600)
+        withContext(Dispatchers.Main) {
+            // Wait for keyboard to appear before typing — avoids crashing when the
+            // tapped element hasn't gained focus yet (e.g. tap opened a modal first).
+            // Skip silently if no keyboard appears within 2 seconds.
+            val appeared = xcApp.descendantsMatchingType(XCUIElementTypeKeyboard)!!
+                .firstMatch.waitForExistenceWithTimeout(2.0)
+            if (appeared) xcApp.typeText(text)
+        }
+        delay(400)
     }
 
     override suspend fun accessibilityTree(): String = withContext(Dispatchers.Main) {

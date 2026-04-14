@@ -439,8 +439,10 @@ fi
 
     if [[ -z "$RESULT_LINE" ]]; then
       echo "Error: Test produced no result — the test likely failed to start."
-      if grep -qi "authentication\|unauthorized\|api key\|401" "$XCODE_LOG" 2>/dev/null; then
+      if grep -qi "Incorrect API key\|invalid_api_key\|AuthenticationError\|authentication_error\|401 Unauthorized" "$XCODE_LOG" 2>/dev/null; then
         echo "Hint: Check your API key — authentication error detected."
+      elif grep -qi "keyboard focus\|synthesize event" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: A text field interaction failed. Try running again — the AI may choose a different action."
       elif grep -qi "No booted\|device not found\|Unable to find" "$XCODE_LOG" 2>/dev/null; then
         echo "Hint: Device not found. Run: xcrun simctl list devices booted"
       elif grep -qi "does not exist\|bundle not found\|could not be launched" "$XCODE_LOG" 2>/dev/null; then
@@ -448,7 +450,7 @@ fi
       fi
       echo "Log saved to: $XCODE_LOG"
       echo "--- Key lines ---"
-      grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
+      grep -E "error:|[Ee]xception|authentication_error|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
       exit 1
     fi
 
@@ -468,8 +470,10 @@ fi
 
     if [[ -z "$REPORT_PATH" ]]; then
       echo "Error: Analysis produced no report — the run likely failed to start."
-      if grep -qi "authentication\|unauthorized\|api key\|401" "$XCODE_LOG" 2>/dev/null; then
+      if grep -qi "Incorrect API key\|invalid_api_key\|AuthenticationError\|authentication_error\|401 Unauthorized" "$XCODE_LOG" 2>/dev/null; then
         echo "Hint: Check your API key — authentication error detected."
+      elif grep -qi "keyboard focus\|synthesize event" "$XCODE_LOG" 2>/dev/null; then
+        echo "Hint: A text field interaction failed. Try running again — the AI may choose a different action."
       elif grep -qi "No booted\|device not found\|Unable to find" "$XCODE_LOG" 2>/dev/null; then
         echo "Hint: Device not found. Run: xcrun simctl list devices booted"
       elif grep -qi "does not exist\|bundle not found\|could not be launched" "$XCODE_LOG" 2>/dev/null; then
@@ -477,7 +481,7 @@ fi
       fi
       echo "Log saved to: $XCODE_LOG"
       echo "--- Key lines ---"
-      grep -E "error:|[Ee]xception|TESTPILOT|authentication|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
+      grep -E "error:|[Ee]xception|authentication_error|TEST (PASSED|FAILED)" "$XCODE_LOG" | grep -v "at [0-9]" | head -30 || true
       exit 1
     fi
 
