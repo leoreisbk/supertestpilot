@@ -80,6 +80,7 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation("com.microsoft.playwright:playwright:1.44.0")
+                implementation("org.json:json:20240303")
             }
         }
     }
