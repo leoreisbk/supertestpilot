@@ -32,23 +32,31 @@ class MobbinFetcher {
             )
             val page = context.newPage()
 
-            // Navigate and wait for screens to load
-            page.navigate(flowUrl)
-            page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE)
+            // Navigate — use DOMCONTENTLOADED; Mobbin has persistent WS connections
+            // that prevent NETWORKIDLE from ever firing.
+            page.navigate(flowUrl, Page.NavigateOptions().setTimeout(60_000.0))
+            page.waitForLoadState(
+                com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED,
+                Page.WaitForLoadStateOptions().setTimeout(60_000.0)
+            )
+
+            // Give React time to render the screen grid
+            page.waitForTimeout(3000.0)
 
             // Scroll to trigger lazy-loaded images
             scrollToBottom(page)
 
             // Find all screen image elements — Mobbin renders screens as <img> inside cards
             val screenshots = mutableListOf<ByteArray>()
-            val imgHandles = page.querySelectorAll("img[src*='storage'], img[src*='supabase'], img[src*='mobbin']")
+            val imgHandles = page.querySelectorAll("img[src*='storage'], img[src*='supabase'], img[src*='mobbin'], img[src*='cloudfront']")
 
             if (imgHandles.isEmpty()) {
                 // Fallback: screenshot each visible card element
-                val cards = page.querySelectorAll("[data-testid='screen-card'], [class*='screen'], [class*='flow-card']")
+                val cards = page.querySelectorAll("[data-testid='screen-card'], [class*='ScreenCard'], [class*='screen-card'], [class*='flow-card']")
                 for (card in cards) {
                     runCatching {
                         card.scrollIntoViewIfNeeded()
+                        page.waitForTimeout(200.0)
                         screenshots.add(card.screenshot())
                     }
                 }
@@ -56,15 +64,14 @@ class MobbinFetcher {
                 for (img in imgHandles) {
                     runCatching {
                         img.scrollIntoViewIfNeeded()
-                        // Wait for the image to actually load
-                        page.waitForFunction("el => el.complete && el.naturalWidth > 0", img)
+                        page.waitForTimeout(200.0)
                         screenshots.add(img.screenshot())
                     }
                 }
             }
 
             if (screenshots.isEmpty()) {
-                // Last resort: full-page screenshot split into sections
+                // Last resort: full-page screenshot
                 scrollToTop(page)
                 val fullPage = page.screenshot(Page.ScreenshotOptions().setFullPage(true))
                 screenshots.add(fullPage)
