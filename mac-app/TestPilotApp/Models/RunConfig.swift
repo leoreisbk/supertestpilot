@@ -31,8 +31,21 @@ enum Language: String, CaseIterable, Identifiable {
 enum RunMode: String, Codable, CaseIterable, Identifiable {
     case analyze
     case test
+    case research
     var id: String { rawValue }
-    var displayName: String { self == .analyze ? "Analyze" : "Test" }
+    var displayName: String {
+        switch self {
+        case .analyze:  return "Analyze"
+        case .test:     return "Test"
+        case .research: return "Research"
+        }
+    }
+}
+
+enum MobbinSource: String, CaseIterable, Identifiable {
+    case flowUrl = "Flow URL"
+    case search  = "Search"
+    var id: String { rawValue }
 }
 
 @Observable
@@ -50,6 +63,10 @@ final class RunConfig {
     // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
     var personaPath: String = ""
+    var mobbinSource: MobbinSource = .flowUrl
+    var mobbinFlowUrl: String = ""
+    var mobbinAppName: String = ""
+    var mobbinFlowName: String = ""
 
     /// Returns the persona markdown content, or nil if no persona is set.
     var personaContent: String? {
@@ -61,14 +78,29 @@ final class RunConfig {
     var mode: RunMode = .analyze
 
     var isValid: Bool {
-        let objectiveRequired = mode == .test || personaPath.isEmpty
-        if objectiveRequired && objective.trimmingCharacters(in: .whitespaces).isEmpty { return false }
-        if platform == .web {
-            let trimmed = url.trimmingCharacters(in: .whitespaces).lowercased()
-            return trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://")
+        switch mode {
+        case .analyze, .test:
+            let objectiveRequired = mode == .test || personaPath.isEmpty
+            if objectiveRequired && objective.trimmingCharacters(in: .whitespaces).isEmpty { return false }
+            if platform == .web {
+                let trimmed = url.trimmingCharacters(in: .whitespaces).lowercased()
+                return trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://")
+            }
+            return selectedDevice != nil
+                && (!appName.trimmingCharacters(in: .whitespaces).isEmpty
+                    || !bundleId.trimmingCharacters(in: .whitespaces).isEmpty)
+
+        case .research:
+            let sessionPath = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".testpilot/sessions/mobbin.com.json").path
+            guard FileManager.default.fileExists(atPath: sessionPath) else { return false }
+            switch mobbinSource {
+            case .flowUrl:
+                return !mobbinFlowUrl.trimmingCharacters(in: .whitespaces).isEmpty
+            case .search:
+                return !mobbinAppName.trimmingCharacters(in: .whitespaces).isEmpty
+                    && !mobbinFlowName.trimmingCharacters(in: .whitespaces).isEmpty
+            }
         }
-        return selectedDevice != nil
-            && (!appName.trimmingCharacters(in: .whitespaces).isEmpty
-                || !bundleId.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 }

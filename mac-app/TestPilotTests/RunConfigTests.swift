@@ -38,6 +38,42 @@ final class RunConfigTests: XCTestCase {
         XCTAssertFalse(config.isValid, "whitespace-only url should be invalid")
     }
 
+    // MARK: - Research mode isValid
+
+    func testResearchIsInvalidWithoutSession() {
+        let config = RunConfig()
+        config.mode = .research
+        config.mobbinFlowUrl = "https://mobbin.com/flows/abc-123"
+        // No session file exists in test environment
+        XCTAssertFalse(config.isValid)
+    }
+
+    func testResearchFlowUrlIsInvalidWhenEmpty() {
+        let config = RunConfig()
+        config.mode = .research
+        config.mobbinSource = .flowUrl
+        config.mobbinFlowUrl = ""
+        XCTAssertFalse(config.isValid)
+    }
+
+    func testResearchSearchIsInvalidWhenAppNameMissing() {
+        let config = RunConfig()
+        config.mode = .research
+        config.mobbinSource = .search
+        config.mobbinAppName = ""
+        config.mobbinFlowName = "Onboarding"
+        XCTAssertFalse(config.isValid)
+    }
+
+    func testResearchSearchIsInvalidWhenFlowNameMissing() {
+        let config = RunConfig()
+        config.mode = .research
+        config.mobbinSource = .search
+        config.mobbinAppName = "Nike Run Club"
+        config.mobbinFlowName = ""
+        XCTAssertFalse(config.isValid)
+    }
+
     func testRunRecordDecodesLegacyJSON() throws {
         // Old records have no "mode" or "testOutcome" fields.
         let json = """
