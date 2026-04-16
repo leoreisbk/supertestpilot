@@ -40,6 +40,7 @@ final class RunConfig {
     var platform: Platform = .ios
     var selectedDevice: DeviceInfo? = nil
     var appName: String = ""
+    var bundleId: String = ""
     var url: String = ""
     var username: String = ""
     var password: String = ""
@@ -67,6 +68,7 @@ final class RunConfig {
             return trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://")
         }
         return selectedDevice != nil
-            && !appName.trimmingCharacters(in: .whitespaces).isEmpty
+            && (!appName.trimmingCharacters(in: .whitespaces).isEmpty
+                || !bundleId.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 }

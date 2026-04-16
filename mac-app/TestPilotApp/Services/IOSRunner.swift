@@ -40,8 +40,12 @@ struct IOSRunner {
     }
 
     /// Resolves the bundle ID for config.appName on config.selectedDevice.
+    /// If config.bundleId is set, it is used directly without any device lookup.
     @MainActor
     func resolveBundleId() async throws -> String {
+        let explicit = config.bundleId.trimmingCharacters(in: .whitespaces)
+        if !explicit.isEmpty { return explicit }
+
         guard let device = config.selectedDevice else {
             throw IOSRunnerError.bundleIdNotFound(config.appName)
         }

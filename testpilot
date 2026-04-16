@@ -14,13 +14,15 @@ OUTPUT="./report.html"
 LANG_CODE="en"
 DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omitted)
 TEAM_ID=""       # Apple Developer Team ID (required for physical device)
+BUNDLE_ID_OVERRIDE=""  # skip app-name lookup and use this bundle ID directly
 PERSONA_FILE=""
 
 COMMAND="${1:-}"
 if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-login" ]]; then
   echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
   echo "       ./testpilot test    --platform ios|android --app <name> --objective <text>"
-  echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--provider anthropic|openai|gemini]"
+  echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--bundle-id <BUNDLE_ID>]"
+  echo "       [--provider anthropic|openai|gemini]"
   echo "       [--api-key <key>] [--max-steps <n>] [--output <path>] [--lang en|pt-BR]"
   echo ""
   echo "       ./testpilot analyze --platform web --url <URL> --objective <text>"
@@ -49,8 +51,9 @@ while [[ $# -gt 0 ]]; do
     --max-steps) MAX_STEPS="$2";    shift 2 ;;
     --output)    OUTPUT="$2";       shift 2 ;;
     --lang)      LANG_CODE="$2";    shift 2 ;;
-    --device)    DEVICE_UDID="$2";  shift 2 ;;
-    --team-id)   TEAM_ID="$2";      shift 2 ;;
+    --device)    DEVICE_UDID="$2";         shift 2 ;;
+    --team-id)   TEAM_ID="$2";            shift 2 ;;
+    --bundle-id) BUNDLE_ID_OVERRIDE="$2"; shift 2 ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
 done
@@ -156,7 +159,7 @@ fi
 if [[ "$PLATFORM" == "web" ]]; then
   [[ -z "$URL" ]] && { echo "Error: --url required for --platform web"; exit 1; }
 else
-  [[ -z "$APP_NAME" ]] && { echo "Error: --app required for --platform $PLATFORM"; exit 1; }
+  [[ -z "$APP_NAME" && -z "$BUNDLE_ID_OVERRIDE" ]] && { echo "Error: --app or --bundle-id required for --platform $PLATFORM"; exit 1; }
 fi
 
 if [[ "$PLATFORM" == "ios" ]]; then
@@ -204,6 +207,10 @@ for runtime, devices in devs.get('devices', {}).items():
   fi
 
   # ── Resolve bundle ID ────────────────────────────────────────────────────────
+  if [[ -n "$BUNDLE_ID_OVERRIDE" ]]; then
+    BUNDLE_ID="$BUNDLE_ID_OVERRIDE"
+    echo "Using bundle ID: $BUNDLE_ID"
+  else
   echo "Resolving bundle ID for \"$APP_NAME\"..."
   export TP_APP_NAME="$APP_NAME"
 
@@ -303,7 +310,9 @@ else:
     select choice in "${CHOICES[@]}"; do BUNDLE_ID="${choice%%=*}"; break; done
   fi
 
-  echo "Found: $BUNDLE_ID"
+  fi  # end of bundle ID resolution (skipped when --bundle-id is provided)
+
+  echo "Using: $BUNDLE_ID"
 
   # ── Ensure artifacts present ─────────────────────────────────────────────────
   _ensure_artifact ios

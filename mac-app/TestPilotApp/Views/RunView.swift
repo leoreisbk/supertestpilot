@@ -53,6 +53,9 @@ struct RunView: View {
                     }
 
                     TextField("App name", text: $config.appName)
+                    TextField("Bundle ID (optional override)", text: $config.bundleId)
+                        .foregroundStyle(config.bundleId.isEmpty ? .primary : .secondary)
+                        .help("If the app can't be found by name, enter its bundle ID directly (e.g. com.pgatour.PGATOUR)")
                 } else {
                     TextField("URL", text: $config.url)
                         .textContentType(.URL)
