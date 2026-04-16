@@ -126,6 +126,31 @@ struct IOSRunner {
 
     // MARK: - Bundle ID resolution
 
+    /// Apple system apps not listed by devicectl — keyed by lowercase display name.
+    private static let systemAppBundleIDs: [String: String] = [
+        "fitness":   "com.apple.Fitness",
+        "health":    "com.apple.Health",
+        "maps":      "com.apple.Maps",
+        "settings":  "com.apple.Preferences",
+        "safari":    "com.apple.mobilesafari",
+        "messages":  "com.apple.MobileSMS",
+        "mail":      "com.apple.mobilemail",
+        "photos":    "com.apple.mobileslideshow",
+        "camera":    "com.apple.camera",
+        "calendar":  "com.apple.mobilecal",
+        "contacts":  "com.apple.MobileAddressBook",
+        "notes":     "com.apple.mobilenotes",
+        "reminders": "com.apple.reminders",
+        "clock":     "com.apple.mobiletimer",
+        "weather":   "com.apple.weather",
+        "wallet":    "com.apple.Passbook",
+        "app store": "com.apple.AppStore",
+        "music":     "com.apple.Music",
+        "podcasts":  "com.apple.podcasts",
+        "tv":        "com.apple.tv",
+        "files":     "com.apple.DocumentsApp",
+    ]
+
     private func listAppsOnSimulator(udid: String) async throws -> String {
         try await runProcess(
             "/usr/bin/xcrun",
@@ -177,6 +202,12 @@ struct IOSRunner {
                     matches.append(bid)
                 }
             }
+        }
+
+        // Fallback: system/Apple apps not listed by devicectl
+        if matches.isEmpty,
+           let bid = IOSRunner.systemAppBundleIDs.first(where: { nameLower.contains($0.key) || $0.key.contains(nameLower) })?.value {
+            return bid
         }
 
         switch matches.count {
