@@ -108,7 +108,9 @@ struct RunningView: View {
                 EmptyView()
 
             case .webLoginPending:
-                NeuralOrbView(platform: config.platform)
+                Image(systemName: "globe")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.secondary)
                 Text("Browser open — log in and tap Save Session")
                     .font(.caption)
                     .foregroundStyle(.secondary)
