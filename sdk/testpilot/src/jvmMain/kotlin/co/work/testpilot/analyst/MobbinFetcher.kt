@@ -126,11 +126,19 @@ class MobbinFetcher(private val httpClient: HttpClient) {
     }
 }
 
-/** Extracts the UUID flow ID from a Mobbin flow URL. */
+/** Extracts the UUID flow ID from a Mobbin flow URL.
+ *
+ * Handles:
+ *   https://mobbin.com/flows/<uuid>
+ *   https://mobbin.com/explore/flows/<uuid>
+ *   https://mobbin.com/apps/<app-slug>-<app-uuid>/<flow-uuid>/flows  ← app URL format
+ */
 fun extractFlowId(url: String): String {
-    // Handles: https://mobbin.com/flows/<uuid>
-    //      and https://mobbin.com/explore/flows/<uuid>
-    val regex = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-    return regex.find(url)?.value
+    val uuidRegex = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+    // For /apps/<slug>/<flow-id>/flows URLs the flow ID is the path segment before /flows
+    val appUrlMatch = Regex("/apps/[^/]+/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/flows").find(url)
+    if (appUrlMatch != null) return appUrlMatch.groupValues[1]
+    // Fallback: first UUID in path (covers /flows/<uuid> and /explore/flows/<uuid>)
+    return uuidRegex.find(url)?.value
         ?: error("Could not extract flow ID from URL: $url — expected a UUID in the path")
 }
