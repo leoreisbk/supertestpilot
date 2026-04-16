@@ -114,6 +114,8 @@ struct RunningView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 360)
+                Button("Save Session") { runner.saveSession() }
+                    .buttonStyle(.borderedProminent)
                 Button("Cancel") { runner.cancel() }
                     .buttonStyle(.bordered)
             }
