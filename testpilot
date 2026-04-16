@@ -16,9 +16,11 @@ DEVICE_UDID=""   # physical device UDID (optional; uses booted simulator if omit
 TEAM_ID=""       # Apple Developer Team ID (required for physical device)
 BUNDLE_ID_OVERRIDE=""  # skip app-name lookup and use this bundle ID directly
 PERSONA_FILE=""
+MOBBIN_FLOW_URL=""
+MOBBIN_FLOW_NAME=""
 
 COMMAND="${1:-}"
-if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-login" ]]; then
+if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-login" && "$COMMAND" != "mobbin-login" && "$COMMAND" != "research" ]]; then
   echo "Usage: ./testpilot analyze --platform ios|android --app <name> --objective <text>"
   echo "       ./testpilot test    --platform ios|android --app <name> --objective <text>"
   echo "       [--device <UDID>] [--team-id <TEAM_ID>] [--bundle-id <BUNDLE_ID>]"
@@ -31,6 +33,13 @@ if [[ "$COMMAND" != "analyze" && "$COMMAND" != "test" && "$COMMAND" != "web-logi
   echo "       [--provider anthropic|openai|gemini] [--api-key <key>] [--max-steps <n>] [--lang en|pt-BR]"
   echo ""
   echo "       ./testpilot web-login --url <URL>"
+  echo ""
+  echo "       ./testpilot research --flow <mobbin-flow-url> --objective <text>"
+  echo "       ./testpilot research --app <app-name> --flow-name <flow-name> [--objective <text>]"
+  echo "       [--persona <file>] [--provider anthropic|openai|gemini] [--api-key <key>]"
+  echo "       [--max-steps <n>] [--output <path>] [--lang en|pt-BR]"
+  echo ""
+  echo "       ./testpilot mobbin-login"
   exit 1
 fi
 TEST_MODE=false
@@ -53,7 +62,9 @@ while [[ $# -gt 0 ]]; do
     --lang)      LANG_CODE="$2";    shift 2 ;;
     --device)    DEVICE_UDID="$2";         shift 2 ;;
     --team-id)   TEAM_ID="$2";            shift 2 ;;
-    --bundle-id) BUNDLE_ID_OVERRIDE="$2"; shift 2 ;;
+    --bundle-id)  BUNDLE_ID_OVERRIDE="$2"; shift 2 ;;
+    --flow)       MOBBIN_FLOW_URL="$2";    shift 2 ;;
+    --flow-name)  MOBBIN_FLOW_NAME="$2";   shift 2 ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
 done
@@ -140,6 +151,81 @@ if [[ "$COMMAND" == "web-login" ]]; then
     "$JAVA_BIN" -jar "$WEB_JAR"
   )
   exit $?
+fi
+
+# ── mobbin-login: establish Mobbin browser session ───────────────────────────
+if [[ "$COMMAND" == "mobbin-login" ]]; then
+  _ensure_artifact web
+  JAVA_BIN="$TESTPILOT_CACHE/web/jre/bin/java"
+  WEB_JAR="$TESTPILOT_CACHE/web/testpilot-web.jar"
+
+  (
+    export TESTPILOT_MODE="mobbin-login"
+    export TESTPILOT_API_KEY="${API_KEY:-dummy}"
+    "$JAVA_BIN" -jar "$WEB_JAR"
+  )
+  exit $?
+fi
+
+# ── research: competitive UX analysis from Mobbin flow ───────────────────────
+if [[ "$COMMAND" == "research" ]]; then
+  MOBBIN_SESSION="$HOME/.testpilot/sessions/mobbin.com.json"
+  if [[ ! -f "$MOBBIN_SESSION" ]]; then
+    echo "Error: Mobbin session not found — run: testpilot mobbin-login"
+    exit 1
+  fi
+
+  if [[ -z "$MOBBIN_FLOW_URL" && ( -z "$APP_NAME" || -z "$MOBBIN_FLOW_NAME" ) ]]; then
+    echo "Error: --flow <url> OR both --app <name> and --flow-name <name> are required for research"
+    exit 1
+  fi
+
+  [[ -z "$API_KEY" ]] && { echo "Error: API key required (--api-key or TESTPILOT_API_KEY in .env)"; exit 1; }
+
+  _ensure_artifact web
+  JAVA_BIN="$TESTPILOT_CACHE/web/jre/bin/java"
+  WEB_JAR="$TESTPILOT_CACHE/web/testpilot-web.jar"
+
+  PERSONA_CONTENT=""
+  if [[ -n "$PERSONA_FILE" ]]; then
+    [[ ! -f "$PERSONA_FILE" ]] && { echo "Error: persona file not found: $PERSONA_FILE"; exit 1; }
+    PERSONA_CONTENT="$(cat "$PERSONA_FILE")"
+  fi
+
+  RESEARCH_LOG=$(mktemp)
+  RESEARCH_EXIT_FILE=$(mktemp)
+  trap 'rm -f "$RESEARCH_LOG" "$RESEARCH_EXIT_FILE"' EXIT
+
+  (
+    export TESTPILOT_MODE="research"
+    export TESTPILOT_API_KEY="$API_KEY"
+    export TESTPILOT_PROVIDER="${PROVIDER:-anthropic}"
+    export TESTPILOT_MAX_STEPS="$MAX_STEPS"
+    export TESTPILOT_LANG="$LANG_CODE"
+    export TESTPILOT_OUTPUT="$OUTPUT"
+    export TESTPILOT_OBJECTIVE="$OBJECTIVE"
+    export TESTPILOT_PERSONA="$PERSONA_CONTENT"
+    export TESTPILOT_MOBBIN_FLOW_URL="$MOBBIN_FLOW_URL"
+    export TESTPILOT_MOBBIN_APP="$APP_NAME"
+    export TESTPILOT_MOBBIN_FLOW_NAME="$MOBBIN_FLOW_NAME"
+    "$JAVA_BIN" -jar "$WEB_JAR" 2>&1
+    echo $? >"$RESEARCH_EXIT_FILE"
+  ) | tee "$RESEARCH_LOG"
+
+  RUNNER_EXIT=$(cat "$RESEARCH_EXIT_FILE" 2>/dev/null || echo "1")
+  if [[ "$RUNNER_EXIT" != "0" ]]; then
+    echo "Error: Research runner failed (exit $RUNNER_EXIT)."
+    rm -f "$RESEARCH_LOG"
+    exit 1
+  fi
+
+  REPORT_PATH=$(grep "^TESTPILOT_REPORT_PATH=" "$RESEARCH_LOG" | tail -1 | cut -d= -f2-)
+  rm -f "$RESEARCH_LOG"
+
+  if [[ -n "$REPORT_PATH" && -f "$REPORT_PATH" ]]; then
+    echo "Research report saved to: $REPORT_PATH"
+  fi
+  exit 0
 fi
 
 [[ -z "$PLATFORM" ]]  && { echo "Error: --platform required (ios, android, or web)"; exit 1; }
