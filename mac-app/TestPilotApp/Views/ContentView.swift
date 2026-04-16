@@ -85,7 +85,7 @@ struct ContentView: View {
         switch selection {
         case .newRun, .none:
             switch runner.state {
-            case .idle:
+            case .idle, .webLoginPending:
                 RunView(config: config, detector: detector,
                         settings: settings, runner: runner)
             default:

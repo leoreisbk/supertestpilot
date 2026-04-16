@@ -108,18 +108,7 @@ struct RunningView: View {
                 EmptyView()
 
             case .webLoginPending:
-                Image(systemName: "globe")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.secondary)
-                Text("Browser open — log in and tap Save Session")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 360)
-                Button("Save Session") { runner.saveSession() }
-                    .buttonStyle(.borderedProminent)
-                Button("Cancel") { runner.cancel() }
-                    .buttonStyle(.bordered)
+                EmptyView()
             }
         }
         .padding()
