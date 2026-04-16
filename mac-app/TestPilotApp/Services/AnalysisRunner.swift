@@ -45,6 +45,18 @@ final class AnalysisRunner {
         analyzeSteps = []
         state = config.mode == .test ? .testRunning(steps: []) : .running(statusLine: "Starting…")
 
+        if config.mode == .research {
+            Task {
+                do {
+                    let proc = try ResearchRunner(config: config, settings: settings).makeProcess()
+                    await MainActor.run { self.startProcess(proc, outputPath: outputPath) }
+                } catch {
+                    await MainActor.run { state = .failed(error: error.localizedDescription) }
+                }
+            }
+            return
+        }
+
         Task {
             do {
                 let proc: Process
@@ -67,6 +79,19 @@ final class AnalysisRunner {
                     return
                 }
                 await MainActor.run { self.startProcess(proc, outputPath: outputPath) }
+            } catch {
+                await MainActor.run { state = .failed(error: error.localizedDescription) }
+            }
+        }
+    }
+
+    func mobbinLogin(config: RunConfig, settings: SettingsStore) {
+        guard case .idle = state else { return }
+
+        Task {
+            do {
+                let proc = try ResearchRunner(config: config, settings: settings).makeMobbinLoginProcess()
+                await MainActor.run { self.startWebLoginProcess(proc) }
             } catch {
                 await MainActor.run { state = .failed(error: error.localizedDescription) }
             }
