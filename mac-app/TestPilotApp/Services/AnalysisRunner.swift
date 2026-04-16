@@ -27,6 +27,8 @@ final class AnalysisRunner {
     private var process: Process?
     private var lastStdoutLine: String = ""
     private var lastReportPath: String = ""
+    private var isCapturingReport = false
+    private var reportLines: [String] = []
 
     func run(config: RunConfig, settings: SettingsStore) {
         guard case .idle = state else { return }
@@ -73,6 +75,8 @@ final class AnalysisRunner {
         process?.terminate()
         process = nil
         analyzeSteps = []
+        isCapturingReport = false
+        reportLines = []
         state = .idle
     }
 
@@ -80,6 +84,8 @@ final class AnalysisRunner {
         process?.terminate()
         process = nil
         analyzeSteps = []
+        isCapturingReport = false
+        reportLines = []
         state = .idle
     }
 
@@ -117,57 +123,23 @@ final class AnalysisRunner {
             let data = handle.availableData
             guard !data.isEmpty,
                   let text = String(data: data, encoding: .utf8) else { return }
-
-            for rawLine in text.components(separatedBy: .newlines) {
-                let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !line.isEmpty else { continue }
-
-                DispatchQueue.main.async {
-                    guard let self else { return }
-                    self.lastStdoutLine = line
-
-                    // Use range(of:) — xcodebuild embeds markers mid-line
-                    if let r = line.range(of: "TESTPILOT_STEP: ") {
-                        let msg = String(line[r.upperBound...])
-                        let cached = msg.hasPrefix("(cached)")
-                        let raw   = cached ? String(msg.dropFirst("(cached) ".count)) : msg
-                        let clean = self.beautify(raw)
-                        let step = TestStep(message: clean, cached: cached)
-                        withAnimation(.easeInOut(duration: 0.4)) {
-                            switch self.state {
-                            case .testRunning(let steps):
-                                self.state = .testRunning(steps: steps + [step])
-                            case .running:
-                                self.analyzeSteps.append(step)
-                                self.state = .running(statusLine: clean)
-                            default: break
-                            }
-                        }
-                    } else if let r = line.range(of: "TESTPILOT_RESULT: ") {
-                        let payload = String(line[r.upperBound...])
-                        let steps: [TestStep]
-                        if case .testRunning(let s) = self.state { steps = s } else { steps = [] }
-                        if payload.hasPrefix("PASS ") {
-                            self.state = .testPassed(reason: String(payload.dropFirst("PASS ".count)), steps: steps)
-                        } else if payload.hasPrefix("FAIL ") {
-                            self.state = .testFailed(reason: String(payload.dropFirst("FAIL ".count)), steps: steps)
-                        }
-                    } else if let r = line.range(of: "TESTPILOT_REPORT_PATH=") {
-                        self.lastReportPath = String(line[r.upperBound...])
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                    } else {
-                        // Raw xcodebuild output — do not update the displayed ticker message
-                    }
-                }
+            DispatchQueue.main.async {
+                self?.processStdoutChunk(text, outputPath: outputPath)
             }
         }
 
         p.terminationHandler = { [weak self] proc in
+            // Drain any remaining stdout before nil-ing the handler so the last
+            // lines (including TESTPILOT_REPORT_PATH=) are not lost.
+            let remaining = stdout.fileHandleForReading.readDataToEndOfFile()
             stdout.fileHandleForReading.readabilityHandler = nil
             let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
             let lastStderr = String(data: stderrData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             DispatchQueue.main.async {
+                if let text = String(data: remaining, encoding: .utf8), !text.isEmpty {
+                    self?.processStdoutChunk(text, outputPath: outputPath)
+                }
                 guard let self else { return }
                 switch self.state {
                 case .running:
@@ -196,6 +168,72 @@ final class AnalysisRunner {
         process = p
         do { try p.run() } catch {
             state = .failed(error: error.localizedDescription)
+        }
+    }
+
+    /// Processes a chunk of raw xcodebuild stdout. Must be called on the main actor.
+    /// Handles inline HTML capture (REPORT_START/END) and all TESTPILOT_ markers.
+    private func processStdoutChunk(_ text: String, outputPath: String) {
+        for rawLine in text.components(separatedBy: .newlines) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // ── Inline HTML capture (physical device: report lives on-device, not Mac) ──
+            if line.contains("TESTPILOT_REPORT_START") {
+                isCapturingReport = true
+                reportLines = []
+                continue
+            }
+            if line.contains("TESTPILOT_REPORT_END") {
+                isCapturingReport = false
+                let html = reportLines.joined(separator: "\n")
+                if !html.isEmpty, let data = html.data(using: .utf8) {
+                    try? data.write(to: URL(fileURLWithPath: outputPath))
+                    lastReportPath = outputPath
+                }
+                reportLines = []
+                continue
+            }
+            if isCapturingReport {
+                reportLines.append(rawLine)
+                continue
+            }
+
+            guard !line.isEmpty else { continue }
+            lastStdoutLine = line
+
+            // ── TESTPILOT markers ──
+            if let r = line.range(of: "TESTPILOT_STEP: ") {
+                let msg = String(line[r.upperBound...])
+                let cached = msg.hasPrefix("(cached)")
+                let raw    = cached ? String(msg.dropFirst("(cached) ".count)) : msg
+                let clean  = beautify(raw)
+                let step   = TestStep(message: clean, cached: cached)
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    switch state {
+                    case .testRunning(let steps): state = .testRunning(steps: steps + [step])
+                    case .running:
+                        analyzeSteps.append(step)
+                        state = .running(statusLine: clean)
+                    default: break
+                    }
+                }
+            } else if let r = line.range(of: "TESTPILOT_RESULT: ") {
+                let payload = String(line[r.upperBound...])
+                let steps: [TestStep]
+                if case .testRunning(let s) = state { steps = s } else { steps = [] }
+                if payload.hasPrefix("PASS ") {
+                    state = .testPassed(reason: String(payload.dropFirst("PASS ".count)), steps: steps)
+                } else if payload.hasPrefix("FAIL ") {
+                    state = .testFailed(reason: String(payload.dropFirst("FAIL ".count)), steps: steps)
+                }
+            } else if let r = line.range(of: "TESTPILOT_REPORT_PATH=") {
+                // Only use this path if we haven't already written the report locally
+                // (i.e., the inline capture didn't run, which means it's a simulator).
+                let emittedPath = String(line[r.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if lastReportPath.isEmpty {
+                    lastReportPath = emittedPath
+                }
+            }
         }
     }
 
