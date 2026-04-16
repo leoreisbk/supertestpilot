@@ -8,6 +8,7 @@ object HtmlReportWriter {
     private data class Labels(
         val htmlLang: String,
         val title: String,
+        val researchTitle: String,
         val summary: String,
         val stepByStep: String,
         val step: String,
@@ -17,28 +18,31 @@ object HtmlReportWriter {
 
     private fun labelsFor(language: String): Labels = when (language) {
         "pt-BR", "pt" -> Labels(
-            htmlLang    = "pt-BR",
-            title       = "Relatório de Análise TestPilot",
-            summary     = "Resumo",
-            stepByStep  = "Passo a passo",
-            step        = "Passo",
-            steps       = "passos",
-            evaluatedAs = "Avaliado como",
+            htmlLang      = "pt-BR",
+            title         = "Relatório de Análise TestPilot",
+            researchTitle = "Relatório de Pesquisa TestPilot",
+            summary       = "Resumo",
+            stepByStep    = "Passo a passo",
+            step          = "Passo",
+            steps         = "passos",
+            evaluatedAs   = "Avaliado como",
         )
         else -> Labels(
-            htmlLang    = "en",
-            title       = "TestPilot Analysis Report",
-            summary     = "Summary",
-            stepByStep  = "Step-by-step",
-            step        = "Step",
-            steps       = "steps",
-            evaluatedAs = "Evaluated as",
+            htmlLang      = "en",
+            title         = "TestPilot Analysis Report",
+            researchTitle = "TestPilot Research Report",
+            summary       = "Summary",
+            stepByStep    = "Step-by-step",
+            step          = "Step",
+            steps         = "steps",
+            evaluatedAs   = "Evaluated as",
         )
     }
 
     @OptIn(ExperimentalEncodingApi::class)
     fun generate(report: AnalysisReport, language: String = "en"): String {
         val lbl = labelsFor(language)
+        val reportTitle = if (report.source == "mobbin") lbl.researchTitle else lbl.title
         val stepsHtml = report.steps.mapIndexed { index, step ->
             val base64 = Base64.encode(step.screenshotData)
             val obsContent = step.observation
@@ -99,7 +103,7 @@ object HtmlReportWriter {
         <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${lbl.title}</title>
+        <title>$reportTitle</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -146,7 +150,10 @@ object HtmlReportWriter {
                    padding: 1px 6px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
           .badge-critical { background: #ff3b30; color: #fff; }
           .badge-issue    { background: #ff9500; color: #fff; }
-          .badge-positive { background: #34c759; color: #fff; }
+          .badge-positive  { background: #34c759; color: #fff; }
+          .badge-advantage { background: #34c759; color: #fff; }
+          .badge-weakness  { background: #ff3b30; color: #fff; }
+          .badge-pattern   { background: #007aff; color: #fff; }
           @media (max-width: 600px) {
             .step-body { flex-direction: column; }
             .step-img-col { flex: none; width: 100%; }
@@ -172,7 +179,7 @@ object HtmlReportWriter {
         </head>
         <body>
         <div class="header">
-          <h1>${lbl.title}</h1>
+          <h1>$reportTitle</h1>
           <div class="objective">${report.objective.htmlEscape()}</div>
           <div class="meta">${report.stepCount} ${lbl.steps} &middot; $durationText</div>
           $personaCardHtml
@@ -190,7 +197,7 @@ object HtmlReportWriter {
         """.trimIndent()
     }
 
-    // Parses [CRITICAL]/[ISSUE]/[POSITIVE] prefix into a colored badge.
+    // Parses severity/research prefix into a colored badge.
     private fun renderObservation(obs: String): String {
         val (badge, text) = when {
             obs.startsWith("[CRITICAL]") ->
@@ -199,6 +206,12 @@ object HtmlReportWriter {
                 """<span class="badge badge-issue">ISSUE</span>""" to obs.removePrefix("[ISSUE]").trim()
             obs.startsWith("[POSITIVE]") ->
                 """<span class="badge badge-positive">POSITIVE</span>""" to obs.removePrefix("[POSITIVE]").trim()
+            obs.startsWith("[ADVANTAGE]") ->
+                """<span class="badge badge-advantage">ADVANTAGE</span>""" to obs.removePrefix("[ADVANTAGE]").trim()
+            obs.startsWith("[WEAKNESS]") ->
+                """<span class="badge badge-weakness">WEAKNESS</span>""" to obs.removePrefix("[WEAKNESS]").trim()
+            obs.startsWith("[PATTERN]") ->
+                """<span class="badge badge-pattern">PATTERN</span>""" to obs.removePrefix("[PATTERN]").trim()
             else -> "" to obs
         }
         return "$badge${text.htmlEscape()}"

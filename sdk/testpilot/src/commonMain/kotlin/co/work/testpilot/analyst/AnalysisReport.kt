@@ -7,4 +7,5 @@ data class AnalysisReport(
     val durationMs: Long,
     val steps: List<AnalysisStep>,
     val persona: String? = null,
+    val source: String? = null,
 )
