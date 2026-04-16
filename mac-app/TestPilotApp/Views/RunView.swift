@@ -114,13 +114,23 @@ struct RunView: View {
                 TextField("App name", text: $config.mobbinAppName)
                 TextField("Flow name", text: $config.mobbinFlowName)
             }
-            Button("Connect Mobbin…") {
-                runner.mobbinLogin(config: config, settings: settings)
+            let mobbinSessionExists = FileManager.default.fileExists(
+                atPath: FileManager.default.homeDirectoryForCurrentUser
+                    .appendingPathComponent(".testpilot/sessions/mobbin.com.json").path
+            )
+            if mobbinSessionExists {
+                Label("Connected to Mobbin", systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            } else {
+                Button("Connect Mobbin…") {
+                    runner.mobbinLogin(config: config, settings: settings)
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .font(.caption)
+                .help("Open a browser to log in to Mobbin — required before running research")
             }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
-            .font(.caption)
-            .help("Open a browser to log in to Mobbin — required before running research")
         }
     }
 
