@@ -30,6 +30,28 @@ struct SettingsView: View {
                         rawEnvText = store.rawEnv
                         store.save()
                     }
+
+                HStack {
+                    Text("Reports folder")
+                    Spacer()
+                    Text(store.reportFolder)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: 200, alignment: .trailing)
+                    Button("Choose…") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseFiles = false
+                        panel.canChooseDirectories = true
+                        panel.canCreateDirectories = true
+                        panel.title = "Choose Reports Folder"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            store.reportFolder = (url.path as NSString).abbreviatingWithTildeInPath
+                            store.save()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
 
             Section {

@@ -38,7 +38,9 @@ final class AnalysisRunner {
             return
         }
 
-        let outputPath = NSString(string: config.outputPath).expandingTildeInPath
+        let folder = NSString(string: settings.reportFolder.isEmpty ? "~/Desktop" : settings.reportFolder)
+            .expandingTildeInPath
+        let outputPath = (folder as NSString).appendingPathComponent("report.html")
         lastStdoutLine = ""
         analyzeSteps = []
         state = config.mode == .test ? .testRunning(steps: []) : .running(statusLine: "Starting…")

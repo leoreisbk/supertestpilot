@@ -7,11 +7,13 @@ import Observation
 final class SettingsStore {
     var provider: AIProvider = .anthropic
     var teamId: String = ""
+    var reportFolder: String = "~/Desktop"
 
     private let keychainService = "com.workco.testpilot"
     private let keychainAccount = "api-key"
-    private let providerKey = "tp_provider"
-    private let teamIdKey = "tp_teamId"
+    private let providerKey    = "tp_provider"
+    private let teamIdKey      = "tp_teamId"
+    private let reportFolderKey = "tp_reportFolder"
 
     private var envFileURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -48,6 +50,7 @@ final class SettingsStore {
             return p
         }()
         teamId = UserDefaults.standard.string(forKey: "tp_teamId") ?? ""
+        reportFolder = UserDefaults.standard.string(forKey: "tp_reportFolder") ?? "~/Desktop"
         // Bootstrap from .env if it exists and we have no saved provider yet
         if let contents = try? String(contentsOf: envFileURL) {
             let parsed = SettingsStore.parseEnv(contents)
@@ -62,6 +65,7 @@ final class SettingsStore {
     func save() {
         UserDefaults.standard.set(provider.rawValue, forKey: providerKey)
         UserDefaults.standard.set(teamId, forKey: teamIdKey)
+        UserDefaults.standard.set(reportFolder, forKey: reportFolderKey)
         writeEnvFile()
     }
 
