@@ -18,44 +18,43 @@ enum WebRunnerError: LocalizedError {
     }
 }
 
-/// Returns the bundled JRE if it's a native macOS binary, otherwise falls back
-/// to the system `java` on PATH. Throws `jreNotFound` if neither is available.
+/// Returns the bundled JRE if it's a native macOS binary, otherwise uses
+/// /usr/libexec/java_home to find Java 21+ installed on the system.
+/// Throws `jreNotFound` if no compatible Java is available.
 func resolveJava() throws -> URL {
     let bundled = cacheDir.appendingPathComponent("web/jre/bin/java")
     if FileManager.default.fileExists(atPath: bundled.path), isMacOSBinary(at: bundled.path) {
         return bundled
     }
-    // Fall back to system Java
-    let result = try? Shell.which("java")
-    guard let systemJava = result, !systemJava.isEmpty else {
-        throw WebRunnerError.jreNotFound
+    // Use /usr/libexec/java_home — works from GUI apps (no PATH dependency),
+    // finds the highest installed JDK ≥ 21.
+    if let home = Shell.javaHome(minVersion: 21), !home.isEmpty {
+        return URL(fileURLWithPath: home).appendingPathComponent("bin/java")
     }
-    return URL(fileURLWithPath: systemJava)
+    throw WebRunnerError.jreNotFound
 }
 
 private func isMacOSBinary(at path: String) -> Bool {
-    // Read the first 4 bytes — Mach-O magic numbers: 0xFEEDFACE (32-bit) or 0xFEEDFACF (64-bit)
-    // or 0xCAFEBABE (fat/universal). ELF binaries start with 0x7F454C46 and cannot run on macOS.
+    // ELF binaries (Linux) start with 0x7F 'E' 'L' 'F' — cannot run on macOS.
     guard let fh = FileHandle(forReadingAtPath: path) else { return false }
     defer { try? fh.close() }
     let magic = fh.readData(ofLength: 4)
     guard magic.count == 4 else { return false }
-    let bytes = [magic[0], magic[1], magic[2], magic[3]]
-    // ELF magic: 0x7F 'E' 'L' 'F'
-    if bytes == [0x7F, 0x45, 0x4C, 0x46] { return false }
-    return true
+    return [magic[0], magic[1], magic[2], magic[3]] != [0x7F, 0x45, 0x4C, 0x46]
 }
 
 private enum Shell {
-    static func which(_ command: String) throws -> String {
+    /// Runs /usr/libexec/java_home -v <minVersion>+ and returns the JAVA_HOME path, or nil.
+    static func javaHome(minVersion: Int) -> String? {
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        proc.arguments = [command]
+        proc.executableURL = URL(fileURLWithPath: "/usr/libexec/java_home")
+        proc.arguments = ["-v", "\(minVersion)+"]
         let pipe = Pipe()
         proc.standardOutput = pipe
         proc.standardError = FileHandle.nullDevice
-        try proc.run()
+        try? proc.run()
         proc.waitUntilExit()
+        guard proc.terminationStatus == 0 else { return nil }
         let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
