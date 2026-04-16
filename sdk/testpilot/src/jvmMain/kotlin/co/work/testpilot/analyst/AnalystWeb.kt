@@ -21,7 +21,7 @@ class AnalystWeb(private val config: Config) {
     ): String {
         val playwright = withContext(Dispatchers.IO) { Playwright.create() }
         val browser = withContext(Dispatchers.IO) {
-            playwright.chromium().launch(BrowserType.LaunchOptions().setHeadless(false))
+            playwright.chromium().launch(launchOptions(headless = false))
         }
         val httpClient = HttpClient(CIO)
 

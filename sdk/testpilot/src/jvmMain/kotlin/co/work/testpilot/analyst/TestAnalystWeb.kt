@@ -29,7 +29,7 @@ class TestAnalystWeb(private val config: Config) {
             if (username != null && password != null && !sessionExists) {
                 val loginBrowser = withContext(Dispatchers.IO) {
                     playwright.chromium()
-                        .launch(BrowserType.LaunchOptions().setHeadless(false))
+                        .launch(launchOptions(headless = false))
                 }
                 try {
                     val loginContext = withContext(Dispatchers.IO) {
@@ -60,7 +60,7 @@ class TestAnalystWeb(private val config: Config) {
 
             // Test run: headless
             val browser = withContext(Dispatchers.IO) {
-                playwright.chromium().launch(BrowserType.LaunchOptions().setHeadless(true))
+                playwright.chromium().launch(launchOptions(headless = true))
             }
             val context = WebSession.loadContext(browser, url)
             try {

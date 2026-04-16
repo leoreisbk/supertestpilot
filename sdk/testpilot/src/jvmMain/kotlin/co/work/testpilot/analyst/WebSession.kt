@@ -8,6 +8,12 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 
+/** Chromium launch flags that suppress the macOS keychain access prompt. */
+internal fun launchOptions(headless: Boolean) =
+    BrowserType.LaunchOptions()
+        .setHeadless(headless)
+        .setArgs(listOf("--password-store=basic", "--use-mock-keychain"))
+
 object WebSession {
 
     fun sessionPath(url: String): String {
@@ -45,7 +51,7 @@ object WebSession {
      */
     fun interactiveLogin(url: String) {
         Playwright.create().use { playwright ->
-            val browser = playwright.chromium().launch(BrowserType.LaunchOptions().setHeadless(false))
+            val browser = playwright.chromium().launch(launchOptions(headless = false))
             val context = browser.newContext(
                 Browser.NewContextOptions().setViewportSize(
                     AnalystDriverWeb.VIEWPORT_WIDTH, AnalystDriverWeb.VIEWPORT_HEIGHT
