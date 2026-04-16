@@ -8,15 +8,9 @@ struct ResearchRunner {
     func makeProcess() throws -> Process {
         let cacheDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".testpilot")
-        let jreJava = cacheDir.appendingPathComponent("web/jre/bin/java")
-        let jar     = cacheDir.appendingPathComponent("web/testpilot-web.jar")
-
-        guard FileManager.default.fileExists(atPath: jreJava.path) else {
-            throw WebRunnerError.jreNotFound
-        }
-        guard FileManager.default.fileExists(atPath: jar.path) else {
-            throw WebRunnerError.jarNotFound
-        }
+        let java = try resolveJava()
+        let jar  = cacheDir.appendingPathComponent("web/testpilot-web.jar")
+        guard FileManager.default.fileExists(atPath: jar.path) else { throw WebRunnerError.jarNotFound }
 
         let provider       = (config.providerOverride ?? settings.provider).rawValue
         let outputPath     = NSString(string: config.outputPath).expandingTildeInPath
@@ -36,7 +30,7 @@ struct ResearchRunner {
         env["TESTPILOT_MOBBIN_FLOW_NAME"] = config.mobbinFlowName
 
         let proc = Process()
-        proc.executableURL = jreJava
+        proc.executableURL = java
         proc.arguments     = ["-jar", jar.path]
         proc.environment   = env
         return proc
@@ -46,22 +40,16 @@ struct ResearchRunner {
     func makeMobbinLoginProcess() throws -> Process {
         let cacheDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".testpilot")
-        let jreJava = cacheDir.appendingPathComponent("web/jre/bin/java")
-        let jar     = cacheDir.appendingPathComponent("web/testpilot-web.jar")
-
-        guard FileManager.default.fileExists(atPath: jreJava.path) else {
-            throw WebRunnerError.jreNotFound
-        }
-        guard FileManager.default.fileExists(atPath: jar.path) else {
-            throw WebRunnerError.jarNotFound
-        }
+        let java = try resolveJava()
+        let jar  = cacheDir.appendingPathComponent("web/testpilot-web.jar")
+        guard FileManager.default.fileExists(atPath: jar.path) else { throw WebRunnerError.jarNotFound }
 
         var env = ProcessInfo.processInfo.environment
         env["TESTPILOT_MODE"]    = "mobbin-login"
         env["TESTPILOT_API_KEY"] = settings.apiKey.isEmpty ? "dummy" : settings.apiKey
 
         let proc = Process()
-        proc.executableURL = jreJava
+        proc.executableURL = java
         proc.arguments     = ["-jar", jar.path]
         proc.environment   = env
         return proc
