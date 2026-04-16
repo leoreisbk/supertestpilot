@@ -7,7 +7,6 @@ import co.work.testpilot.analyst.MobbinFetcher
 import co.work.testpilot.analyst.TestAnalystWeb
 import co.work.testpilot.analyst.WebSession
 import co.work.testpilot.analyst.buildWebAIClient
-import co.work.testpilot.analyst.extractFlowId
 import co.work.testpilot.runtime.AIProvider
 import co.work.testpilot.runtime.ConfigBuilder
 import io.ktor.client.*
@@ -84,34 +83,30 @@ fun main(args: Array<String>) {
                 val appName  = env("TESTPILOT_MOBBIN_APP")
                 val flowName = env("TESTPILOT_MOBBIN_FLOW_NAME")
 
-                val fetchClient = HttpClient(CIO)
-                val fetcher = MobbinFetcher(fetchClient)
+                val fetcher = MobbinFetcher()
 
                 if (!fetcher.hasSession()) {
                     System.err.println("Error: Mobbin session not found — run: testpilot mobbin-login")
                     exitProcess(1)
                 }
 
+                if (flowUrl.isNullOrEmpty() && (appName.isNullOrEmpty() || flowName.isNullOrEmpty())) {
+                    System.err.println("Error: either TESTPILOT_MOBBIN_FLOW_URL or both TESTPILOT_MOBBIN_APP and TESTPILOT_MOBBIN_FLOW_NAME are required")
+                    exitProcess(1)
+                }
+
+                val targetUrl = if (!flowUrl.isNullOrEmpty()) flowUrl else {
+                    System.err.println("Error: search mode requires a flow URL for now — use --flow <url>")
+                    exitProcess(1)
+                }
+
                 val images = try {
-                    when {
-                        !flowUrl.isNullOrEmpty() -> {
-                            val flowId = extractFlowId(flowUrl)
-                            fetcher.fetchFlowImages(flowId)
-                        }
-                        !appName.isNullOrEmpty() && !flowName.isNullOrEmpty() -> {
-                            val flowId = fetcher.searchFlowId(appName, flowName)
-                            fetcher.fetchFlowImages(flowId)
-                        }
-                        else -> {
-                            System.err.println("Error: either TESTPILOT_MOBBIN_FLOW_URL or both TESTPILOT_MOBBIN_APP and TESTPILOT_MOBBIN_FLOW_NAME are required")
-                            exitProcess(1)
-                        }
-                    }
+                    println("TESTPILOT_STEP: Opening Mobbin flow in browser…")
+                    System.out.flush()
+                    fetcher.fetchFlowScreenshots(targetUrl)
                 } catch (e: Exception) {
                     System.err.println("Error fetching Mobbin flow: ${e.message}")
                     exitProcess(1)
-                } finally {
-                    fetchClient.close()
                 }
 
                 val config = ConfigBuilder()

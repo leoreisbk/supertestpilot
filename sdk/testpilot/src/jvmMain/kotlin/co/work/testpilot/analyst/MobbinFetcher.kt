@@ -1,19 +1,15 @@
 package co.work.testpilot.analyst
 
-import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
+import com.microsoft.playwright.Browser
+import com.microsoft.playwright.Page
+import com.microsoft.playwright.Playwright
 import java.io.File
+import java.nio.file.Path
 
-class MobbinFetcher(private val httpClient: HttpClient) {
+class MobbinFetcher {
 
     companion object {
         private const val MOBBIN_SESSION_PATH = ".testpilot/sessions/mobbin.com.json"
-        private const val MOBBIN_API_BASE = "https://mobbin.com/api"
 
         fun sessionFile(): File =
             File(System.getProperty("user.home"), MOBBIN_SESSION_PATH)
@@ -23,122 +19,83 @@ class MobbinFetcher(private val httpClient: HttpClient) {
     fun hasSession(): Boolean = sessionFile().exists()
 
     /**
-     * Loads cookies from the saved Playwright session state (JSON) for mobbin.com.
-     * Returns a Cookie header value string like "name=value; name2=value2".
+     * Uses Playwright to navigate to the Mobbin flow URL and screenshot each screen.
+     * This bypasses the private API entirely — relies only on the saved session cookies.
      */
-    private fun loadCookieHeader(): String {
-        val json = JSONObject(sessionFile().readText())
-        val cookies = json.optJSONArray("cookies") ?: JSONArray()
-        return (0 until cookies.length())
-            .map { cookies.getJSONObject(it) }
-            .filter { it.optString("domain").contains("mobbin.com") }
-            .joinToString("; ") { "${it.getString("name")}=${it.getString("value")}" }
-    }
+    fun fetchFlowScreenshots(flowUrl: String): List<ByteArray> {
+        Playwright.create().use { playwright ->
+            val browser = playwright.chromium().launch(launchOptions(headless = true))
+            val context = browser.newContext(
+                Browser.NewContextOptions()
+                    .setStorageStatePath(Path.of(sessionFile().path))
+                    .setViewportSize(1280, 900)
+            )
+            val page = context.newPage()
 
-    /**
-     * Fetches image bytes for all screens in a Mobbin flow.
-     * @param flowId UUID extracted from the flow URL.
-     *
-     * Note: Mobbin API endpoints are unofficial/internal (reverse-engineered).
-     * Verify endpoint shape against https://github.com/pdcolandrea/mobbin-mcp if broken.
-     */
-    suspend fun fetchFlowImages(flowId: String): List<ByteArray> {
-        val cookieHeader = loadCookieHeader()
+            // Navigate and wait for screens to load
+            page.navigate(flowUrl)
+            page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE)
 
-        val response = httpClient.get("$MOBBIN_API_BASE/content/flows/$flowId") {
-            header("Cookie", cookieHeader)
-            header("Accept", "application/json")
-        }
+            // Scroll to trigger lazy-loaded images
+            scrollToBottom(page)
 
-        if (response.status.value == 401) {
-            error("Mobbin session expired — run: testpilot mobbin-login")
-        }
-        if (response.status.value != 200) {
-            error("Mobbin API error ${response.status.value} for flow $flowId")
-        }
+            // Find all screen image elements — Mobbin renders screens as <img> inside cards
+            val screenshots = mutableListOf<ByteArray>()
+            val imgHandles = page.querySelectorAll("img[src*='storage'], img[src*='supabase'], img[src*='mobbin']")
 
-        val body = response.bodyAsText()
-        val imageUrls = parseImageUrls(body)
-
-        if (imageUrls.isEmpty()) {
-            error("No screens found in Mobbin flow $flowId. Check the flow URL.")
-        }
-
-        return imageUrls.map { url ->
-            withContext(Dispatchers.IO) {
-                httpClient.get(url) {
-                    header("Cookie", cookieHeader)
-                }.readBytes()
+            if (imgHandles.isEmpty()) {
+                // Fallback: screenshot each visible card element
+                val cards = page.querySelectorAll("[data-testid='screen-card'], [class*='screen'], [class*='flow-card']")
+                for (card in cards) {
+                    runCatching {
+                        card.scrollIntoViewIfNeeded()
+                        screenshots.add(card.screenshot())
+                    }
+                }
+            } else {
+                for (img in imgHandles) {
+                    runCatching {
+                        img.scrollIntoViewIfNeeded()
+                        // Wait for the image to actually load
+                        page.waitForFunction("el => el.complete && el.naturalWidth > 0", img)
+                        screenshots.add(img.screenshot())
+                    }
+                }
             }
-        }
-    }
 
-    /**
-     * Searches for a flow by app name + flow name and returns its ID.
-     */
-    suspend fun searchFlowId(appName: String, flowName: String): String {
-        val cookieHeader = loadCookieHeader()
-
-        val appsResp = httpClient.get("$MOBBIN_API_BASE/content/search-apps") {
-            header("Cookie", cookieHeader)
-            header("Accept", "application/json")
-            parameter("q", appName)
-        }
-        val appId = parseFirstId(appsResp.bodyAsText())
-            ?: error("No app found matching '$appName' on Mobbin")
-
-        val flowsResp = httpClient.get("$MOBBIN_API_BASE/content/search-flows") {
-            header("Cookie", cookieHeader)
-            header("Accept", "application/json")
-            parameter("q", flowName)
-            parameter("appId", appId)
-        }
-        return parseFirstId(flowsResp.bodyAsText())
-            ?: error("No flow found matching '$flowName' for app '$appName' on Mobbin")
-    }
-
-    private fun parseImageUrls(json: String): List<String> {
-        // Mobbin flow response: { "data": { "screens": [ { "imageUrl": "..." }, ... ] } }
-        // Adjust field path if the API response shape differs — check mobbin-mcp for current shape.
-        return try {
-            val root = JSONObject(json)
-            val screens = root.optJSONObject("data")
-                ?.optJSONArray("screens")
-                ?: root.optJSONArray("screens")
-                ?: JSONArray()
-            (0 until screens.length()).mapNotNull { i ->
-                screens.getJSONObject(i).optString("imageUrl").takeIf { it.isNotBlank() }
+            if (screenshots.isEmpty()) {
+                // Last resort: full-page screenshot split into sections
+                scrollToTop(page)
+                val fullPage = page.screenshot(Page.ScreenshotOptions().setFullPage(true))
+                screenshots.add(fullPage)
             }
-        } catch (e: Exception) {
-            emptyList()
+
+            return screenshots
         }
     }
 
-    private fun parseFirstId(json: String): String? {
-        return try {
-            val root = JSONObject(json)
-            val arr = root.optJSONArray("data") ?: return null
-            if (arr.length() == 0) return null
-            arr.getJSONObject(0).optString("id").takeIf { it.isNotBlank() }
-        } catch (e: Exception) {
-            null
-        }
+    private fun scrollToBottom(page: Page) {
+        page.evaluate("""
+            () => new Promise(resolve => {
+                let last = 0;
+                const timer = setInterval(() => {
+                    window.scrollBy(0, 800);
+                    if (document.body.scrollHeight === last) {
+                        clearInterval(timer);
+                        resolve();
+                    }
+                    last = document.body.scrollHeight;
+                }, 300);
+            })
+        """)
+        page.waitForTimeout(1000.0)
+    }
+
+    private fun scrollToTop(page: Page) {
+        page.evaluate("() => window.scrollTo(0, 0)")
+        page.waitForTimeout(500.0)
     }
 }
 
-/** Extracts the UUID flow ID from a Mobbin flow URL.
- *
- * Handles:
- *   https://mobbin.com/flows/<uuid>
- *   https://mobbin.com/explore/flows/<uuid>
- *   https://mobbin.com/apps/<app-slug>-<app-uuid>/<flow-uuid>/flows  ← app URL format
- */
-fun extractFlowId(url: String): String {
-    val uuidRegex = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-    // For /apps/<slug>/<flow-id>/flows URLs the flow ID is the path segment before /flows
-    val appUrlMatch = Regex("/apps/[^/]+/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/flows").find(url)
-    if (appUrlMatch != null) return appUrlMatch.groupValues[1]
-    // Fallback: first UUID in path (covers /flows/<uuid> and /explore/flows/<uuid>)
-    return uuidRegex.find(url)?.value
-        ?: error("Could not extract flow ID from URL: $url — expected a UUID in the path")
-}
+/** Extracts the full URL to pass to fetchFlowScreenshots — kept for interface compatibility. */
+fun extractFlowId(url: String): String = url  // now we pass the full URL through
