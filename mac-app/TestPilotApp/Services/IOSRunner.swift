@@ -57,7 +57,17 @@ struct IOSRunner {
             rawOutput = try await listAppsOnSimulator(udid: device.id)
         }
 
-        return try pickBundleId(from: rawOutput, appName: config.appName)
+        if let bundleId = pickBundleId(from: rawOutput, appName: config.appName) {
+            return bundleId
+        }
+
+        // Last resort: query the iTunes Search API for App Store apps.
+        // devicectl only lists dev-installed apps, so App Store apps won't appear above.
+        if let bundleId = await searchAppStore(appName: config.appName) {
+            return bundleId
+        }
+
+        throw IOSRunnerError.bundleIdNotFound(config.appName)
     }
 
     /// Writes AnalystTests.swift to ~/.testpilot/harness/AnalystTests/ with this run's config.
@@ -172,13 +182,12 @@ struct IOSRunner {
         return (try? String(contentsOf: tempJSON, encoding: .utf8)) ?? ""
     }
 
-    private func pickBundleId(from output: String, appName: String) throws -> String {
+    /// Returns the best-matching bundle ID from local device/simulator output, or nil if not found.
+    private func pickBundleId(from output: String, appName: String) -> String? {
         let nameLower = appName.lowercased()
         var matches: [String] = []
 
         // Simulator: ASCII plist format — look for bundle IDs containing app name
-        // Pattern: lines like `"com.example.app" = {` followed by CFBundleDisplayName
-        // Simple heuristic: find all bundle IDs (contain a dot, appear as keys)
         let bundlePattern = #""([a-zA-Z0-9.\-]+)"\s*=\s*\{"#
         if let regex = try? NSRegularExpression(pattern: bundlePattern) {
             let range = NSRange(output.startIndex..., in: output)
@@ -214,11 +223,32 @@ struct IOSRunner {
             return bid
         }
 
-        switch matches.count {
-        case 0: throw IOSRunnerError.bundleIdNotFound(appName)
-        case 1: return matches[0]
-        default: throw IOSRunnerError.multipleBundleIdMatches(Array(Set(matches)))
+        // Deduplicate and return only if unambiguous
+        let unique = Array(Set(matches))
+        return unique.count == 1 ? unique[0] : nil
+    }
+
+    /// Queries the iTunes Search API to resolve a bundle ID for an App Store app.
+    /// This is the fallback for apps not visible to devicectl (all App Store apps).
+    private func searchAppStore(appName: String) async -> String? {
+        guard let encoded = appName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://itunes.apple.com/search?term=\(encoded)&entity=software&limit=10") else {
+            return nil
         }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let results = json["results"] as? [[String: Any]] else {
+            return nil
+        }
+        let nameLower = appName.lowercased()
+        // Prefer exact track name match, then first result
+        for result in results {
+            if (result["trackName"] as? String)?.lowercased() == nameLower,
+               let bid = result["bundleId"] as? String {
+                return bid
+            }
+        }
+        return results.first?["bundleId"] as? String
     }
 
     // MARK: - Test file generation

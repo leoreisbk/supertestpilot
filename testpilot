@@ -299,6 +299,31 @@ else:
 ")
   fi
 
+  # Last resort: query the iTunes Search API (catches all App Store apps).
+  # devicectl only lists dev-installed apps, so App Store apps won't appear above.
+  if [[ "$BUNDLE_ID" == "ERROR_no_match" ]]; then
+    echo "Searching App Store for \"$APP_NAME\"..."
+    BUNDLE_ID=$(python3 -c "
+import urllib.request, urllib.parse, json, os, sys
+name = os.environ['TP_APP_NAME']
+url = 'https://itunes.apple.com/search?term=' + urllib.parse.quote(name) + '&entity=software&limit=10'
+try:
+    with urllib.request.urlopen(url, timeout=5) as r:
+        data = json.load(r)
+    results = data.get('results', [])
+    name_lower = name.lower()
+    for r in results:
+        if r.get('trackName', '').lower() == name_lower and r.get('bundleId'):
+            print(r['bundleId'], end=''); sys.exit()
+    if results and results[0].get('bundleId'):
+        print(results[0]['bundleId'], end='')
+    else:
+        print('ERROR_no_match', end='')
+except Exception:
+    print('ERROR_no_match', end='')
+" 2>/dev/null || echo "ERROR_no_match")
+  fi
+
   if [[ "$BUNDLE_ID" == ERROR* ]]; then
     echo "Error: No app matching \"$APP_NAME\" found on the target device."
     exit 1
