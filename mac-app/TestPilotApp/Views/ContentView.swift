@@ -41,7 +41,12 @@ struct ContentView: View {
                 .padding(.bottom, 16)
         }
         .onChange(of: runner.state) { _, newState in
-            let displayName = config.platform == .web ? config.url : config.appName
+            let displayName: String
+            if config.mode == .research {
+                displayName = config.mobbinSource == .flowUrl ? config.mobbinFlowUrl : "\(config.mobbinAppName) — \(config.mobbinFlowName)"
+            } else {
+                displayName = config.platform == .web ? config.url : config.appName
+            }
             switch newState {
             case .completed(let path):
                 history.append(RunRecord(
@@ -49,7 +54,7 @@ struct ContentView: View {
                     platform: config.platform,
                     objective: config.objective,
                     reportPath: path,
-                    mode: .analyze
+                    mode: config.mode == .research ? .analyze : config.mode
                 ))
             case .testPassed(let reason, _):
                 history.append(RunRecord(

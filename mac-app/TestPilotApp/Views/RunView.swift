@@ -55,7 +55,7 @@ struct RunView: View {
             set: { _ in }
         )) {
             VStack(spacing: 20) {
-                Text("Log in to \(config.url)")
+                Text("Log in to \(config.mode == .research ? "mobbin.com" : config.url)")
                     .font(.headline)
                 Text("A browser window has opened. Complete login, then tap Save Session.")
                     .font(.subheadline)
