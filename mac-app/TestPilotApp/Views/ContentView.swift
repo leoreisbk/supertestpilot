@@ -54,7 +54,7 @@ struct ContentView: View {
                     platform: config.platform,
                     objective: config.objective,
                     reportPath: path,
-                    mode: config.mode == .research ? .analyze : config.mode
+                    mode: config.mode
                 ))
             case .testPassed(let reason, _):
                 history.append(RunRecord(

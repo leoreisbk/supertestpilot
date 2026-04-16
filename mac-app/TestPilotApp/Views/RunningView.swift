@@ -9,8 +9,11 @@ struct RunningView: View {
         VStack(spacing: 24) {
             // Header
             VStack(spacing: 4) {
-                Text(config.appName)
+                Text(config.mode == .research
+                    ? (config.mobbinSource == .flowUrl ? config.mobbinFlowUrl : "\(config.mobbinAppName) — \(config.mobbinFlowName)")
+                    : (config.platform == .web ? config.url : config.appName))
                     .font(.title2.weight(.semibold))
+                    .lineLimit(1)
                 Text(config.objective)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -91,7 +94,7 @@ struct RunningView: View {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 64))
                     .foregroundStyle(.red)
-                Text(config.mode == .test ? "Test failed" : "Analysis failed")
+                Text(config.mode == .test ? "Test failed" : config.mode == .research ? "Research failed" : "Analysis failed")
                     .font(.title3.weight(.medium))
                 Text(error)
                     .font(.caption)
