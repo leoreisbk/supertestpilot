@@ -106,10 +106,10 @@ Nenhum elemento da tela precisa ter um identificador especial. Se está visível
 O iOS tem uma barreira de segurança: nenhum programa externo consegue controlar um app ou tirar capturas de tela diretamente. A Apple só libera esse acesso durante a execução de **testes automatizados**, que recebem permissões especiais para isso.
 
 Para contornar isso sem abrir mão da simplicidade de uso, criamos uma estrutura chamada `harness/`. Ela é composta por:
-- **HarnessApp** — um aplicativo auxiliar vazio que precisa estar instalado no aparelho. Você nunca vai abrir ele; ele existe apenas para que o iOS libere as permissões necessárias. Pense nele como um crachá de acesso.
+- **HarnessApp** — um aplicativo auxiliar vazio instalado pelo TestPilot automaticamente. Você nunca vai abrir ele; ele existe apenas para que o iOS libere as permissões necessárias. Pense nele como um crachá de acesso.
 - **AnalystTests** — é quem executa de fato os comandos: tirar capturas de tela, tocar na tela, rolar o conteúdo. É o "braço" que o TestPilot usa para interagir com o app analisado, dentro do contexto de permissão que o HarnessApp abriu.
 
-Você não precisa mexer em nada disso — o TestPilot instala e gerencia tudo automaticamente. No Android e na Web essa estrutura não existe porque o sistema já permite esse tipo de controle sem restrições adicionais.
+Você não precisa mexer em nada disso — o TestPilot instala e gerencia tudo automaticamente. Na primeira execução o app aparece brevemente no dispositivo; nas seguintes, o iOS detecta que o app já está instalado e vai direto para a análise. No Android e na Web essa estrutura não existe porque o sistema já permite esse tipo de controle sem restrições adicionais.
 
 ---
 
@@ -356,3 +356,4 @@ As opções abaixo funcionam em ambos os subcomandos (`analyze` e `test`), salvo
 | `--persona` | — | Caminho para um arquivo `.md` com o perfil de persona (apenas `analyze`) |
 | `--device` | — | ID do iPhone/iPad para rodar em aparelho físico |
 | `--team-id` | — | Código de desenvolvedor Apple (obrigatório ao usar `--device`) |
+| `--bundle-id` | — | Bundle ID direto do app (substitui a busca pelo nome — útil quando o app não é encontrado automaticamente) |

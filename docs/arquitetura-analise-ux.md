@@ -91,21 +91,31 @@ O ponto de entrada é um script bash que orquestra o build, a injeção de confi
 
 ## App macOS
 
-O app macOS (`mac-app/`) é uma camada de interface SwiftUI sobre o mesmo CLI. Não há lógica de análise no app — ele apenas spawna o processo `testpilot` e parseia o stdout em tempo real.
+O app macOS (`mac-app/`) é uma camada SwiftUI que orquestra as execuções diretamente, sem passar pelo script bash.
 
 ```
 Usuário (RunView)
   └── AnalysisRunner.run(config, settings)
-        └── Process(executableURL: testpilot, arguments: [...])
-              ├── stdout → parse TESTPILOT_STEP / TESTPILOT_RESULT / TESTPILOT_REPORT_PATH
-              └── stderr → capturado para mensagem de erro em caso de falha
+        ├── [iOS]  IOSRunner → resolveBundleId() → generateTestFile() → xcodebuild test
+        │             ├── stdout → processStdoutChunk()
+        │             │     ├── TESTPILOT_REPORT_START/END → extrai HTML → escreve outputPath
+        │             │     ├── TESTPILOT_STEP / TESTPILOT_RESULT → atualiza UI
+        │             │     └── TESTPILOT_REPORT_PATH= → fallback para simulador
+        │             └── stderr → capturado para mensagem de erro
+        └── [Web]  WebRunner → java -jar testpilot-web.jar
+                      ├── stdout → parse TESTPILOT_STEP / TESTPILOT_RESULT
+                      └── stderr → capturado para mensagem de erro
 ```
+
+**Resolução de bundle ID (iOS):** `IOSRunner.resolveBundleId()` tenta em ordem: (1) bundle ID explícito do campo "Bundle ID" da UI, (2) `devicectl device info apps` para apps instalados via desenvolvimento, (3) dicionário de apps do sistema Apple (Fitness, Maps, etc.), (4) iTunes Search API para qualquer app da App Store.
+
+**Recuperação do relatório (iOS):** o SDK Kotlin emite o HTML inline entre os marcadores `TESTPILOT_REPORT_START` / `TESTPILOT_REPORT_END` no stdout. O `AnalysisRunner` captura o conteúdo e grava diretamente no `outputPath` local — funciona tanto para simulador quanto para dispositivo físico (onde o caminho emitido por `TESTPILOT_REPORT_PATH=` aponta para o container do app no dispositivo, inacessível pelo Mac).
 
 **Estado da UI:** `AnalysisState` enum com os casos `idle`, `running`, `testRunning`, `webLoginPending`, `completed`, `testPassed`, `testFailed`, `failed`. O `AnalysisRunner` é um `@Observable` — a view reage diretamente às mudanças de estado.
 
-**Fluxo `web-login`:** `AnalysisRunner.webLogin()` spawna o processo com stdin aberto. Ao receber `TESTPILOT_LOGIN_READY` no stdout, transiciona para `.webLoginPending` e exibe o sheet de login. `saveSession()` escreve `\n` no stdin para sinalizar ao processo que salve e encerre.
+**Fluxo `web-login`:** `AnalysisRunner.webLogin()` spawna `WebRunner` com stdin aberto. Ao receber `TESTPILOT_LOGIN_READY` no stdout, transiciona para `.webLoginPending` e exibe o sheet de login. `saveSession()` escreve `\n` no stdin para sinalizar ao processo que salve e encerre.
 
-**Persistência:** `HistoryStore` serializa `[RunRecord]` em JSON no Application Support. `SettingsStore` persiste API key no Keychain e demais preferências em `UserDefaults`.
+**Persistência:** `HistoryStore` serializa `[RunRecord]` em JSON no Application Support. `SettingsStore` persiste API key no Keychain e demais preferências em `UserDefaults` (incluindo pasta padrão dos relatórios).
 
 ---
 
@@ -118,7 +128,13 @@ Usuário (RunView)
 - **Físico** (`--device <UDID>`): usa `xcrun devicectl device info apps` para listar apps instalados
 - **Simulador** (padrão): usa `xcrun simctl list devices` para encontrar o simulador em execução
 
-O bundle ID é resolvido por correspondência fuzzy no nome do app. Se houver múltiplos matches, exibe seleção interativa.
+O bundle ID é resolvido em ordem de prioridade:
+1. `--bundle-id` explícito (pula toda busca)
+2. `devicectl` / `simctl` com correspondência fuzzy no nome do app
+3. Dicionário de apps do sistema Apple (Fitness, Health, Maps, Settings, etc.)
+4. iTunes Search API — cobre qualquer app da App Store pelo nome
+
+Se houver múltiplos matches, exibe seleção interativa.
 
 **Geração do arquivo de teste**
 
@@ -136,12 +152,11 @@ xcodebuild test \
   DEVELOPMENT_TEAM=<TEAM_ID>
 ```
 
-A saída é monitorada em busca da linha `TESTPILOT_REPORT_PATH=<path>`, impressa pelo Kotlin ao finalizar o relatório.
+A saída é monitorada em busca dos marcadores `TESTPILOT_REPORT_START` / `TESTPILOT_REPORT_END` e de `TESTPILOT_REPORT_PATH=`.
 
 **Recuperação do relatório**
 
-- **Simulador**: `cp` direto do `NSTemporaryDirectory()`
-- **Físico**: `xcrun devicectl device copy off --device <UDID> --source <path> --destination <output>`
+O SDK emite o HTML completo inline no stdout entre `TESTPILOT_REPORT_START` e `TESTPILOT_REPORT_END`. O CLI extrai esse conteúdo do log do xcodebuild e grava no `--output` local — funciona em simulador e dispositivo físico sem transferência de arquivo via `devicectl`.
 
 ---
 
@@ -422,7 +437,9 @@ Todas as plataformas emitem linhas prefixadas para o stdout durante a execução
 | `TESTPILOT_STEP: (cached) <mensagem>` | Passo executado a partir do cache |
 | `TESTPILOT_RESULT: PASS <motivo>` | Teste aprovado |
 | `TESTPILOT_RESULT: FAIL <motivo>` | Teste reprovado |
-| `TESTPILOT_REPORT_PATH=<caminho>` | Caminho do relatório HTML gerado (modo analyze) |
+| `TESTPILOT_REPORT_START` | Início do HTML do relatório inline (modo analyze) |
+| `TESTPILOT_REPORT_END` | Fim do HTML do relatório inline |
+| `TESTPILOT_REPORT_PATH=<caminho>` | Caminho local do relatório (simulador); no dispositivo físico o HTML já foi extraído inline |
 | `TESTPILOT_LOGIN_READY` | Browser aberto aguardando login manual (`web-login`) |
 | `TESTPILOT_LOGIN_DONE:<caminho>` | Sessão salva; caminho do arquivo de sessão |
 
