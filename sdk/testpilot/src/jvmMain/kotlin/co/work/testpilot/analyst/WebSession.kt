@@ -64,6 +64,15 @@ object WebSession {
             System.out.flush()
             readLine() // blocks until '\n'
 
+            // Navigate back to root to ensure Supabase JS has run and refreshed tokens before saving.
+            // This captures the most up-to-date cookies (including rotated refresh_token).
+            runCatching {
+                val host = java.net.URI(url).host
+                page.navigate("https://$host")
+                page.waitForLoadState()
+                Thread.sleep(1500)
+            }
+
             val path = sessionPath(url)
             saveSession(context, url)
 

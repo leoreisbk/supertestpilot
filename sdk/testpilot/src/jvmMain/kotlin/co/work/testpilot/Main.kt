@@ -95,15 +95,16 @@ fun main(args: Array<String>) {
                     exitProcess(1)
                 }
 
-                val targetUrl = if (!flowUrl.isNullOrEmpty()) flowUrl else {
-                    System.err.println("Error: search mode requires a flow URL for now — use --flow <url>")
-                    exitProcess(1)
-                }
-
                 val images = try {
-                    println("TESTPILOT_STEP: Opening Mobbin flow in browser…")
-                    System.out.flush()
-                    fetcher.fetchFlowScreenshots(targetUrl)
+                    if (!flowUrl.isNullOrEmpty()) {
+                        println("TESTPILOT_STEP: Opening Mobbin flow in browser…")
+                        System.out.flush()
+                        fetcher.fetchFlowScreenshots(flowUrl)
+                    } else {
+                        println("TESTPILOT_STEP: Searching Mobbin for ${appName}…")
+                        System.out.flush()
+                        fetcher.fetchByAppName(appName!!, flowName)
+                    }
                 } catch (e: Exception) {
                     System.err.println("Error fetching Mobbin flow: ${e.message}")
                     exitProcess(1)

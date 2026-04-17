@@ -119,9 +119,18 @@ struct RunView: View {
                     .appendingPathComponent(".testpilot/sessions/mobbin.com.json").path
             )
             if mobbinSessionExists {
-                Label("Connected to Mobbin", systemImage: "checkmark.circle.fill")
+                HStack(spacing: 8) {
+                    Label("Connected to Mobbin", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                    Button("Reconnect") {
+                        runner.mobbinLogin(config: config, settings: settings)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
                     .font(.caption)
-                    .foregroundStyle(.green)
+                    .help("Re-authenticate with Mobbin if your session has expired")
+                }
             } else {
                 Button("Connect Mobbin…") {
                     runner.mobbinLogin(config: config, settings: settings)
