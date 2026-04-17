@@ -84,7 +84,13 @@ $persona
     }
 
     private fun parseObservation(response: String): String {
-        val match = Regex(""""observation"\s*:\s*"((?:[^"\\]|\\.)*)"""").find(response)
+        // Strip markdown code fences (```json ... ``` or ``` ... ```)
+        val cleaned = response.trim()
+            .removePrefix("```json").removePrefix("```")
+            .trimStart()
+            .let { if (it.endsWith("```")) it.dropLast(3).trimEnd() else it }
+
+        val match = Regex(""""observation"\s*:\s*"((?:[^"\\]|\\.)*)"""").find(cleaned)
         return match?.groupValues?.get(1)
             ?.replace("\\\"", "\"")
             ?.replace("\\n", " ")
