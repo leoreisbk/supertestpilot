@@ -83,7 +83,17 @@ class AnalystAndroid(private val config: Config) {
             ?: throw IllegalStateException("External files dir not available")
         val reportFile = java.io.File(reportDir, "testpilot_report.html")
         reportFile.writeText(html)
-        val reportPath = reportFile.absolutePath
+
+        try {
+            val screenshotsDir = java.io.File(reportDir, "screenshots").also { it.mkdirs() }
+            val seenFingerprints = mutableSetOf<Int>()
+            report.steps.forEachIndexed { index, step ->
+                if (step.screenshotData.isEmpty()) return@forEachIndexed
+                if (!seenFingerprints.add(screenFingerprint(step.screenshotData))) return@forEachIndexed
+                val ext = if (step.screenshotData.size >= 2 && step.screenshotData[0] == 0xFF.toByte() && step.screenshotData[1] == 0xD8.toByte()) "jpg" else "png"
+                java.io.File(screenshotsDir, "screenshot_%02d.$ext".format(index + 1)).writeBytes(step.screenshotData)
+            }
+        } catch (_: Exception) {}  // best-effort: screenshot saving must not fail the test
 
         println("TESTPILOT_REPORT_PATH=${reportFile.absolutePath}")
         return reportFile.absolutePath
