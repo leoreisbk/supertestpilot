@@ -12,6 +12,8 @@ import com.aallam.openai.client.OpenAIConfig
 import com.aallam.openai.client.OpenAIHost
 import io.ktor.client.*
 import io.ktor.client.engine.darwin.*
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -34,12 +36,15 @@ class AnalystIOS(private val config: Config) {
     // to avoid the XCTWaiter stack assertion introduced in Xcode 26 where
     // XCUIApplication(bundleIdentifier:) internally calls XCUIWaitAndAssert, conflicting with
     // the async test runner's outer waiter.
+    @Throws(Throwable::class)
     suspend fun run(objective: String, xcApp: XCUIApplication, username: String? = null, password: String? = null): String {
         withContext(Dispatchers.Main) { xcApp.activate() }
         delay(5000) // wait for app to fully load before first screenshot
 
         val httpClient = HttpClient(Darwin)
+        try {
         val aiClient = when (config.provider) {
+
             AIProvider.Anthropic -> AnthropicChatClient(
                 apiKey = config.apiKey,
                 modelId = config.modelId ?: AIProviderDefaults.anthropicModel,
@@ -96,8 +101,30 @@ class AnalystIOS(private val config: Config) {
         val data: NSData? = (html as NSString).dataUsingEncoding(NSUTF8StringEncoding)
         data?.writeToFile(path = reportPath, atomically = true)
 
+        val seenFingerprints = mutableSetOf<Int>()
+        report.steps.forEachIndexed { index, step ->
+            if (step.screenshotData.isEmpty()) return@forEachIndexed
+            if (!seenFingerprints.add(screenFingerprint(step.screenshotData))) return@forEachIndexed
+            val ext = if (step.screenshotData.size >= 2 && step.screenshotData[0] == 0xFF.toByte() && step.screenshotData[1] == 0xD8.toByte()) "jpg" else "png"
+            val n = (index + 1).toString().padStart(2, '0')
+            println("TESTPILOT_SCREENSHOT_START:screenshot_$n.$ext")
+            @OptIn(ExperimentalEncodingApi::class)
+            println(Base64.encode(step.screenshotData))
+            println("TESTPILOT_SCREENSHOT_END")
+        }
+
         println("TESTPILOT_REPORT_PATH=$reportPath")
         return reportPath
+        } catch (e: Throwable) {
+            println("TESTPILOT_ERROR: ${e.message ?: e::class.simpleName ?: "Unknown error"}")
+            throw e
+        } finally {
+            // Close the HttpClient so the Darwin NSURLSession is properly invalidated before
+            // the coroutine completes. Without this, pending NSURLSession callbacks fire after
+            // the coroutine is done and reach the ObjC export boundary as unhandled exceptions,
+            // causing SIGABRT via terminateWithUnhandledException.
+            try { httpClient.close() } catch (_: Exception) {}
+        }
     }
 
     // Convenience overload: creates XCUIApplication internally.

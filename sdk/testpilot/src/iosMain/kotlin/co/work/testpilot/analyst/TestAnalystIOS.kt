@@ -23,11 +23,13 @@ import platform.XCTest.XCUIApplication
 
 class TestAnalystIOS(private val config: Config) {
 
+    @Throws(Throwable::class)
     suspend fun run(objective: String, xcApp: XCUIApplication, username: String? = null, password: String? = null): TestResult {
         withContext(Dispatchers.Main) { xcApp.activate() }
         delay(5000)
 
         val httpClient = HttpClient(Darwin)
+        try {
         val baseClient = when (config.provider) {
             AIProvider.Anthropic -> AnthropicChatClient(
                 apiKey = config.apiKey,
@@ -89,5 +91,11 @@ class TestAnalystIOS(private val config: Config) {
         println("TESTPILOT_RESULT: $verdict ${result.reason}")
 
         return result
+        } catch (e: Throwable) {
+            println("TESTPILOT_ERROR: ${e.message ?: e::class.simpleName ?: "Unknown error"}")
+            throw e
+        } finally {
+            try { httpClient.close() } catch (_: Exception) {}
+        }
     }
 }
