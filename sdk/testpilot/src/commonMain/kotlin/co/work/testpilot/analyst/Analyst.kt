@@ -22,6 +22,8 @@ class Analyst(
         var stuckCount = 0
         var lastFingerprint = Int.MIN_VALUE
         var scrollRecoveryCount = 0
+        var lastStepScreenshot = byteArrayOf()
+        var lastStepFp = Int.MIN_VALUE
 
         for (i in 0 until config.maxSteps) {
             if (done) break
@@ -46,9 +48,18 @@ class Analyst(
 
             val obs = action.observation
             if (obs != null && seenObservations.add(obs)) {
+                // Reuse the previous step's screenshot ByteArray when the screen hasn't changed,
+                // so identical frames are stored only once across the steps list.
+                val stepScreenshot = if (fp == lastStepFp && lastStepScreenshot.isNotEmpty()) {
+                    lastStepScreenshot
+                } else {
+                    lastStepScreenshot = screenshot
+                    lastStepFp = fp
+                    screenshot
+                }
                 steps.add(
                     AnalysisStep(
-                        screenshotData = screenshot,
+                        screenshotData = stepScreenshot,
                         observation = obs,
                         action = action.actionName,
                         coordinates = action.coordinates,

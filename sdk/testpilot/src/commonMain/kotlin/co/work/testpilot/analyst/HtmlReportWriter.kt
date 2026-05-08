@@ -43,6 +43,7 @@ object HtmlReportWriter {
     fun generate(report: AnalysisReport, language: String = "en"): String {
         val lbl = labelsFor(language)
         val reportTitle = if (report.source == "mobbin") lbl.researchTitle else lbl.title
+
         val stepsHtml = report.steps.mapIndexed { index, step ->
             val base64 = Base64.encode(step.screenshotData)
             val obsContent = step.observation
@@ -52,6 +53,9 @@ object HtmlReportWriter {
             val coordHtml = step.coordinates
                 ?.let { (x, y) -> "<span class=\"coord\">(${fmtCoord(x)}, ${fmtCoord(y)})</span>" }
                 ?: ""
+            val imgTag = if (step.screenshotData.isNotEmpty())
+                """<img src="data:${step.screenshotData.imageMimeType()};base64,$base64" alt="${lbl.step} ${index + 1}" loading="lazy" />"""
+            else ""
             """
             <div class="step">
               <div class="step-header">
@@ -61,7 +65,7 @@ object HtmlReportWriter {
               </div>
               <div class="step-body">
                 <div class="step-img-col">
-                  <img src="data:${step.screenshotData.imageMimeType()};base64,$base64" alt="${lbl.step} ${index + 1}" loading="lazy" />
+                  $imgTag
                 </div>
                 <div class="step-obs-col">
                   $obsContent
