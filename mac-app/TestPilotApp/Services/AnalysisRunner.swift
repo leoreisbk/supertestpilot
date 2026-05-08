@@ -27,8 +27,12 @@ final class AnalysisRunner {
     private var process: Process?
     private var lastStdoutLine: String = ""
     private var lastReportPath: String = ""
+    private var lastErrorMessage: String = ""
     private var isCapturingReport = false
     private var reportLines: [String] = []
+    private var isCapturingScreenshot = false
+    private var currentScreenshotName = ""
+    private var screenshotLines: [String] = []
 
     func run(config: RunConfig, settings: SettingsStore) {
         guard case .idle = state else { return }
@@ -104,6 +108,9 @@ final class AnalysisRunner {
         analyzeSteps = []
         isCapturingReport = false
         reportLines = []
+        lastErrorMessage = ""
+        isCapturingScreenshot = false
+        screenshotLines = []
         state = .idle
     }
 
@@ -113,6 +120,9 @@ final class AnalysisRunner {
         analyzeSteps = []
         isCapturingReport = false
         reportLines = []
+        lastErrorMessage = ""
+        isCapturingScreenshot = false
+        screenshotLines = []
         state = .idle
     }
 
@@ -175,16 +185,16 @@ final class AnalysisRunner {
                         self.state = .completed(reportPath: path)
                         self.lastReportPath = ""
                     } else {
-                        let fallback = self.lastStdoutLine
-                        let msg = !lastStderr.isEmpty ? lastStderr
-                                : !fallback.isEmpty    ? fallback
+                        let msg = !self.lastErrorMessage.isEmpty ? self.lastErrorMessage
+                                : !lastStderr.isEmpty             ? lastStderr
+                                : !self.lastStdoutLine.isEmpty    ? self.lastStdoutLine
                                 : "Analysis failed (exit \(proc.terminationStatus))"
                         self.state = .failed(error: msg)
                     }
                 case .testRunning(let steps):
-                    let fallback = self.lastStdoutLine
-                    let msg = !lastStderr.isEmpty ? lastStderr
-                            : !fallback.isEmpty    ? fallback
+                    let msg = !self.lastErrorMessage.isEmpty ? self.lastErrorMessage
+                            : !lastStderr.isEmpty             ? lastStderr
+                            : !self.lastStdoutLine.isEmpty    ? self.lastStdoutLine
                             : "Test failed (exit \(proc.terminationStatus))"
                     self.state = .testFailed(reason: msg, steps: steps)
                 default: break
@@ -225,6 +235,30 @@ final class AnalysisRunner {
                 continue
             }
 
+            // ── Inline screenshot capture ──
+            if let r = line.range(of: "TESTPILOT_SCREENSHOT_START:") {
+                isCapturingScreenshot = true
+                currentScreenshotName = String(line[r.upperBound...])
+                screenshotLines = []
+                continue
+            }
+            if line.contains("TESTPILOT_SCREENSHOT_END") {
+                isCapturingScreenshot = false
+                let b64 = screenshotLines.joined()
+                if !b64.isEmpty, let data = Data(base64Encoded: b64, options: .ignoreUnknownCharacters) {
+                    let dir = (outputPath as NSString).deletingLastPathComponent
+                        .appending("/screenshots")
+                    try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+                    try? data.write(to: URL(fileURLWithPath: "\(dir)/\(currentScreenshotName)"))
+                }
+                screenshotLines = []
+                continue
+            }
+            if isCapturingScreenshot {
+                screenshotLines.append(rawLine)
+                continue
+            }
+
             guard !line.isEmpty else { continue }
             lastStdoutLine = line
 
@@ -253,6 +287,8 @@ final class AnalysisRunner {
                 } else if payload.hasPrefix("FAIL ") {
                     state = .testFailed(reason: String(payload.dropFirst("FAIL ".count)), steps: steps)
                 }
+            } else if let r = line.range(of: "TESTPILOT_ERROR: ") {
+                lastErrorMessage = String(line[r.upperBound...])
             } else if let r = line.range(of: "TESTPILOT_REPORT_PATH=") {
                 // Only use this path if we haven't already written the report locally
                 // (i.e., the inline capture didn't run, which means it's a simulator).
