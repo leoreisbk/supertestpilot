@@ -10,22 +10,34 @@ class VisionPrompt(
     // Built once — config is immutable for the lifetime of a run.
     // Identical string content is required for Anthropic prompt caching to hit.
     private val languageInstruction: String = if (config.language == "en") "" else
-        "All observations, reasons, and summaries must be written in ${config.language}."
+        "\nAll observations, reasons, and summaries must be written in ${config.language}."
 
-    private val personaSection: String = config.personaMarkdown
-        ?.takeIf { it.isNotBlank() }
-        ?.let { persona ->
-            """
+    private val isPersonaMode: Boolean = config.personaMarkdown?.isNotBlank() == true
 
-            ## Persona
-            You are evaluating this app from the perspective of the following user. Let their goals, behaviors, and pain points shape which flows you prioritize, what you notice, and how you assess the UX.
+    private val systemPrompt: String = if (isPersonaMode) {
+        val persona = config.personaMarkdown!!.trim()
+        """
+        You are the following person using a mobile app:
 
-            <persona>
-            $persona
-            </persona>""".trimIndent()
-        } ?: ""
+        <persona>
+        $persona
+        </persona>
 
-    private val systemPrompt: String = """
+        You are NOT a researcher — you ARE this person. Use the app exactly as they would: follow their natural instincts, make the decisions they'd make, get confused where they'd get confused, succeed where they'd succeed.
+
+        ## Describing your experience
+        Write observations in first person, as this person would experience the app ("I can't find", "I'm not sure what this does", "This was easy to follow"). Prefix with [CRITICAL] for blockers that would make you abandon the app, [ISSUE] for friction or confusion, [POSITIVE] for moments that feel intuitive and natural.
+
+        ## Navigation rules
+        - Stay focused on your goal — navigate as this person would naturally explore
+        - Use "type" — NOT "tap" — for text fields, search bars, or any input that accepts keyboard text. Always use a realistic value this persona would enter
+        - Never tap the same element twice without a visible change
+        - If stuck, scroll or navigate back to find a new path
+
+        Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.$languageInstruction
+        """.trimIndent()
+    } else {
+        """
         You are a senior UX researcher conducting a structured usability evaluation of a live mobile app. Your findings will be used by product managers and designers to make product decisions — they must be specific, evidence-based, and actionable.
 
         ## Your job
@@ -44,9 +56,9 @@ class VisionPrompt(
         - Never tap the same element twice without a visible change
         - If stuck, scroll or navigate back to find a new path
 
-        Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.
-        $languageInstruction$personaSection
-    """.trimIndent()
+        Respond ONLY with a single valid JSON object. No markdown, no explanation, no extra text.$languageInstruction
+        """.trimIndent()
+    }
 
     suspend operator fun invoke(
         objective: String,
@@ -69,16 +81,50 @@ class VisionPrompt(
             else -> ""
         }
 
-        val explorationNote = if (screensSeen < 5)
-            "You have visited $screensSeen screen(s). Keep exploring flows relevant to the objective — open menus, tap list items, go into sub-flows. Do NOT use \"done\" until you have visited at least 5 distinct screens."
-        else
-            "You have visited $screensSeen screens. Call \"done\" only after covering the main flows relevant to the objective."
+        val explorationNote = if (isPersonaMode) {
+            if (screensSeen < 5)
+                "You have explored $screensSeen screen(s) so far. Keep going — open menus, tap items, go deeper into flows. Do NOT use \"done\" until you have explored at least 5 distinct screens."
+            else
+                "You have explored $screensSeen screens. Use \"done\" only after you've covered the main flows relevant to your goal."
+        } else {
+            if (screensSeen < 5)
+                "You have visited $screensSeen screen(s). Keep exploring flows relevant to the objective — open menus, tap list items, go into sub-flows. Do NOT use \"done\" until you have visited at least 5 distinct screens."
+            else
+                "You have visited $screensSeen screens. Call \"done\" only after covering the main flows relevant to the objective."
+        }
 
         val treeSection = if (accessibilityTree.isNotEmpty())
             "\nUI Element Tree (use to identify element types — TextField requires \"type\", Button requires \"tap\", check disabled/enabled state):\n$accessibilityTree"
         else ""
 
-        val userPrompt = """
+        val userPrompt = if (isPersonaMode) {
+            """
+            Your goal: $objective
+
+            Experiences already recorded (do NOT repeat or rephrase these):
+            $observationsText
+
+            $stuckNote
+            $explorationNote
+            $treeSection
+            Look at the screenshot. Describe your experience as this person in this moment, then decide what to do next.
+
+            Respond with a JSON object:
+            - action: "tap" | "scroll" | "type" | "done"
+            - x, y: normalized coordinates 0.0–1.0 (tap/type only)
+            - direction: "up" | "down" (scroll only)
+            - text: string to type (type only)
+            - observation: your first-person experience — what you tried, felt, understood or didn't, with [CRITICAL]/[ISSUE]/[POSITIVE] prefix. Required for every step except "done" when the final screen adds nothing new.
+            - reason: what you're trying to do next
+
+            Examples:
+            {"action":"tap","x":0.5,"y":0.72,"observation":"[ISSUE] I see a button that says 'Proceed' but I'm not sure if that's what I press to pay — it's not clear","reason":"tapping to see if this leads to payment"}
+            {"action":"type","x":0.5,"y":0.3,"text":"maria@example.com","observation":"[POSITIVE] The login screen felt familiar — the email field was already focused when I opened it","reason":"filling in my email to get in"}
+            {"action":"scroll","direction":"down","observation":"[CRITICAL] I filled in my profile details but I can't find a Save button — I'm afraid my changes will be lost","reason":"scrolling down to look for a way to save"}
+            {"action":"done","observation":"[POSITIVE] I was able to complete my goal without getting confused — the flow felt straightforward","reason":"I've explored the main flows relevant to my goal"}
+            """.trimIndent()
+        } else {
+            """
             Evaluation objective: $objective
 
             Observations already recorded (do NOT repeat or rephrase these):
@@ -102,7 +148,8 @@ class VisionPrompt(
             {"action":"type","x":0.5,"y":0.3,"text":"john@example.com","observation":"[POSITIVE] Login screen: email field auto-focuses on load, reducing friction for returning users","reason":"filling email to proceed to the main app flow"}
             {"action":"scroll","direction":"down","observation":"[CRITICAL] Profile screen: Save button is not visible without scrolling — changes may be lost","reason":"scrolling to check if save button is reachable"}
             {"action":"done","observation":"[POSITIVE] Settings screen: all previously identified flows completed successfully","reason":"covered all main flows relevant to the objective"}
-        """.trimIndent()
+            """.trimIndent()
+        }
 
         val messages = listOf(
             ChatMessage(role = ChatMessage.ROLE_SYSTEM, content = systemPrompt),
