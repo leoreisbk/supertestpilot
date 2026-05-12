@@ -57,13 +57,14 @@ struct IOSRunner {
             rawOutput = try await listAppsOnSimulator(udid: device.id)
         }
 
-        if let bundleId = pickBundleId(from: rawOutput, appName: config.appName) {
+        let trimmedName = config.appName.trimmingCharacters(in: .whitespaces)
+        if let bundleId = pickBundleId(from: rawOutput, appName: trimmedName) {
             return bundleId
         }
 
         // Last resort: query the iTunes Search API for App Store apps.
         // devicectl only lists dev-installed apps, so App Store apps won't appear above.
-        if let bundleId = await searchAppStore(appName: config.appName) {
+        if let bundleId = await searchAppStore(appName: trimmedName) {
             return bundleId
         }
 
@@ -183,43 +184,73 @@ struct IOSRunner {
     }
 
     /// Returns the best-matching bundle ID from local device/simulator output, or nil if not found.
+    /// Strips special chars so "Work & Cup", "workandcup", "Work-Cup", "work'n'cup"
+    /// all normalize to the same token for comparison.
+    private func normalizeAppName(_ name: String) -> String {
+        name.lowercased()
+            .replacingOccurrences(of: "&", with: "and")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined()
+    }
+
     private func pickBundleId(from output: String, appName: String) -> String? {
         let nameLower = appName.lowercased()
-        var matches: [String] = []
+        let nameNorm  = normalizeAppName(appName)
+        var exactMatches: [String] = []
+        var fuzzyMatches: [String] = []
 
-        // Simulator: parse plist with PropertyListSerialization to get CFBundleDisplayName
+        func score(bid: String, displayName: String) {
+            let displayLower = displayName.lowercased()
+            let displayNorm  = normalizeAppName(displayName)
+            let bidLastNorm  = normalizeAppName(bid.components(separatedBy: ".").last ?? "")
+
+            if displayLower == nameLower || displayNorm == nameNorm || bidLastNorm == nameNorm {
+                exactMatches.append(bid)
+            } else if displayLower.contains(nameLower) || bid.lowercased().contains(nameLower)
+                        || displayNorm.contains(nameNorm) || bidLastNorm.contains(nameNorm) {
+                fuzzyMatches.append(bid)
+            }
+        }
+
+        // Simulator: parse plist to get CFBundleDisplayName
         if let plistData = output.data(using: .utf8),
            let plist = (try? PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)) as? [String: [String: Any]] {
             for (bid, info) in plist {
-                let displayName = (info["CFBundleDisplayName"] as? String ?? info["CFBundleName"] as? String ?? "").lowercased()
-                if displayName.contains(nameLower) || bid.lowercased().contains(nameLower) {
-                    matches.append(bid)
-                }
+                let displayName = info["CFBundleDisplayName"] as? String
+                    ?? info["CFBundleName"] as? String
+                    ?? ""
+                score(bid: bid, displayName: displayName)
             }
         }
 
         // Device: JSON format from devicectl
-        if matches.isEmpty, let data = output.data(using: .utf8),
+        if exactMatches.isEmpty && fuzzyMatches.isEmpty,
+           let data = output.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let result = json["result"] as? [String: Any],
            let apps = result["apps"] as? [[String: Any]] {
             for app in apps {
-                let bid = (app["bundleIdentifier"] ?? app["bundleID"]) as? String ?? ""
+                let bid  = (app["bundleIdentifier"] ?? app["bundleID"]) as? String ?? ""
                 let name = app["name"] as? String ?? bid
-                if name.lowercased().contains(nameLower) || bid.lowercased().contains(nameLower) {
-                    matches.append(bid)
-                }
+                score(bid: bid, displayName: name)
             }
         }
 
-        // Fallback: system/Apple apps not listed by devicectl
-        if matches.isEmpty,
-           let bid = IOSRunner.systemAppBundleIDs.first(where: { nameLower.contains($0.key) || $0.key.contains(nameLower) })?.value {
+        // Fallback: Apple system apps not listed by devicectl
+        if exactMatches.isEmpty && fuzzyMatches.isEmpty,
+           let bid = IOSRunner.systemAppBundleIDs.first(where: {
+               nameLower.contains($0.key) || $0.key.contains(nameLower)
+           })?.value {
             return bid
         }
 
-        // Deduplicate and return only if unambiguous
-        let unique = Array(Set(matches))
+        // Prefer exact matches; use fuzzy only when no exact match exists.
+        // Return nil when ambiguous so the caller can surface the conflict.
+        let candidates = exactMatches.isEmpty ? fuzzyMatches : exactMatches
+        let unique = Array(Set(candidates))
         return unique.count == 1 ? unique[0] : nil
     }
 
@@ -242,14 +273,16 @@ struct IOSRunner {
             return nil
         }
         let nameLower = appName.lowercased()
-        // Prefer exact track name match, then first result
+        let nameNorm  = normalizeAppName(appName)
+        // Require at least a normalized match — never return an unrelated first result.
         for result in results {
-            if (result["trackName"] as? String)?.lowercased() == nameLower,
-               let bid = result["bundleId"] as? String {
+            guard let bid = result["bundleId"] as? String,
+                  let trackName = result["trackName"] as? String else { continue }
+            if trackName.lowercased() == nameLower || normalizeAppName(trackName) == nameNorm {
                 return bid
             }
         }
-        return results.first?["bundleId"] as? String
+        return nil
     }
 
     // MARK: - Test file generation
