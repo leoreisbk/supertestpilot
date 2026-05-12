@@ -187,17 +187,12 @@ struct IOSRunner {
         let nameLower = appName.lowercased()
         var matches: [String] = []
 
-        // Simulator: ASCII plist format — look for bundle IDs containing app name
-        let bundlePattern = #""([a-zA-Z0-9.\-]+)"\s*=\s*\{"#
-        if let regex = try? NSRegularExpression(pattern: bundlePattern) {
-            let range = NSRange(output.startIndex..., in: output)
-            let allMatches = regex.matches(in: output, range: range)
-            let candidates = allMatches.compactMap { m -> String? in
-                guard let r = Range(m.range(at: 1), in: output) else { return nil }
-                return String(output[r])
-            }
-            for bid in candidates {
-                if bid.lowercased().contains(nameLower) || nameLower.contains(bid.lowercased().components(separatedBy: ".").last ?? "") {
+        // Simulator: parse plist with PropertyListSerialization to get CFBundleDisplayName
+        if let plistData = output.data(using: .utf8),
+           let plist = (try? PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)) as? [String: [String: Any]] {
+            for (bid, info) in plist {
+                let displayName = (info["CFBundleDisplayName"] as? String ?? info["CFBundleName"] as? String ?? "").lowercased()
+                if displayName.contains(nameLower) || bid.lowercased().contains(nameLower) {
                     matches.append(bid)
                 }
             }
