@@ -231,10 +231,16 @@ struct IOSRunner {
     /// Queries the iTunes Search API to resolve a bundle ID for an App Store app.
     /// This is the fallback for apps not visible to devicectl (all App Store apps).
     private func searchAppStore(appName: String) async -> String? {
-        guard let encoded = appName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "https://itunes.apple.com/search?term=\(encoded)&entity=software&limit=10") else {
-            return nil
-        }
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "itunes.apple.com"
+        components.path = "/search"
+        components.queryItems = [
+            URLQueryItem(name: "term", value: appName),
+            URLQueryItem(name: "entity", value: "software"),
+            URLQueryItem(name: "limit", value: "10"),
+        ]
+        guard let url = components.url else { return nil }
         guard let (data, _) = try? await URLSession.shared.data(from: url),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let results = json["results"] as? [[String: Any]] else {
