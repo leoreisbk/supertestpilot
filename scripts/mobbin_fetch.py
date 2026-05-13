@@ -7,6 +7,7 @@ import html as html_lib
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -29,15 +30,24 @@ def parse_args():
     p.add_argument("--api-key", required=True, dest="api_key")
     p.add_argument("--lang", default="en")
     p.add_argument("--persona", default="")
-    return p.parse_args()
+    args = p.parse_args()
+    if args.limit < 1:
+        p.error("--limit must be at least 1")
+    return args
 
 
 def load_cookie() -> str:
     if not os.path.exists(SESSION_PATH):
         print("Error: Mobbin session not found — run: testpilot mobbin-login", file=sys.stderr)
         sys.exit(1)
+    if os.stat(SESSION_PATH).st_mode & 0o077:
+        print("Warning: session file is world-readable. Run: chmod 600 ~/.testpilot/sessions/mobbin.com.json", file=sys.stderr)
     with open(SESSION_PATH) as f:
-        state = json.load(f)
+        try:
+            state = json.load(f)
+        except json.JSONDecodeError:
+            print("Error: Mobbin session file is corrupt — run: testpilot mobbin-login", file=sys.stderr)
+            sys.exit(1)
     cookies = [c for c in state.get("cookies", []) if "mobbin.com" in c.get("domain", "")]
     if not cookies:
         print("Error: Mobbin session expired — run: testpilot mobbin-login", file=sys.stderr)
@@ -106,7 +116,7 @@ def search_flows(query: str, platform: str, limit: int, cookie: str) -> list[dic
             screens.append({
                 "app_name": app_name,
                 "screen_url": screen.get("screenUrl", ""),
-                "mobbin_url": f"https://mobbin.com/screens/{screen.get('screenId', '')}",
+                "mobbin_url": f"https://mobbin.com/screens/{screen.get('screenId') or ''}",
             })
     return screens
 
@@ -245,18 +255,8 @@ def analyze_screen(image_bytes: bytes, app_name: str, objective: str,
     return _call_gemini(b64, system, prompt, api_key)
 
 
-def generate_summary(observations: list, objective: str, provider: str, api_key: str, lang: str) -> str:
-    lang_note = f"Write in {lang}." if lang != "en" else ""
-    obs_text = "\n".join(f"{i+1}. {o}" for i, o in enumerate(observations))
-    prompt = (
-        f"Objective: {objective}\n\nObservations from {len(observations)} screens:\n{obs_text}\n\n"
-        "Synthesize a concise competitive analysis (3-5 bullet points as HTML <ul><li>). "
-        "Focus on cross-app patterns: what works, what doesn't, standout design decisions. "
-        f"{lang_note}\n"
-        'Respond with JSON: {"summary": "<ul><li>point 1</li>...</ul>"}'
-    )
-    system = "You are a senior UX researcher synthesizing competitive findings."
-
+def _call_text(system: str, prompt: str, provider: str, api_key: str) -> str:
+    """Text-only (no image) AI call shared by generate_summary."""
     if provider == "anthropic":
         body = {"model": "claude-sonnet-4-6", "max_tokens": 1024, "system": system,
                 "messages": [{"role": "user", "content": prompt}]}
@@ -265,11 +265,7 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
             headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                raw = _strip_fences(json.loads(resp.read())["content"][0]["text"])
-                try:
-                    return json.loads(raw).get("summary", raw)
-                except Exception:
-                    return raw
+                return _strip_fences(json.loads(resp.read())["content"][0]["text"])
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"Anthropic API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
@@ -281,26 +277,41 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                raw = _strip_fences(json.loads(resp.read())["choices"][0]["message"]["content"])
-                try:
-                    return json.loads(raw).get("summary", raw)
-                except Exception:
-                    return raw
+                return _strip_fences(json.loads(resp.read())["choices"][0]["message"]["content"])
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"OpenAI API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
-    body = {"contents": [{"parts": [{"text": prompt}]}]}
+    body = {
+        "system_instruction": {"parts": [{"text": system}]},
+        "contents": [{"parts": [{"text": prompt}]}],
+    }
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
-            raw = _strip_fences(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
-            try:
-                return json.loads(raw).get("summary", raw)
-            except Exception:
-                return raw
+            return _strip_fences(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"Gemini API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
+
+
+def generate_summary(observations: list, objective: str, provider: str, api_key: str, lang: str) -> str:
+    lang_note = f"Write in {lang}." if lang != "en" else ""
+    obs_text = "\n".join(f"{i+1}. {o}" for i, o in enumerate(observations))
+    system = "You are a senior UX researcher synthesizing competitive findings."
+    prompt = (
+        f"Objective: {objective}\n\nObservations from {len(observations)} screens:\n{obs_text}\n\n"
+        "Synthesize 3-5 key findings as a JSON array of plain text strings — no HTML, no markdown. "
+        f"Focus on cross-app patterns: what works, what doesn't, standout design decisions. {lang_note}\n"
+        'Respond with JSON: {"items": ["Finding 1", "Finding 2", ...]}'
+    )
+    raw = _call_text(system, prompt, provider, api_key)
+    try:
+        items = json.loads(raw).get("items", [])
+        if isinstance(items, list) and items:
+            return "<ul>" + "".join(f"<li>{html_lib.escape(str(item))}</li>" for item in items) + "</ul>"
+    except Exception:
+        pass
+    return f"<p>{html_lib.escape(raw)}</p>"
 
 
 def _badge(obs: str) -> str:
@@ -419,7 +430,7 @@ def generate_report(steps: list, query: str, objective: str, summary: str,
         f'<div class="meta">Query: &ldquo;{html_lib.escape(query)}&rdquo; &middot; {len(steps)} screens</div>'
         f'{persona_card}</div>\n'
         f'<div class="summary-box"><h2>{sum_label}</h2>'
-        f'<div class="summary-content">{re.sub(r"\\*\\*(.+?)\\*\\*", r"<strong>\\1</strong>", summary)}</div></div>\n'
+        f'<div class="summary-content">{summary}</div></div>\n'
         f'<div class="steps"><h2>{analyzed_label}</h2>{steps_html}</div>\n'
         f'</body></html>'
     )
@@ -429,6 +440,7 @@ def main():
     args = parse_args()
     cookie = load_cookie()
     print(f'Searching Mobbin for "{args.query}"...')
+    # pageSize is number of flows; slice to args.limit to enforce screen count
     screens = search_flows(args.query, args.platform, args.limit, cookie)[:args.limit]
     print(f"Found {len(screens)} screens. Analyzing...")
 
@@ -481,7 +493,7 @@ def main():
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(report_html)
     print(f"Report written to: {output_path}")
-    os.system(f'open "{output_path}"')
+    subprocess.run(["open", output_path], check=False)
 
 
 if __name__ == "__main__":
