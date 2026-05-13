@@ -150,9 +150,17 @@ def _user_prompt(app_name: str, objective: str, observations: list, lang: str) -
     )
 
 
+def _strip_fences(text: str) -> str:
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r'^```(?:json)?\s*\n?', '', text)
+        text = re.sub(r'\n?```\s*$', '', text)
+    return text.strip()
+
+
 def _parse_obs(raw: str) -> str:
     try:
-        return json.loads(raw).get("observation", raw)
+        return json.loads(_strip_fences(raw)).get("observation", raw)
     except Exception:
         return raw.strip()
 
@@ -257,11 +265,11 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
             headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                raw = json.loads(resp.read())["content"][0]["text"]
+                raw = _strip_fences(json.loads(resp.read())["content"][0]["text"])
                 try:
                     return json.loads(raw).get("summary", raw)
                 except Exception:
-                    return raw.strip()
+                    return raw
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"Anthropic API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
@@ -273,11 +281,11 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                raw = json.loads(resp.read())["choices"][0]["message"]["content"]
+                raw = _strip_fences(json.loads(resp.read())["choices"][0]["message"]["content"])
                 try:
                     return json.loads(raw).get("summary", raw)
                 except Exception:
-                    return raw.strip()
+                    return raw
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"OpenAI API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
@@ -286,11 +294,11 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
-            raw = json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"]
+            raw = _strip_fences(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
             try:
                 return json.loads(raw).get("summary", raw)
             except Exception:
-                return raw.strip()
+                return raw
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"Gemini API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
@@ -411,7 +419,7 @@ def generate_report(steps: list, query: str, objective: str, summary: str,
         f'<div class="meta">Query: &ldquo;{html_lib.escape(query)}&rdquo; &middot; {len(steps)} screens</div>'
         f'{persona_card}</div>\n'
         f'<div class="summary-box"><h2>{sum_label}</h2>'
-        f'<div class="summary-content">{summary}</div></div>\n'
+        f'<div class="summary-content">{re.sub(r"\\*\\*(.+?)\\*\\*", r"<strong>\\1</strong>", summary)}</div></div>\n'
         f'<div class="steps"><h2>{analyzed_label}</h2>{steps_html}</div>\n'
         f'</body></html>'
     )
@@ -421,7 +429,7 @@ def main():
     args = parse_args()
     cookie = load_cookie()
     print(f'Searching Mobbin for "{args.query}"...')
-    screens = search_flows(args.query, args.platform, args.limit, cookie)
+    screens = search_flows(args.query, args.platform, args.limit, cookie)[:args.limit]
     print(f"Found {len(screens)} screens. Analyzing...")
 
     steps = []          # {"app_name", "mobbin_url", "image_b64", "observation"}
@@ -462,7 +470,11 @@ def main():
         sys.exit(1)
 
     print("Generating summary...")
-    summary = generate_summary(observations, args.objective, args.provider, args.api_key, args.lang)
+    try:
+        summary = generate_summary(observations, args.objective, args.provider, args.api_key, args.lang)
+    except Exception as e:
+        print(f"Warning: summary generation failed ({e}). Using placeholder.", file=sys.stderr)
+        summary = "<ul><li>Summary unavailable — see per-screen observations above.</li></ul>"
 
     report_html = generate_report(steps, args.query, args.objective, summary, args.lang, args.persona)
     output_path = os.path.abspath(args.output)
