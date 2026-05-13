@@ -13,6 +13,7 @@ import urllib.request
 
 SESSION_PATH = os.path.expanduser("~/.testpilot/sessions/mobbin.com.json")
 MOBBIN_BASE = "https://mobbin.com"
+# CDN account ID discovered via API probing (Task 1). May need updating if Mobbin rotates CDN config.
 BYTESCALE_CDN = "https://bytescale.mobbin.com/FW25bBB/image/mobbin.com/prod"
 SUPABASE_PUBLIC = "/storage/v1/object/public/"
 
@@ -72,12 +73,17 @@ def mobbin_request(path: str, body: dict, cookie: str) -> object:
             print("Error: Mobbin session expired — run: testpilot mobbin-login", file=sys.stderr)
             sys.exit(1)
         raise
+    except urllib.error.URLError as e:
+        print(f"Error: Could not reach Mobbin — check your internet connection. ({e.reason})", file=sys.stderr)
+        sys.exit(1)
 
 
-def search_flows(query: str, platform: str, limit: int, cookie: str) -> list:
-    """Search Mobbin flows. Returns list of flow objects each with appName + screens[]."""
+def search_flows(query: str, platform: str, limit: int, cookie: str) -> list[dict]:
+    """Search Mobbin flows. Returns a flat list of screen dicts with normalized keys."""
+    # Note: /search-flows uses flowActions taxonomy, not free-text; searchQuery is a best-effort addition
     result = mobbin_request("/api/content/search-flows", {
         "searchRequestId": "",
+        "searchQuery": query,
         "filterOptions": {
             "platform": platform,
             "flowActions": None,
@@ -93,7 +99,16 @@ def search_flows(query: str, platform: str, limit: int, cookie: str) -> list:
     if not flows:
         print(f'Error: No flows found for query "{query}". Try a different query.', file=sys.stderr)
         sys.exit(1)
-    return flows
+    screens = []
+    for flow in flows:
+        app_name = flow.get("appName", "")
+        for screen in flow.get("screens", []):
+            screens.append({
+                "app_name": app_name,
+                "screen_url": screen.get("screenUrl", ""),
+                "mobbin_url": f"https://mobbin.com/screens/{screen.get('screenId', '')}",
+            })
+    return screens
 
 
 def download_image(screen_url: str) -> bytes:
@@ -104,7 +119,7 @@ def download_image(screen_url: str) -> bytes:
         with urllib.request.urlopen(req, timeout=30) as resp:
             return resp.read()
     except Exception as e:
-        print(f"  Warning: image download failed ({e})")
+        print(f"  Warning: image download failed ({e})", file=sys.stderr)
         return b""
 
 
@@ -112,15 +127,11 @@ def main():
     args = parse_args()
     cookie = load_cookie()
     print(f'Searching Mobbin for "{args.query}"...')
-    flows = search_flows(args.query, args.platform, args.limit, cookie)
-    print(f"Found {len(flows)} flows.")
-    # Test image download from first screen of first flow
-    first_flow = flows[0]
-    screens = first_flow.get("screens", [])
-    print(f"First flow: {first_flow.get('appName')} — {len(screens)} screens")
+    screens = search_flows(args.query, args.platform, args.limit, cookie)
+    print(f"Found {len(screens)} screens across flows.")
     if screens:
-        img = download_image(screens[0].get("screenUrl", ""))
-        print(f"First image: {len(img)} bytes ({'ok' if img else 'EMPTY'})")
+        img = download_image(screens[0]["screen_url"])
+        print(f"First image ({screens[0]['app_name']}): {len(img)} bytes ({'ok' if img else 'EMPTY'})")
 
 
 if __name__ == "__main__":
