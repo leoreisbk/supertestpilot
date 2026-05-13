@@ -179,23 +179,13 @@ struct RunView: View {
 
     @ViewBuilder
     private var objectiveSection: some View {
-        ZStack(alignment: .topLeading) {
-            if config.objective.isEmpty {
-                let placeholder = config.mode == .test
-                    ? "Check if the Buy button is enabled on the product page…"
-                    : config.personaPath.isEmpty
-                        ? "Describe what to analyze…"
-                        : "Optional — persona defines the focus. Add a specific goal to narrow it down."
-                Text(placeholder)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 4)
-                    .allowsHitTesting(false)
-            }
-            TextEditor(text: $config.objective)
-                .frame(minHeight: 80)
-                .scrollContentBackground(.hidden)
-        }
+        let placeholder = config.mode == .test
+            ? "Check if the Buy button is enabled on the product page…"
+            : config.personaPath.isEmpty
+                ? "Describe what to analyze…"
+                : "Optional — persona defines the focus. Add a specific goal to narrow it down."
+        MultilineTextField(text: $config.objective, placeholder: placeholder)
+            .frame(minHeight: 80)
     }
 
     @ViewBuilder
@@ -282,5 +272,67 @@ struct RunView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - MultilineTextField
+
+private struct MultilineTextField: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let textView = PlaceholderTextView()
+        textView.placeholderString = placeholder
+        textView.isEditable = true
+        textView.isRichText = false
+        textView.drawsBackground = false
+        textView.font = .systemFont(ofSize: NSFont.systemFontSize)
+        textView.textColor = .labelColor
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.delegate = context.coordinator
+
+        let scroll = NSScrollView()
+        scroll.documentView = textView
+        scroll.hasVerticalScroller = false
+        scroll.drawsBackground = false
+        scroll.borderType = .noBorder
+        return scroll
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? PlaceholderTextView else { return }
+        if textView.string != text { textView.string = text }
+        textView.placeholderString = placeholder
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: MultilineTextField
+        init(_ parent: MultilineTextField) { self.parent = parent }
+        func textDidChange(_ n: Notification) {
+            guard let tv = n.object as? NSTextView else { return }
+            parent.text = tv.string
+        }
+    }
+}
+
+private final class PlaceholderTextView: NSTextView {
+    var placeholderString: String = "" { didSet { needsDisplay = true } }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard string.isEmpty else { return }
+        let x = (textContainer?.lineFragmentPadding ?? 0) + textContainerInset.width
+        let y = textContainerInset.height
+        NSAttributedString(string: placeholderString, attributes: [
+            .foregroundColor: NSColor.placeholderTextColor,
+            .font: font ?? .systemFont(ofSize: NSFont.systemFontSize)
+        ]).draw(at: NSPoint(x: x, y: y))
     }
 }
