@@ -300,10 +300,51 @@ def main():
     cookie = load_cookie()
     print(f'Searching Mobbin for "{args.query}"...')
     screens = search_flows(args.query, args.platform, args.limit, cookie)
-    print(f"Found {len(screens)} screens across flows.")
-    if screens:
-        img = download_image(screens[0]["screen_url"])
-        print(f"First image ({screens[0]['app_name']}): {len(img)} bytes ({'ok' if img else 'EMPTY'})")
+    print(f"Found {len(screens)} screens. Analyzing...")
+
+    steps = []          # {"app_name", "mobbin_url", "image_b64", "observation"}
+    observations = []   # running list for dedup context
+
+    for i, screen in enumerate(screens):
+        app_name = screen["app_name"]
+        mobbin_url = screen["mobbin_url"]
+        print(f"  [{i + 1}/{len(screens)}] {app_name}...", end=" ", flush=True)
+
+        image_bytes = download_image(screen["screen_url"])
+        if not image_bytes:
+            print("skip (no image)")
+            steps.append({"app_name": app_name, "mobbin_url": mobbin_url,
+                           "image_b64": "", "observation": "Could not load image."})
+            continue
+
+        try:
+            observation = analyze_screen(
+                image_bytes, app_name, args.objective,
+                observations, args.provider, args.api_key, args.lang, args.persona,
+            )
+            observations.append(f"{app_name}: {observation}")
+            print("done")
+        except Exception as e:
+            observation = f"Analysis error: {e}"
+            print(f"error: {e}", file=sys.stderr)
+
+        steps.append({
+            "app_name": app_name,
+            "mobbin_url": mobbin_url,
+            "image_b64": base64.b64encode(image_bytes).decode(),
+            "observation": observation,
+        })
+
+    if not observations:
+        print("Error: no screens could be analyzed.", file=sys.stderr)
+        sys.exit(1)
+
+    print("Generating summary...")
+    summary = generate_summary(observations, args.objective, args.provider, args.api_key, args.lang)
+
+    # report written in Task 6
+    print(f"Done. {len(steps)} screens analyzed.")
+    print(f"Summary preview: {summary[:120]}...")
 
 
 if __name__ == "__main__":
