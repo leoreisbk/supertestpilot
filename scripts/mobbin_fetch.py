@@ -123,6 +123,145 @@ def download_image(screen_url: str) -> bytes:
         return b""
 
 
+# ---------------------------------------------------------------------------
+# AI analysis helpers
+# ---------------------------------------------------------------------------
+
+_SYSTEM_ANALYST = (
+    "You are a senior UX researcher conducting competitive analysis. "
+    "Examine the screenshot and identify ONE specific finding relevant to the objective. "
+    'Respond ONLY with valid JSON: {"observation": "[CRITICAL/ISSUE/POSITIVE] specific finding"}'
+)
+
+_SYSTEM_PERSONA_TMPL = (
+    "You are the following person using a mobile app:\n\n<persona>\n{persona}\n</persona>\n\n"
+    "You are NOT a researcher — you ARE this person. "
+    'Respond ONLY with valid JSON: {"observation": "[CRITICAL/ISSUE/POSITIVE] first-person experience"}'
+)
+
+
+def _user_prompt(app_name: str, objective: str, observations: list, lang: str) -> str:
+    prev = "\n".join(f"{i+1}. {o}" for i, o in enumerate(observations[-10:])) or "None yet."
+    lang_note = f"\nWrite your observation in {lang}." if lang != "en" else ""
+    return (
+        f"App: {app_name}\nObjective: {objective}\n"
+        f"Previous observations (do NOT repeat):\n{prev}\n"
+        f"Examine this screenshot and provide ONE UX observation.{lang_note}"
+    )
+
+
+def _parse_obs(raw: str) -> str:
+    try:
+        return json.loads(raw).get("observation", raw)
+    except Exception:
+        return raw.strip()
+
+
+def _call_anthropic(b64: str, system: str, prompt: str, api_key: str) -> str:
+    body = {
+        "model": "claude-sonnet-4-6",
+        "max_tokens": 512,
+        "system": system,
+        "messages": [{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/webp", "data": b64}},
+            {"type": "text", "text": prompt},
+        ]}],
+    }
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=json.dumps(body).encode(),
+        headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return _parse_obs(json.loads(resp.read())["content"][0]["text"])
+
+
+def _call_openai(b64: str, system: str, prompt: str, api_key: str) -> str:
+    body = {
+        "model": "gpt-4o",
+        "max_tokens": 512,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": f"data:image/webp;base64,{b64}"}},
+                {"type": "text", "text": prompt},
+            ]},
+        ],
+    }
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=json.dumps(body).encode(),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return _parse_obs(json.loads(resp.read())["choices"][0]["message"]["content"])
+
+
+def _call_gemini(b64: str, prompt: str, api_key: str) -> str:
+    body = {"contents": [{"parts": [
+        {"inline_data": {"mime_type": "image/webp", "data": b64}},
+        {"text": prompt},
+    ]}]}
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.5-flash:generateContent?key={api_key}"
+    )
+    req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                  headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return _parse_obs(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
+
+
+def analyze_screen(image_bytes: bytes, app_name: str, objective: str,
+                   observations: list, provider: str, api_key: str,
+                   lang: str, persona: str) -> str:
+    b64 = base64.b64encode(image_bytes).decode()
+    system = _SYSTEM_PERSONA_TMPL.format(persona=persona.strip()) if persona else _SYSTEM_ANALYST
+    prompt = _user_prompt(app_name, objective, observations, lang)
+    if provider == "anthropic":
+        return _call_anthropic(b64, system, prompt, api_key)
+    if provider == "openai":
+        return _call_openai(b64, system, prompt, api_key)
+    return _call_gemini(b64, prompt, api_key)
+
+
+def generate_summary(observations: list, objective: str, provider: str, api_key: str, lang: str) -> str:
+    lang_note = f"Write in {lang}." if lang != "en" else ""
+    obs_text = "\n".join(f"{i+1}. {o}" for i, o in enumerate(observations))
+    prompt = (
+        f"Objective: {objective}\n\nObservations from {len(observations)} screens:\n{obs_text}\n\n"
+        "Synthesize a concise competitive analysis (3-5 bullet points as HTML <ul><li>). "
+        "Focus on cross-app patterns: what works, what doesn't, standout design decisions. "
+        f"{lang_note}\n"
+        'Respond with JSON: {"summary": "<ul><li>point 1</li>...</ul>"}'
+    )
+    system = "You are a senior UX researcher synthesizing competitive findings."
+
+    if provider == "anthropic":
+        body = {"model": "claude-sonnet-4-6", "max_tokens": 1024, "system": system,
+                "messages": [{"role": "user", "content": prompt}]}
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages",
+            data=json.dumps(body).encode(),
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return _parse_obs(json.loads(resp.read())["content"][0]["text"])
+
+    if provider == "openai":
+        body = {"model": "gpt-4o", "max_tokens": 1024,
+                "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]}
+        req = urllib.request.Request("https://api.openai.com/v1/chat/completions",
+            data=json.dumps(body).encode(),
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return _parse_obs(json.loads(resp.read())["choices"][0]["message"]["content"])
+
+    body = {"contents": [{"parts": [{"text": prompt}]}]}
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return _parse_obs(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
+
+
 def main():
     args = parse_args()
     cookie = load_cookie()
