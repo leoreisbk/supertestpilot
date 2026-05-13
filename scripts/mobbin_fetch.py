@@ -244,7 +244,11 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
             data=json.dumps(body).encode(),
             headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
         with urllib.request.urlopen(req, timeout=60) as resp:
-            return _parse_obs(json.loads(resp.read())["content"][0]["text"])
+            raw = json.loads(resp.read())["content"][0]["text"]
+            try:
+                return json.loads(raw).get("summary", raw)
+            except Exception:
+                return raw.strip()
 
     if provider == "openai":
         body = {"model": "gpt-4o", "max_tokens": 1024,
@@ -253,13 +257,21 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
             data=json.dumps(body).encode(),
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=60) as resp:
-            return _parse_obs(json.loads(resp.read())["choices"][0]["message"]["content"])
+            raw = json.loads(resp.read())["choices"][0]["message"]["content"]
+            try:
+                return json.loads(raw).get("summary", raw)
+            except Exception:
+                return raw.strip()
 
     body = {"contents": [{"parts": [{"text": prompt}]}]}
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=60) as resp:
-        return _parse_obs(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
+        raw = json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"]
+        try:
+            return json.loads(raw).get("summary", raw)
+        except Exception:
+            return raw.strip()
 
 
 def main():
