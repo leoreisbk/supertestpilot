@@ -295,6 +295,128 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
         raise RuntimeError(f"Gemini API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
 
+def _badge(obs: str) -> str:
+    u = obs.upper()
+    if "[CRITICAL]" in u:
+        return '<span class="badge badge-critical">CRITICAL</span>'
+    if "[ISSUE]" in u:
+        return '<span class="badge badge-issue">ISSUE</span>'
+    if "[POSITIVE]" in u:
+        return '<span class="badge badge-positive">POSITIVE</span>'
+    return ""
+
+
+def _render_obs(obs: str) -> str:
+    badge = _badge(obs)
+    clean = html_lib.escape(re.sub(r"\[(CRITICAL|ISSUE|POSITIVE)\]\s*", "", obs))
+    return f"{badge} {clean}"
+
+
+_CSS = """* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       background: #f5f5f7; color: #1d1d1f; line-height: 1.5; }
+.header { background: #fff; padding: 32px 40px; border-bottom: 1px solid #e5e5ea; }
+.header h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.header .objective { color: #6e6e73; font-size: 15px; }
+.meta { margin-top: 12px; font-size: 13px; color: #8e8e93; }
+.persona-card { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px;
+                background: #f2f2f7; border-radius: 8px; padding: 10px 14px; }
+.persona-icon { font-size: 20px; }
+.persona-label { font-size: 11px; color: #8e8e93; text-transform: uppercase; letter-spacing: .04em; }
+.persona-text { font-size: 13px; font-weight: 500; }
+.summary-box { margin: 24px 40px; background: #fff; border-radius: 12px;
+               padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.summary-box h2 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.summary-content { font-size: 14px; color: #3a3a3c; }
+.summary-content ul { padding-left: 18px; }
+.summary-content li { margin-bottom: 3px; }
+.steps { padding: 0 40px 40px; }
+.steps h2 { font-size: 15px; font-weight: 600; margin: 24px 0 12px; }
+.step { background: #fff; border-radius: 12px; margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.step-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+               background: #f2f2f7; border-radius: 12px 12px 0 0; }
+.step-num { font-size: 12px; color: #8e8e93; }
+.action { font-size: 13px; font-weight: 600; }
+.action a { color: #007aff; text-decoration: none; }
+.step-body { display: flex; flex-direction: row; align-items: flex-start; }
+.step-img-col { flex: 0 0 40%; padding: 12px; }
+.step-img-col img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.step-obs-col { flex: 1; padding: 16px 16px 16px 8px; font-size: 14px; line-height: 1.6; color: #3a3a3c; }
+.step-obs-empty { color: #aeaeb2; font-style: italic; }
+.badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+         padding: 1px 6px; border-radius: 3px; margin-right: 6px; }
+.badge-critical { background: #ff3b30; color: #fff; }
+.badge-issue { background: #ff9500; color: #fff; }
+.badge-positive { background: #34c759; color: #fff; }
+@media (max-width: 600px) { .step-body { flex-direction: column; } .step-img-col { width: 100%; flex: none; } }
+@media (prefers-color-scheme: dark) {
+  body { background: #1c1c1e; color: #f5f5f7; }
+  .header { background: #2c2c2e; border-bottom-color: #3a3a3c; }
+  .header .objective { color: #aeaeb2; }
+  .summary-box, .step { background: #2c2c2e; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .step-header { background: #3a3a3c; }
+  .step-num { color: #636366; }
+  .summary-content { color: #ebebf0; }
+  .step-obs-col { color: #ebebf0; }
+}"""
+
+
+def generate_report(steps: list, query: str, objective: str, summary: str,
+                    lang: str, persona: str) -> str:
+    ptbr = lang.startswith("pt")
+    title = "Relatório de Pesquisa TestPilot" if ptbr else "TestPilot Research Report"
+    sum_label = "Resumo" if ptbr else "Summary"
+    screen_label = "Tela" if ptbr else "Screen"
+    analyzed_label = "Telas analisadas" if ptbr else "Analyzed screens"
+    eval_label = "Avaliado como" if ptbr else "Evaluated as"
+
+    persona_card = ""
+    if persona:
+        first = html_lib.escape(next((l.lstrip("# ") for l in persona.splitlines() if l.strip()), "Persona"))
+        persona_card = (
+            f'<div class="persona-card"><span class="persona-icon">👤</span>'
+            f'<div class="persona-content"><div class="persona-label">{eval_label}</div>'
+            f'<div class="persona-text">{first}</div></div></div>'
+        )
+
+    steps_html = ""
+    for i, step in enumerate(steps):
+        img_tag = (
+            f'<img src="data:image/webp;base64,{step["image_b64"]}" '
+            f'alt="{screen_label} {i+1}" loading="lazy" />'
+        ) if step["image_b64"] else ""
+        app_link = (
+            f'<a href="{html_lib.escape(step["mobbin_url"])}" target="_blank">'
+            f'{html_lib.escape(step["app_name"])}</a>'
+        ) if step["mobbin_url"] else html_lib.escape(step["app_name"])
+        obs_html = (
+            f'<p>{_render_obs(step["observation"])}</p>'
+            if step["observation"] else '<p class="step-obs-empty">—</p>'
+        )
+        steps_html += (
+            f'<div class="step"><div class="step-header">'
+            f'<span class="step-num">{screen_label} {i+1}</span>'
+            f'<span class="action">{app_link}</span></div>'
+            f'<div class="step-body"><div class="step-img-col">{img_tag}</div>'
+            f'<div class="step-obs-col">{obs_html}</div></div></div>'
+        )
+
+    return (
+        f'<!DOCTYPE html><html lang="{"pt-BR" if ptbr else "en"}">\n'
+        f'<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+        f'<title>{title}</title><style>{_CSS}</style></head>\n<body>\n'
+        f'<div class="header"><h1>{title}</h1>'
+        f'<div class="objective">{html_lib.escape(objective)}</div>'
+        f'<div class="meta">Query: &ldquo;{html_lib.escape(query)}&rdquo; &middot; {len(steps)} screens</div>'
+        f'{persona_card}</div>\n'
+        f'<div class="summary-box"><h2>{sum_label}</h2>'
+        f'<div class="summary-content">{summary}</div></div>\n'
+        f'<div class="steps"><h2>{analyzed_label}</h2>{steps_html}</div>\n'
+        f'</body></html>'
+    )
+
+
 def main():
     args = parse_args()
     cookie = load_cookie()
@@ -342,9 +464,12 @@ def main():
     print("Generating summary...")
     summary = generate_summary(observations, args.objective, args.provider, args.api_key, args.lang)
 
-    # report written in Task 6
-    print(f"Done. {len(steps)} screens analyzed.")
-    print(f"Summary preview: {summary[:120]}...")
+    report_html = generate_report(steps, args.query, args.objective, summary, args.lang, args.persona)
+    output_path = os.path.abspath(args.output)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(report_html)
+    print(f"Report written to: {output_path}")
+    os.system(f'open "{output_path}"')
 
 
 if __name__ == "__main__":
