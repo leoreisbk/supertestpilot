@@ -172,8 +172,11 @@ def _call_anthropic(b64: str, system: str, prompt: str, api_key: str) -> str:
         data=json.dumps(body).encode(),
         headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return _parse_obs(json.loads(resp.read())["content"][0]["text"])
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return _parse_obs(json.loads(resp.read())["content"][0]["text"])
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Anthropic API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
 
 def _call_openai(b64: str, system: str, prompt: str, api_key: str) -> str:
@@ -193,23 +196,32 @@ def _call_openai(b64: str, system: str, prompt: str, api_key: str) -> str:
         data=json.dumps(body).encode(),
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return _parse_obs(json.loads(resp.read())["choices"][0]["message"]["content"])
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return _parse_obs(json.loads(resp.read())["choices"][0]["message"]["content"])
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"OpenAI API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
 
-def _call_gemini(b64: str, prompt: str, api_key: str) -> str:
-    body = {"contents": [{"parts": [
-        {"inline_data": {"mime_type": "image/webp", "data": b64}},
-        {"text": prompt},
-    ]}]}
+def _call_gemini(b64: str, system: str, prompt: str, api_key: str) -> str:
+    body = {
+        "system_instruction": {"parts": [{"text": system}]},
+        "contents": [{"parts": [
+            {"inline_data": {"mime_type": "image/webp", "data": b64}},
+            {"text": prompt},
+        ]}],
+    }
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"gemini-2.5-flash:generateContent?key={api_key}"
     )
     req = urllib.request.Request(url, data=json.dumps(body).encode(),
                                   headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return _parse_obs(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return _parse_obs(json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"])
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Gemini API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
 
 def analyze_screen(image_bytes: bytes, app_name: str, objective: str,
@@ -222,7 +234,7 @@ def analyze_screen(image_bytes: bytes, app_name: str, objective: str,
         return _call_anthropic(b64, system, prompt, api_key)
     if provider == "openai":
         return _call_openai(b64, system, prompt, api_key)
-    return _call_gemini(b64, prompt, api_key)
+    return _call_gemini(b64, system, prompt, api_key)
 
 
 def generate_summary(observations: list, objective: str, provider: str, api_key: str, lang: str) -> str:
@@ -243,12 +255,15 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
         req = urllib.request.Request("https://api.anthropic.com/v1/messages",
             data=json.dumps(body).encode(),
             headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            raw = json.loads(resp.read())["content"][0]["text"]
-            try:
-                return json.loads(raw).get("summary", raw)
-            except Exception:
-                return raw.strip()
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                raw = json.loads(resp.read())["content"][0]["text"]
+                try:
+                    return json.loads(raw).get("summary", raw)
+                except Exception:
+                    return raw.strip()
+        except urllib.error.HTTPError as e:
+            raise RuntimeError(f"Anthropic API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
     if provider == "openai":
         body = {"model": "gpt-4o", "max_tokens": 1024,
@@ -256,22 +271,28 @@ def generate_summary(observations: list, objective: str, provider: str, api_key:
         req = urllib.request.Request("https://api.openai.com/v1/chat/completions",
             data=json.dumps(body).encode(),
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            raw = json.loads(resp.read())["choices"][0]["message"]["content"]
-            try:
-                return json.loads(raw).get("summary", raw)
-            except Exception:
-                return raw.strip()
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                raw = json.loads(resp.read())["choices"][0]["message"]["content"]
+                try:
+                    return json.loads(raw).get("summary", raw)
+                except Exception:
+                    return raw.strip()
+        except urllib.error.HTTPError as e:
+            raise RuntimeError(f"OpenAI API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
     body = {"contents": [{"parts": [{"text": prompt}]}]}
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        raw = json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"]
-        try:
-            return json.loads(raw).get("summary", raw)
-        except Exception:
-            return raw.strip()
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw = json.loads(resp.read())["candidates"][0]["content"]["parts"][0]["text"]
+            try:
+                return json.loads(raw).get("summary", raw)
+            except Exception:
+                return raw.strip()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Gemini API error {e.code}: {e.read().decode(errors='replace')[:200]}") from e
 
 
 def main():
