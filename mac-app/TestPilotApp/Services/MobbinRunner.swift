@@ -41,12 +41,20 @@ PERSONA: \(persona)
 
 ## Instructions
 
-1. Call mcp__mobbin__search_screens with:
-   - query: the QUERY above
-   - platform: the PLATFORM above (ios or web)
-   - limit: the LIMIT above
+1. Determine if QUERY is an **app name** (a short proper noun like "Tesla", "Spotify", "Airbnb") or a **description of screen content** (a phrase like "onboarding steps with progress bar").
 
-2. For each screen returned by the tool, before analyzing it print exactly:
+   **If QUERY is an app name:**
+   - Call mcp__mobbin__search_screens up to 3 times with these queries (stop early once you have enough screens):
+     a. "\(config.mobbinQuery) app"
+     b. "\(config.mobbinQuery) screens"
+     c. "\(config.mobbinQuery) mobile interface"
+   - Use only results where app_name contains "\(config.mobbinQuery)" (case-insensitive). Discard results from other apps.
+   - Stop collecting once you have LIMIT screens from the target app.
+
+   **If QUERY is a content description:**
+   - Call mcp__mobbin__search_screens once with the QUERY as-is, platform PLATFORM, limit LIMIT.
+
+2. For each screen retained, before analyzing it print exactly:
    TESTPILOT_STEP: Screen X/N — <app_name>
    (where X is the 1-based index and N is the total count)
 

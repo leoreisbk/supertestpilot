@@ -101,7 +101,7 @@ struct RunView: View {
             }
         }
         if config.mode == .research {
-            TextField("Search Mobbin…", text: $config.mobbinQuery)
+            TextField("App name or screen description (e.g. Tesla, onboarding flow)", text: $config.mobbinQuery)
             Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...30)
         }
     }
