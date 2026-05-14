@@ -245,7 +245,7 @@ struct RunView: View {
                         value: $config.maxSteps, in: 1...60)
             }
             if config.mode == .research {
-                Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...30)
+                Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...15)
             }
             if config.mode == .analyze {
                 HStack {

@@ -83,7 +83,7 @@ final class MobbinClient {
         req.setValue("Bearer \(token)",                     forHTTPHeaderField: "Authorization")
         if let sid = sessionId { req.setValue(sid, forHTTPHeaderField: "Mcp-Session-Id") }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        req.timeoutInterval = 120
+        req.timeoutInterval = 300
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { throw MobbinClientError.toolCallFailed("Non-HTTP response") }

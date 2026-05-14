@@ -59,7 +59,7 @@ final class RunConfig {
     var personaPath: String = ""
     var mobbinAppName: String = ""
     var mobbinDescription: String = ""
-    var mobbinLimit: Int = 20
+    var mobbinLimit: Int = 5
 
     /// Returns the persona markdown content, or nil if no persona is set.
     var personaContent: String? {
