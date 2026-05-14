@@ -3,15 +3,21 @@ import Foundation
 enum MobbinRunnerError: LocalizedError {
     case noAPIKey
     case apiError(String)
-    case noHTMLInResponse
 
     var errorDescription: String? {
         switch self {
-        case .noAPIKey:            return "API key not set. Open Settings and add your key."
-        case .apiError(let m):     return "AI API error: \(m)"
-        case .noHTMLInResponse:    return "The AI did not return an HTML report."
+        case .noAPIKey:        return "API key not set. Open Settings and add your key."
+        case .apiError(let m): return "AI API error: \(m)"
         }
     }
+}
+
+// Parsed result from the AI's structured response
+private struct ScreenAnalysis {
+    let observation: String  // full text including [CRITICAL]/[ISSUE]/[POSITIVE]
+    let badgeClass: String   // badge-critical / badge-issue / badge-positive
+    let badgeLabel: String   // CRITICAL / ISSUE / POSITIVE
+    let observationText: String // text after the tag
 }
 
 struct MobbinRunner {
@@ -26,52 +32,95 @@ struct MobbinRunner {
         onStep("Analyzing \(screens.count) screens with AI…")
 
         let provider = config.providerOverride ?? settings.provider
+        let rawAnalysis: String
         switch provider {
-        case .anthropic: return try await callAnthropic(screens: screens, apiKey: key)
-        case .openai:    return try await callOpenAI(screens: screens, apiKey: key)
-        case .gemini:    return try await callGemini(screens: screens, apiKey: key)
+        case .anthropic: rawAnalysis = try await callAnthropic(screens: screens, apiKey: key)
+        case .openai:    rawAnalysis = try await callOpenAI(screens: screens, apiKey: key)
+        case .gemini:    rawAnalysis = try await callGemini(screens: screens, apiKey: key)
         }
+
+        return buildHTML(screens: screens, aiResponse: rawAnalysis)
     }
 
-    // MARK: - Prompts
+    // MARK: - Analysis prompt
 
     @MainActor
-    private func buildSystemPrompt() -> String {
+    private func buildAnalysisPrompt() -> String {
         let persona = config.personaContent.map { "\nPERSONA: \($0)" } ?? ""
         return """
-        You are a UX research assistant.\
-        \nAPP: \(config.mobbinAppName)\
-        \nOBJECTIVE: \(config.objective)\(persona)
+        You are a UX research assistant.
+        APP: \(config.mobbinAppName)
+        OBJECTIVE: \(config.objective)\(persona)
 
-        Analyze each screen image provided. For each screen write one observation prefixed with exactly one of:
-        - [CRITICAL] for severe UX problems
-        - [ISSUE] for moderate UX problems
-        - [POSITIVE] for good UX patterns
+        You will receive \(config.mobbinLimit) app screen images. Analyze each one against the OBJECTIVE.
 
-        After all screens, write a summary of 3-5 cross-screen patterns.
+        Respond in this EXACT format — no extra text, no markdown, no HTML:
 
-        Then produce a COMPLETE HTML report using the exact CSS and structure below.
-        Output ONLY the HTML document, starting with <!DOCTYPE html> and ending with </html>.
+        SUMMARY
+        • [cross-screen pattern 1]
+        • [cross-screen pattern 2]
+        • [cross-screen pattern 3]
+        END_SUMMARY
+
+        SCREEN_1
+        [CRITICAL|ISSUE|POSITIVE] one sentence observation
+        END_SCREEN_1
+
+        SCREEN_2
+        [CRITICAL|ISSUE|POSITIVE] one sentence observation
+        END_SCREEN_2
+
+        (continue for all screens)
         """
     }
 
+    // MARK: - HTML builder (uses actual images from screens array)
+
     @MainActor
-    private func buildHTMLTemplate() -> String {
+    private func buildHTML(screens: [MobbinScreen], aiResponse: String) -> String {
         let lang = config.language.rawValue
-        let (title, summary, screensLabel, screenLabel): (String, String, String, String) = lang == "pt-BR"
-            ? ("Relatório de Pesquisa TestPilot", "Resumo", "Telas analisadas", "Tela")
-            : ("TestPilot Research Report", "Summary", "Analyzed screens", "Screen")
+        let isPTBR = lang == "pt-BR"
+        let title     = isPTBR ? "Relatório de Pesquisa TestPilot" : "TestPilot Research Report"
+        let lblSum    = isPTBR ? "Resumo" : "Summary"
+        let lblScreen = isPTBR ? "Telas analisadas" : "Analyzed screens"
+        let lblNum    = isPTBR ? "Tela" : "Screen"
+
+        let summary = parseSummary(from: aiResponse)
+        let analyses = parseScreenAnalyses(from: aiResponse, count: screens.count)
 
         let persona = config.personaContent ?? ""
         let personaCard = persona.isEmpty ? "" : """
-          <div class="persona-card"><div class="persona-icon">👤</div><div>\
-          <div class="persona-label">Persona</div>\
-          <div class="persona-text">\(persona)</div></div></div>
-          """
+            <div class="persona-card"><div class="persona-icon">&#x1F464;</div><div>\
+            <div class="persona-label">Persona</div>\
+            <div class="persona-text">\(escapeHTML(persona))</div></div></div>
+            """
+
+        var screenCards = ""
+        for (i, screen) in screens.enumerated() {
+            let analysis = i < analyses.count ? analyses[i] : ScreenAnalysis(observation: "", badgeClass: "badge-issue", badgeLabel: "ISSUE", observationText: "—")
+            let title2 = screen.mobbinURL.map { "<a href=\"\($0)\" target=\"_blank\">\(lblNum) \(i+1)</a>" } ?? "\(lblNum) \(i+1)"
+            let imgTag = "<img src=\"data:\(screen.mediaType);base64,\(screen.imageBase64)\" loading=\"lazy\"/>"
+            screenCards += """
+            <div class="step">
+              <div class="step-header">
+                <span class="step-num">\(title2)</span>
+                <span class="action">\(escapeHTML(screen.appName))</span>
+              </div>
+              <div class="step-body">
+                <div class="step-img-col">\(imgTag)</div>
+                <div class="step-obs-col"><p><span class="badge \(analysis.badgeClass)">\(analysis.badgeLabel)</span>\(escapeHTML(analysis.observationText))</p></div>
+              </div>
+            </div>\n
+            """
+        }
 
         return """
-        ## HTML format — output this structure exactly
-
+        <!DOCTYPE html>
+        <html lang="\(lang)">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>\(title)</title>
         <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; line-height: 1.5; }
@@ -106,25 +155,85 @@ struct MobbinRunner {
         @media (max-width: 600px) { .step-body { flex-direction: column; } .step-img-col { width: 100%; flex: none; } }
         @media (prefers-color-scheme: dark) { body { background: #1c1c1e; color: #f5f5f7; } .header { background: #2c2c2e; border-bottom-color: #3a3a3c; } .header .objective { color: #aeaeb2; } .summary-box, .step { background: #2c2c2e; } .step-header { background: #3a3a3c; } .summary-content, .step-obs-col { color: #ebebf0; } }
         </style>
-
-        <!DOCTYPE html>
-        <html lang="\(lang)">
-        <head><meta charset="UTF-8"><title>\(title)</title><style><!-- CSS above --></style></head>
+        </head>
         <body>
         <div class="header">
           <h1>\(title)</h1>
-          <div class="objective">\(config.objective)</div>
-          <div class="meta">\(config.mobbinAppName)\(config.mobbinDescription.isEmpty ? "" : " · \(config.mobbinDescription)")</div>
+          <div class="objective">\(escapeHTML(config.objective))</div>
+          <div class="meta">\(escapeHTML(config.mobbinAppName))\(config.mobbinDescription.isEmpty ? "" : " · \(escapeHTML(config.mobbinDescription))")</div>
           \(personaCard)
         </div>
-        <div class="summary-box"><h2>\(summary)</h2><div class="summary-content"><!-- YOUR SUMMARY HERE --></div></div>
-        <div class="steps"><h2>\(screensLabel)</h2>
-        <!-- one .step per screen; badge class: badge-critical / badge-issue / badge-positive;
-             embed images as data URIs: <img src="data:image/jpeg;base64,BASE64" loading="lazy"/>
-             if mobbinURL available: <a href="URL">\(screenLabel) N</a>, else plain text -->
+        <div class="summary-box">
+          <h2>\(lblSum)</h2>
+          <div class="summary-content"><ul>\(summary)</ul></div>
         </div>
-        </body></html>
+        <div class="steps">
+          <h2>\(lblScreen)</h2>
+          \(screenCards)
+        </div>
+        </body>
+        </html>
         """
+    }
+
+    // MARK: - Response parsers
+
+    private func parseSummary(from text: String) -> String {
+        guard let start = text.range(of: "SUMMARY\n"),
+              let end   = text.range(of: "\nEND_SUMMARY") else {
+            // Fallback: return first non-empty lines as bullet
+            return text.components(separatedBy: "\n")
+                .filter { $0.hasPrefix("•") || $0.hasPrefix("-") }
+                .prefix(5)
+                .map { "<li>\(escapeHTML(String($0.dropFirst().trimmingCharacters(in: .whitespaces))))</li>" }
+                .joined()
+        }
+        let block = String(text[start.upperBound..<end.lowerBound])
+        return block.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .map { line -> String in
+                let clean = line.hasPrefix("•") || line.hasPrefix("-")
+                    ? String(line.dropFirst().trimmingCharacters(in: .whitespaces))
+                    : line
+                return "<li>\(escapeHTML(clean))</li>"
+            }
+            .joined()
+    }
+
+    private func parseScreenAnalyses(from text: String, count: Int) -> [ScreenAnalysis] {
+        var results: [ScreenAnalysis] = []
+        for i in 1...max(1, count) {
+            let startTag = "SCREEN_\(i)\n"
+            let endTag   = "\nEND_SCREEN_\(i)"
+            guard let start = text.range(of: startTag),
+                  let end   = text.range(of: endTag) else { continue }
+            let obs = String(text[start.upperBound..<end.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            results.append(parseObservation(obs))
+        }
+        return results
+    }
+
+    private func parseObservation(_ text: String) -> ScreenAnalysis {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("[CRITICAL]") {
+            let obs = String(trimmed.dropFirst("[CRITICAL]".count)).trimmingCharacters(in: .whitespaces)
+            return ScreenAnalysis(observation: trimmed, badgeClass: "badge-critical", badgeLabel: "CRITICAL", observationText: obs)
+        } else if trimmed.hasPrefix("[ISSUE]") {
+            let obs = String(trimmed.dropFirst("[ISSUE]".count)).trimmingCharacters(in: .whitespaces)
+            return ScreenAnalysis(observation: trimmed, badgeClass: "badge-issue", badgeLabel: "ISSUE", observationText: obs)
+        } else if trimmed.hasPrefix("[POSITIVE]") {
+            let obs = String(trimmed.dropFirst("[POSITIVE]".count)).trimmingCharacters(in: .whitespaces)
+            return ScreenAnalysis(observation: trimmed, badgeClass: "badge-positive", badgeLabel: "POSITIVE", observationText: obs)
+        }
+        return ScreenAnalysis(observation: trimmed, badgeClass: "badge-issue", badgeLabel: "NOTE", observationText: trimmed)
+    }
+
+    private func escapeHTML(_ s: String) -> String {
+        s.replacingOccurrences(of: "&", with: "&amp;")
+         .replacingOccurrences(of: "<", with: "&lt;")
+         .replacingOccurrences(of: ">", with: "&gt;")
+         .replacingOccurrences(of: "\"", with: "&quot;")
     }
 
     // MARK: - Anthropic
@@ -132,10 +241,10 @@ struct MobbinRunner {
     @MainActor
     private func callAnthropic(screens: [MobbinScreen], apiKey: String) async throws -> String {
         var content: [[String: Any]] = [
-            ["type": "text", "text": buildSystemPrompt() + "\n\n" + buildHTMLTemplate()]
+            ["type": "text", "text": buildAnalysisPrompt()]
         ]
         for (i, s) in screens.enumerated() {
-            content.append(["type": "text", "text": "Screen \(i + 1)/\(screens.count) — \(s.appName)"])
+            content.append(["type": "text", "text": "Screen \(i + 1)/\(screens.count)"])
             content.append(["type": "image", "source": [
                 "type": "base64", "media_type": s.mediaType, "data": s.imageBase64
             ]])
@@ -143,7 +252,7 @@ struct MobbinRunner {
 
         let body: [String: Any] = [
             "model": "claude-opus-4-5-20251101",
-            "max_tokens": 8192,
+            "max_tokens": 4096,
             "messages": [["role": "user", "content": content]]
         ]
 
@@ -163,8 +272,7 @@ struct MobbinRunner {
               let arr  = json["content"] as? [[String: Any]],
               let text = arr.first?["text"] as? String
         else { throw MobbinRunnerError.apiError("Unexpected response shape") }
-
-        return extractHTML(text)
+        return text
     }
 
     // MARK: - OpenAI
@@ -172,10 +280,10 @@ struct MobbinRunner {
     @MainActor
     private func callOpenAI(screens: [MobbinScreen], apiKey: String) async throws -> String {
         var parts: [[String: Any]] = [
-            ["type": "text", "text": buildSystemPrompt() + "\n\n" + buildHTMLTemplate()]
+            ["type": "text", "text": buildAnalysisPrompt()]
         ]
         for (i, s) in screens.enumerated() {
-            parts.append(["type": "text", "text": "Screen \(i + 1)/\(screens.count) — \(s.appName)"])
+            parts.append(["type": "text", "text": "Screen \(i + 1)/\(screens.count)"])
             parts.append(["type": "image_url", "image_url": [
                 "url": "data:\(s.mediaType);base64,\(s.imageBase64)"
             ]])
@@ -183,7 +291,7 @@ struct MobbinRunner {
 
         let body: [String: Any] = [
             "model": "gpt-4o",
-            "max_tokens": 8192,
+            "max_tokens": 4096,
             "messages": [["role": "user", "content": parts]]
         ]
 
@@ -203,8 +311,7 @@ struct MobbinRunner {
               let msg     = choices.first?["message"] as? [String: Any],
               let text    = msg["content"] as? String
         else { throw MobbinRunnerError.apiError("Unexpected response shape") }
-
-        return extractHTML(text)
+        return text
     }
 
     // MARK: - Gemini
@@ -212,16 +319,16 @@ struct MobbinRunner {
     @MainActor
     private func callGemini(screens: [MobbinScreen], apiKey: String) async throws -> String {
         var parts: [[String: Any]] = [
-            ["text": buildSystemPrompt() + "\n\n" + buildHTMLTemplate()]
+            ["text": buildAnalysisPrompt()]
         ]
         for (i, s) in screens.enumerated() {
-            parts.append(["text": "Screen \(i + 1)/\(screens.count) — \(s.appName)"])
+            parts.append(["text": "Screen \(i + 1)/\(screens.count)"])
             parts.append(["inline_data": ["mime_type": s.mediaType, "data": s.imageBase64]])
         }
 
         let body: [String: Any] = [
             "contents": [["parts": parts]],
-            "generationConfig": ["maxOutputTokens": 8192]
+            "generationConfig": ["maxOutputTokens": 4096]
         ]
 
         let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\(apiKey)")!
@@ -235,26 +342,12 @@ struct MobbinRunner {
         guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
             throw MobbinRunnerError.apiError(String(data: data, encoding: .utf8) ?? "HTTP error")
         }
-        guard let json      = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        guard let json       = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let candidates = json["candidates"] as? [[String: Any]],
               let content    = candidates.first?["content"] as? [String: Any],
               let parts2     = content["parts"] as? [[String: Any]],
               let text       = parts2.first?["text"] as? String
         else { throw MobbinRunnerError.apiError("Unexpected Gemini response shape") }
-
-        return extractHTML(text)
-    }
-
-    // MARK: - HTML extraction
-
-    private func extractHTML(_ text: String) -> String {
-        if let s = text.range(of: "```html\n"), let e = text.range(of: "\n```", range: s.upperBound..<text.endIndex) {
-            return String(text[s.upperBound..<e.lowerBound])
-        }
-        if let s = text.range(of: "<!DOCTYPE html>", options: .caseInsensitive),
-           let e = text.range(of: "</html>", options: [.caseInsensitive, .backwards]) {
-            return String(text[s.lowerBound...e.upperBound])
-        }
         return text
     }
 }
