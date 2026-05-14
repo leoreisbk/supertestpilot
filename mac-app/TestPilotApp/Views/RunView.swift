@@ -211,8 +211,10 @@ struct RunView: View {
                     Text(l.displayName).tag(l)
                 }
             }
-            Stepper("Max steps: \(config.maxSteps)",
-                    value: $config.maxSteps, in: 1...60)
+            if config.mode != .research {
+                Stepper("Max steps: \(config.maxSteps)",
+                        value: $config.maxSteps, in: 1...60)
+            }
             if config.mode == .analyze {
                 HStack {
                     TextField("Output path", text: $config.outputPath)
