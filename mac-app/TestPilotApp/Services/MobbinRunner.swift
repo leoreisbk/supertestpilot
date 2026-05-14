@@ -29,9 +29,10 @@ struct MobbinRunner {
             : ("TestPilot Research Report", "Summary", "Analyzed screens", "Screen")
 
         let prompt = """
-You are a UX research assistant. Use the mcp__mobbin__search_screens tool to search Mobbin for screens matching the query below, then analyze each screen against the objective.
+You are a UX research assistant. Use the mcp__mobbin__search_screens tool to search Mobbin for screens from a specific app, then analyze each screen against the objective.
 
-QUERY: \(config.mobbinQuery)
+APP_NAME: \(config.mobbinAppName)
+DESCRIPTION: \(config.mobbinDescription.isEmpty ? "(any screens)" : config.mobbinDescription)
 OBJECTIVE: \(config.objective)
 PLATFORM: \(platform)
 LIMIT: \(config.mobbinLimit)
@@ -41,18 +42,11 @@ PERSONA: \(persona)
 
 ## Instructions
 
-1. Determine if QUERY is an **app name** (a short proper noun like "Tesla", "Spotify", "Airbnb") or a **description of screen content** (a phrase like "onboarding steps with progress bar").
-
-   **If QUERY is an app name:**
-   - Call mcp__mobbin__search_screens up to 3 times with these queries (stop early once you have enough screens):
-     a. "\(config.mobbinQuery) app"
-     b. "\(config.mobbinQuery) screens"
-     c. "\(config.mobbinQuery) mobile interface"
-   - Use only results where app_name contains "\(config.mobbinQuery)" (case-insensitive). Discard results from other apps.
-   - Stop collecting once you have LIMIT screens from the target app.
-
-   **If QUERY is a content description:**
-   - Call mcp__mobbin__search_screens once with the QUERY as-is, platform PLATFORM, limit LIMIT.
+1. Search for screens from APP_NAME using mcp__mobbin__search_screens. Try up to 3 queries (stop early once you have LIMIT results from that app):
+   - If DESCRIPTION is provided: "\(config.mobbinAppName) \(config.mobbinDescription)"
+   - "\(config.mobbinAppName) app screens"
+   - "\(config.mobbinAppName) mobile interface"
+   Keep only results where app_name contains "\(config.mobbinAppName)" (case-insensitive). Discard results from other apps.
 
 2. For each screen retained, before analyzing it print exactly:
    TESTPILOT_STEP: Screen X/N — <app_name>

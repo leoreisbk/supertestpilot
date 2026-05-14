@@ -43,7 +43,7 @@ struct ContentView: View {
         .onChange(of: runner.state) { _, newState in
             let displayName: String
             if config.mode == .research {
-                displayName = config.mobbinQuery
+                displayName = config.mobbinAppName
             } else {
                 displayName = config.platform == .web ? config.url : config.appName
             }

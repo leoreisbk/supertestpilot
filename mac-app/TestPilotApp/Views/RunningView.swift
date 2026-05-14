@@ -10,7 +10,7 @@ struct RunningView: View {
             // Header
             VStack(spacing: 4) {
                 Text(config.mode == .research
-                    ? config.mobbinQuery
+                    ? config.mobbinAppName
                     : (config.platform == .web ? config.url : config.appName))
                     .font(.title2.weight(.semibold))
                     .lineLimit(1)

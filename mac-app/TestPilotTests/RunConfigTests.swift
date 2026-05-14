@@ -43,7 +43,7 @@ final class RunConfigTests: XCTestCase {
     func testResearchIsInvalidWithoutQuery() {
         let config = RunConfig()
         config.mode = .research
-        config.mobbinQuery = ""
+        config.mobbinAppName = ""
         config.objective = "Analyze UX clarity"
         XCTAssertFalse(config.isValid)
     }
@@ -51,7 +51,7 @@ final class RunConfigTests: XCTestCase {
     func testResearchIsInvalidWithoutObjective() {
         let config = RunConfig()
         config.mode = .research
-        config.mobbinQuery = "onboarding flow"
+        config.mobbinAppName = "onboarding flow"
         config.objective = ""
         XCTAssertFalse(config.isValid)
     }
@@ -59,7 +59,7 @@ final class RunConfigTests: XCTestCase {
     func testResearchIsValidWithQueryAndObjective() {
         let config = RunConfig()
         config.mode = .research
-        config.mobbinQuery = "onboarding flow"
+        config.mobbinAppName = "onboarding flow"
         config.objective = "Analyze UX clarity"
         XCTAssertTrue(config.isValid)
     }

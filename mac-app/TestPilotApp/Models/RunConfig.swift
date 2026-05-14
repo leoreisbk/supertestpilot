@@ -57,7 +57,8 @@ final class RunConfig {
     // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
     var personaPath: String = ""
-    var mobbinQuery: String = ""
+    var mobbinAppName: String = ""
+    var mobbinDescription: String = ""
     var mobbinLimit: Int = 20
 
     /// Returns the persona markdown content, or nil if no persona is set.
@@ -83,7 +84,7 @@ final class RunConfig {
                     || !bundleId.trimmingCharacters(in: .whitespaces).isEmpty)
 
         case .research:
-            return !mobbinQuery.trimmingCharacters(in: .whitespaces).isEmpty
+            return !mobbinAppName.trimmingCharacters(in: .whitespaces).isEmpty
                 && !objective.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
