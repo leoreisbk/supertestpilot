@@ -130,15 +130,17 @@ final class MobbinAuthService {
             listener?.newConnectionHandler = { conn in
                 conn.start(queue: .global())
                 Self.readHTTPRequest(from: conn) { raw in
-                    let html = "<html><body style='font-family:system-ui;text-align:center;padding:60px'><h2>&#10003; Connected to Mobbin</h2><p>Return to TestPilot.</p></body></html>"
-                    let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(html.utf8.count)\r\nConnection: close\r\n\r\n\(html)"
-                    conn.send(content: resp.data(using: .utf8), completion: .contentProcessed { _ in conn.cancel() })
-
-                    guard let code = Self.extractQueryParam("code", from: raw), !code.isEmpty else {
-                        finish(.failure(MobbinAuthError.callbackMissingCode))
-                        return
+                    if let code = Self.extractQueryParam("code", from: raw), !code.isEmpty {
+                        let html = "<html><body style='font-family:system-ui;text-align:center;padding:60px'><h2>&#10003; Connected to Mobbin</h2><p>Return to TestPilot.</p></body></html>"
+                        let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(html.utf8.count)\r\nConnection: close\r\n\r\n\(html)"
+                        conn.send(content: resp.data(using: .utf8), completion: .contentProcessed { _ in conn.cancel() })
+                        finish(.success(code))
+                    } else {
+                        // Send 204 and keep listening — this connection had no code (browser probe, favicon, etc.)
+                        let resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"
+                        conn.send(content: resp.data(using: .utf8), completion: .contentProcessed { _ in conn.cancel() })
+                        NSLog("[MobbinAuth] connection without code, raw prefix: %@", String(raw.prefix(300)))
                     }
-                    finish(.success(code))
                 }
             }
 
