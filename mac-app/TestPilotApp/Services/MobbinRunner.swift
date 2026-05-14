@@ -29,7 +29,7 @@ struct MobbinRunner {
         switch provider {
         case .anthropic: return try await callAnthropic(screens: screens, apiKey: key)
         case .openai:    return try await callOpenAI(screens: screens, apiKey: key)
-        case .gemini:    throw MobbinRunnerError.apiError("Gemini vision not yet supported for research mode.")
+        case .gemini:    throw MobbinRunnerError.apiError("research_needs_claude_or_openai")
         }
     }
 

@@ -105,6 +105,12 @@ struct RunningView: View {
                         .frame(maxWidth: 360)
                     Button("Connect Mobbin") { showMobbinSheet = true }
                         .buttonStyle(.borderedProminent)
+                } else if config.mode == .research && error == "research_needs_claude_or_openai" {
+                    Text("Research mode requires Claude or OpenAI. Switch your provider in Settings.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 360)
                 } else {
                     Text(error)
                         .font(.caption)
