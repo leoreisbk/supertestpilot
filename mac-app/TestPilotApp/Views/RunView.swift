@@ -102,7 +102,7 @@ struct RunView: View {
         }
         if config.mode == .research {
             TextField("App name", text: $config.mobbinAppName)
-            TextField("Screen type (optional, e.g. onboarding flow)", text: $config.mobbinDescription)
+            TextField("Flow or screen (optional, e.g. onboarding, checkout)", text: $config.mobbinDescription)
             Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...30)
         }
     }
