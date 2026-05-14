@@ -103,7 +103,6 @@ struct RunView: View {
         if config.mode == .research {
             TextField("App name", text: $config.mobbinAppName)
             TextField("Flow or screen (optional, e.g. onboarding, checkout)", text: $config.mobbinDescription)
-            Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...30)
         }
     }
 
@@ -215,6 +214,9 @@ struct RunView: View {
             if config.mode != .research {
                 Stepper("Max steps: \(config.maxSteps)",
                         value: $config.maxSteps, in: 1...60)
+            }
+            if config.mode == .research {
+                Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...30)
             }
             if config.mode == .analyze {
                 HStack {
