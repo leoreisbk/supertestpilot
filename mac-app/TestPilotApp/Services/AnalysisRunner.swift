@@ -167,15 +167,17 @@ final class AnalysisRunner {
                 guard let self else { return }
                 switch self.state {
                 case .running:
-                    if proc.terminationStatus == 0 {
-                        let path = self.lastReportPath.isEmpty ? outputPath : self.lastReportPath
-                        self.state = .completed(reportPath: path)
+                    if proc.terminationStatus == 0 && !self.lastReportPath.isEmpty {
+                        let path = self.lastReportPath
                         self.lastReportPath = ""
+                        self.state = .completed(reportPath: path)
                     } else {
                         let msg = !self.lastErrorMessage.isEmpty ? self.lastErrorMessage
                                 : !lastStderr.isEmpty             ? lastStderr
                                 : !self.lastStdoutLine.isEmpty    ? self.lastStdoutLine
-                                : "Analysis failed (exit \(proc.terminationStatus))"
+                                : proc.terminationStatus == 0
+                                    ? "Report was not generated. Check that the Mobbin MCP is authenticated."
+                                    : "Analysis failed (exit \(proc.terminationStatus))"
                         self.state = .failed(error: msg)
                     }
                 case .testRunning(let steps):
@@ -276,6 +278,8 @@ final class AnalysisRunner {
                 }
             } else if let r = line.range(of: "TESTPILOT_ERROR: ") {
                 lastErrorMessage = String(line[r.upperBound...])
+            } else if lastErrorMessage.isEmpty && isMobbinAuthError(line) {
+                lastErrorMessage = "Mobbin session expired. Re-authenticate: claude mcp remove mobbin && claude mcp add --scope user --transport http mobbin https://api.mobbin.com/mcp"
             } else if let r = line.range(of: "TESTPILOT_REPORT_PATH=") {
                 // Only use this path if we haven't already written the report locally
                 // (i.e., the inline capture didn't run, which means it's a simulator).
@@ -336,6 +340,15 @@ final class AnalysisRunner {
         do { try p.run() } catch {
             state = .failed(error: error.localizedDescription)
         }
+    }
+
+    // MARK: - Auth error detection
+
+    private func isMobbinAuthError(_ line: String) -> Bool {
+        let lower = line.lowercased()
+        return lower.contains("401") && (lower.contains("mobbin") || lower.contains("mcp"))
+            || lower.contains("session has expired") && lower.contains("mobbin")
+            || lower.contains("re-authenticate") && lower.contains("mobbin")
     }
 
     // MARK: - Message cleanup
