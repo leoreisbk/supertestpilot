@@ -67,10 +67,12 @@ final class AnalysisRunner {
                         return
                     }
 
+                    let mobbinPlatform = config.platform == .web ? "web" : "ios"
                     let screens = try await mobbinClient.searchScreens(
                         appName:     config.mobbinAppName,
                         description: config.mobbinDescription,
                         limit:       config.mobbinLimit,
+                        platform:    mobbinPlatform,
                         token:       token
                     )
 

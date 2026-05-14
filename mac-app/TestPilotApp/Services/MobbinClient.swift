@@ -2,8 +2,8 @@ import Foundation
 
 struct MobbinScreen {
     let appName: String
-    let imageBase64: String
-    let mediaType: String
+    let imageBase64: String  // base64-encoded image data
+    let mediaType: String    // "image/jpeg" or "image/webp"
     let mobbinURL: String?
 }
 
@@ -26,20 +26,28 @@ enum MobbinClientError: LocalizedError {
 final class MobbinClient {
     private static let endpoint = URL(string: "https://api.mobbin.com/mcp")!
 
-    func searchScreens(appName: String, description: String, limit: Int, token: String) async throws -> [MobbinScreen] {
+    // platform: "ios" or "web"
+    func searchScreens(appName: String, description: String, limit: Int, platform: String, token: String) async throws -> [MobbinScreen] {
         let sessionId = try await initSession(token: token)
         let query = description.isEmpty ? appName : "\(appName) \(description)"
 
         let (data, http) = try await mcpPost([
             "jsonrpc": "2.0", "id": 2, "method": "tools/call",
             "params": ["name": "search_screens",
-                       "arguments": ["query": query, "limit": limit] as [String: Any]]
+                       "arguments": [
+                           "query": query,
+                           "platform": platform,
+                           "limit": limit,
+                           "mode": "fast",
+                           "image_format": "jpg"
+                       ] as [String: Any]]
         ], token: token, sessionId: sessionId.isEmpty ? nil : sessionId)
 
         if http.statusCode == 401 { throw MobbinClientError.tokenExpired }
 
+        // Server always responds with SSE; try plain JSON first as a fallback
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            return try parseRPCResponse(json, appName: appName)
+            return try parseRPCResult(json, appName: appName)
         }
         return try parseSSE(data, appName: appName)
     }
@@ -60,10 +68,8 @@ final class MobbinClient {
         }
 
         let sessionId = http.value(forHTTPHeaderField: "Mcp-Session-Id") ?? ""
-
         _ = try? await mcpPost(["jsonrpc": "2.0", "method": "notifications/initialized"],
                                token: token, sessionId: sessionId.isEmpty ? nil : sessionId)
-
         return sessionId
     }
 
@@ -77,7 +83,7 @@ final class MobbinClient {
         req.setValue("Bearer \(token)",                     forHTTPHeaderField: "Authorization")
         if let sid = sessionId { req.setValue(sid, forHTTPHeaderField: "Mcp-Session-Id") }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        req.timeoutInterval = 60
+        req.timeoutInterval = 120
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { throw MobbinClientError.toolCallFailed("Non-HTTP response") }
@@ -86,28 +92,11 @@ final class MobbinClient {
 
     // MARK: - Response parsers
 
-    private func parseRPCResponse(_ json: [String: Any], appName: String) throws -> [MobbinScreen] {
-        if let err = (json["error"] as? [String: Any])?["message"] as? String {
-            throw MobbinClientError.toolCallFailed(err)
-        }
-        guard let result = json["result"] as? [String: Any] else {
-            throw MobbinClientError.toolCallFailed("No result field")
-        }
-        return try parseResult(result, appName: appName)
-    }
-
-    private func parseResult(_ result: [String: Any], appName: String) throws -> [MobbinScreen] {
-        guard let content = result["content"] as? [[String: Any]] else {
-            throw MobbinClientError.toolCallFailed("No content field")
-        }
-        for item in content {
-            if (item["type"] as? String) == "text", let text = item["text"] as? String {
-                let screens = parseScreenArray(text, appName: appName)
-                if !screens.isEmpty { return screens }
-            }
-        }
-        throw MobbinClientError.noScreensFound
-    }
+    // Mobbin returns SSE: event: message\ndata: <json>\n\n
+    // The JSON result.content array has:
+    //   [0] { "type": "text", "text": "{\"screens\":[{index, id, image_url, mobbin_url, app_name, platform}]}" }
+    //   [1..N] { "type": "image", "data": "<base64>", "mimeType": "image/jpeg" }
+    // Images correspond to screens by index order.
 
     private func parseSSE(_ data: Data, appName: String) throws -> [MobbinScreen] {
         guard let text = String(data: data, encoding: .utf8) else {
@@ -117,31 +106,54 @@ final class MobbinClient {
             let t = line.trimmingCharacters(in: .whitespaces)
             guard t.hasPrefix("data: "),
                   let d = String(t.dropFirst(6)).data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
-                  let result = json["result"] as? [String: Any]
+                  let json = try? JSONSerialization.jsonObject(with: d) as? [String: Any]
             else { continue }
-            return try parseResult(result, appName: appName)
+            return try parseRPCResult(json, appName: appName)
         }
         throw MobbinClientError.toolCallFailed("Could not parse SSE response")
     }
 
-    private func parseScreenArray(_ text: String, appName: String) -> [MobbinScreen] {
-        guard let data = text.data(using: .utf8),
-              let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
-        else { return [] }
+    private func parseRPCResult(_ json: [String: Any], appName: String) throws -> [MobbinScreen] {
+        if let err = (json["error"] as? [String: Any])?["message"] as? String {
+            throw MobbinClientError.toolCallFailed(err)
+        }
+        guard let result = json["result"] as? [String: Any],
+              let content = result["content"] as? [[String: Any]] else {
+            throw MobbinClientError.toolCallFailed("Unexpected response shape")
+        }
 
-        return arr.compactMap { s -> MobbinScreen? in
-            guard let img = s["image"] as? String
-                         ?? s["screenshot"] as? String
-                         ?? s["image_data"] as? String
-                         ?? s["imageData"] as? String
-            else { return nil }
+        // Check for tool-level error (isError: true)
+        if let isError = result["isError"] as? Bool, isError {
+            let msg = content.first(where: { $0["type"] as? String == "text" }).flatMap { $0["text"] as? String } ?? "Tool error"
+            throw MobbinClientError.toolCallFailed(msg)
+        }
 
+        // Extract metadata from the first text item
+        var metaScreens: [[String: Any]] = []
+        if let textItem = content.first(where: { $0["type"] as? String == "text" }),
+           let textStr = textItem["text"] as? String,
+           let textData = textStr.data(using: .utf8),
+           let parsed = try? JSONSerialization.jsonObject(with: textData) as? [String: Any],
+           let screens = parsed["screens"] as? [[String: Any]] {
+            metaScreens = screens
+        }
+
+        // Extract image items in order
+        let imageItems = content.filter { $0["type"] as? String == "image" }
+
+        guard !imageItems.isEmpty else {
+            throw MobbinClientError.noScreensFound
+        }
+
+        return imageItems.enumerated().compactMap { i, item -> MobbinScreen? in
+            guard let base64 = item["data"] as? String, !base64.isEmpty else { return nil }
+            let mimeType = item["mimeType"] as? String ?? "image/jpeg"
+            let meta: [String: Any] = i < metaScreens.count ? metaScreens[i] : [:]
             return MobbinScreen(
-                appName:     s["app_name"] as? String ?? s["appName"] as? String ?? appName,
-                imageBase64: img,
-                mediaType:   s["media_type"] as? String ?? s["mediaType"] as? String ?? "image/jpeg",
-                mobbinURL:   s["url"] as? String ?? s["mobbin_url"] as? String
+                appName:     meta["app_name"] as? String ?? appName,
+                imageBase64: base64,
+                mediaType:   mimeType,
+                mobbinURL:   meta["mobbin_url"] as? String
             )
         }
     }
