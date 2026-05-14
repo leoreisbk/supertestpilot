@@ -9,6 +9,7 @@ struct RunView: View {
     var runner: AnalysisRunner
 
     @State private var showAdvanced = false
+    @State private var showMobbinSheet = false
 
     private var runButtonLabel: String {
         switch config.mode {
@@ -23,6 +24,7 @@ struct RunView: View {
             Section("Required") {
                 modePicker
                 platformOrSourceSection
+                mobbinStatusRow
                 targetSection
                 objectiveSection
                 credentialsSection
@@ -50,6 +52,9 @@ struct RunView: View {
             Task { await detector.refresh(for: config.platform) }
         }
         .navigationTitle(config.mode == .test ? "New Test" : config.mode == .research ? "New Research" : "New Analysis")
+        .sheet(isPresented: $showMobbinSheet) {
+            MobbinConnectSheet(auth: runner.mobbinAuth)
+        }
         .sheet(isPresented: Binding(
             get: { runner.state == .webLoginPending },
             set: { _ in }
@@ -204,6 +209,30 @@ struct RunView: View {
     }
 
     @ViewBuilder
+    private var mobbinStatusRow: some View {
+        if config.mode == .research {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(runner.mobbinConnected ? Color.green : Color.orange)
+                    .frame(width: 8, height: 8)
+                Text(runner.mobbinConnected ? "Connected to Mobbin" : "Mobbin not connected")
+                    .font(.callout)
+                Spacer()
+                if runner.mobbinConnected {
+                    Button("Disconnect") { runner.mobbinAuth.disconnect() }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                } else {
+                    Button("Connect") { showMobbinSheet = true }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var advancedSection: some View {
         DisclosureGroup("Advanced Options", isExpanded: $showAdvanced) {
             Picker("Language", selection: $config.language) {
@@ -238,6 +267,73 @@ struct RunView: View {
                 ForEach(AIProvider.allCases) { p in
                     Text(p.displayName).tag(Optional(p))
                 }
+            }
+        }
+    }
+}
+
+// MARK: - MobbinConnectSheet
+
+struct MobbinConnectSheet: View {
+    var auth: MobbinAuthService
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: auth.isConnected ? "checkmark.circle.fill" : "link.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(auth.isConnected ? .green : .blue)
+
+            if auth.isConnected {
+                Text("Connected to Mobbin")
+                    .font(.title2.weight(.semibold))
+                Text("Research mode is ready.")
+                    .foregroundStyle(.secondary)
+                Button("Done") { dismiss() }
+                    .buttonStyle(.borderedProminent)
+
+            } else if auth.isAuthenticating {
+                Text("Connecting to Mobbin…")
+                    .font(.title2.weight(.semibold))
+                ProgressView()
+                Text("A browser window opened — log in to your Mobbin account, then return here.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 340)
+
+            } else {
+                Text("Connect Mobbin")
+                    .font(.title2.weight(.semibold))
+                Text("Research mode fetches app screens directly from Mobbin. Connect your account to get started.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 340)
+
+                if let err = auth.lastError {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 340)
+                }
+
+                HStack(spacing: 12) {
+                    Button("Cancel") { dismiss() }
+                        .buttonStyle(.bordered)
+                    Button("Connect") {
+                        Task { await auth.startOAuthFlow() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .padding(32)
+        .frame(minWidth: 360)
+        .onChange(of: auth.isConnected) { _, connected in
+            if connected {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { dismiss() }
             }
         }
     }

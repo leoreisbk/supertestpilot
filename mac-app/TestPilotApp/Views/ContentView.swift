@@ -35,7 +35,9 @@ struct ContentView: View {
             detail
                 .frame(minWidth: 560, minHeight: 440)
         }
-        .task { await artifactManager.ensureArtifacts() }
+        .task {
+            await artifactManager.ensureArtifacts()
+        }
         .overlay(alignment: .bottom) {
             ArtifactToastView(manager: artifactManager)
                 .padding(.bottom, 16)

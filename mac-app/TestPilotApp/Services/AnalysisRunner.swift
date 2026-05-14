@@ -17,7 +17,6 @@ enum AnalysisState: Equatable {
     case testFailed(reason: String, steps: [TestStep])
     case failed(error: String)
     case webLoginPending
-    case mobbinAuthPending
 }
 
 @MainActor
@@ -25,8 +24,10 @@ enum AnalysisState: Equatable {
 final class AnalysisRunner {
     private(set) var state: AnalysisState = .idle
     private(set) var analyzeSteps: [TestStep] = []
+    let mobbinAuth   = MobbinAuthService()
+    let mobbinClient = MobbinClient()
+    var mobbinConnected: Bool { mobbinAuth.isConnected }
     private var process: Process?
-    private var stdinPipe: Pipe?
     private var lastStdoutLine: String = ""
     private var lastReportPath: String = ""
     private var lastErrorMessage: String = ""
@@ -39,7 +40,7 @@ final class AnalysisRunner {
     func run(config: RunConfig, settings: SettingsStore) {
         guard case .idle = state else { return }
 
-        if settings.apiKey.isEmpty && config.mode != .research {
+        if settings.apiKey.isEmpty {
             state = .failed(error: "API key not set — open Settings and enter your API key")
             return
         }
@@ -52,12 +53,57 @@ final class AnalysisRunner {
         state = config.mode == .test ? .testRunning(steps: []) : .running(statusLine: "Starting…")
 
         if config.mode == .research {
+            guard mobbinAuth.isConnected else {
+                state = .failed(error: "mobbin_auth_required")
+                return
+            }
+
+            state = .running(statusLine: "Searching Mobbin for \(config.mobbinAppName)…")
+
             Task {
                 do {
-                    let proc = try MobbinRunner(config: config, settings: settings).makeProcess(outputPath: outputPath)
-                    await MainActor.run { self.startProcess(proc, outputPath: outputPath, openStdin: true) }
+                    guard let token = mobbinAuth.accessToken else {
+                        await MainActor.run { self.state = .failed(error: "mobbin_auth_required") }
+                        return
+                    }
+
+                    let screens = try await mobbinClient.searchScreens(
+                        appName:     config.mobbinAppName,
+                        description: config.mobbinDescription,
+                        limit:       config.mobbinLimit,
+                        token:       token
+                    )
+
+                    await MainActor.run {
+                        for (i, s) in screens.enumerated() {
+                            let step = TestStep(message: "Screen \(i+1)/\(screens.count) — \(s.appName)", cached: false)
+                            self.analyzeSteps.append(step)
+                            withAnimation(.easeInOut(duration: 0.4)) {
+                                self.state = .running(statusLine: step.message)
+                            }
+                        }
+                    }
+
+                    let runner = MobbinRunner(config: config, settings: settings)
+                    let html = try await runner.analyze(screens: screens) { @MainActor [weak self] msg in
+                        guard let self else { return }
+                        let step = TestStep(message: msg, cached: false)
+                        analyzeSteps.append(step)
+                        withAnimation(.easeInOut(duration: 0.4)) {
+                            self.state = .running(statusLine: msg)
+                        }
+                    }
+
+                    try Data(html.utf8).write(to: URL(fileURLWithPath: outputPath))
+                    await MainActor.run { self.state = .completed(reportPath: outputPath) }
+
+                } catch MobbinClientError.tokenExpired {
+                    await MainActor.run {
+                        self.mobbinAuth.disconnect()
+                        self.state = .failed(error: "mobbin_auth_required")
+                    }
                 } catch {
-                    await MainActor.run { state = .failed(error: error.localizedDescription) }
+                    await MainActor.run { self.state = .failed(error: error.localizedDescription) }
                 }
             }
             return
@@ -91,17 +137,9 @@ final class AnalysisRunner {
         }
     }
 
-    func submitMobbinAuthUrl(_ url: String) {
-        guard case .mobbinAuthPending = state, let pipe = stdinPipe else { return }
-        let data = (url.trimmingCharacters(in: .whitespacesAndNewlines) + "\n").data(using: .utf8) ?? Data()
-        pipe.fileHandleForWriting.write(data)
-        state = .running(statusLine: "Completing authentication…")
-    }
-
     func cancel() {
         process?.terminate()
         process = nil
-        stdinPipe = nil
         analyzeSteps = []
         isCapturingReport = false
         reportLines = []
@@ -114,7 +152,6 @@ final class AnalysisRunner {
     func reset() {
         process?.terminate()
         process = nil
-        stdinPipe = nil
         analyzeSteps = []
         isCapturingReport = false
         reportLines = []
@@ -148,16 +185,11 @@ final class AnalysisRunner {
 
     // MARK: - Private
 
-    private func startProcess(_ p: Process, outputPath: String, openStdin: Bool = false) {
+    private func startProcess(_ p: Process, outputPath: String) {
         let stdout = Pipe()
         let stderr = Pipe()
         p.standardOutput = stdout
         p.standardError  = stderr
-        if openStdin {
-            let stdin = Pipe()
-            p.standardInput = stdin
-            stdinPipe = stdin
-        }
 
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -294,10 +326,6 @@ final class AnalysisRunner {
                 }
             } else if let r = line.range(of: "TESTPILOT_ERROR: ") {
                 lastErrorMessage = String(line[r.upperBound...])
-            } else if case .running = state, isMobbinAuthRequest(line) {
-                state = .mobbinAuthPending
-            } else if lastErrorMessage.isEmpty && isMobbinAuthError(line) {
-                lastErrorMessage = "Mobbin session expired. Re-authenticate: claude mcp remove mobbin && claude mcp add --scope user --transport http mobbin https://api.mobbin.com/mcp"
             } else if let r = line.range(of: "TESTPILOT_REPORT_PATH=") {
                 // Only use this path if we haven't already written the report locally
                 // (i.e., the inline capture didn't run, which means it's a simulator).
@@ -358,21 +386,6 @@ final class AnalysisRunner {
         do { try p.run() } catch {
             state = .failed(error: error.localizedDescription)
         }
-    }
-
-    // MARK: - Auth error detection
-
-    private func isMobbinAuthRequest(_ line: String) -> Bool {
-        let lower = line.lowercased()
-        return lower.contains("paste the full url") || lower.contains("paste.*url.*address bar")
-            || (lower.contains("address bar") && lower.contains("authentication"))
-    }
-
-    private func isMobbinAuthError(_ line: String) -> Bool {
-        let lower = line.lowercased()
-        return lower.contains("401") && (lower.contains("mobbin") || lower.contains("mcp"))
-            || lower.contains("session has expired") && lower.contains("mobbin")
-            || lower.contains("re-authenticate") && lower.contains("mobbin")
     }
 
     // MARK: - Message cleanup

@@ -4,7 +4,7 @@ import AppKit
 struct RunningView: View {
     var runner: AnalysisRunner
     var config: RunConfig
-    @State private var mobbinAuthUrl = ""
+    @State private var showMobbinSheet = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -97,38 +97,23 @@ struct RunningView: View {
                     .foregroundStyle(.red)
                 Text(config.mode == .test ? "Test failed" : config.mode == .research ? "Research failed" : "Analysis failed")
                     .font(.title3.weight(.medium))
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 360)
+                if config.mode == .research && error == "mobbin_auth_required" {
+                    Text("Mobbin is not connected or the session expired.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 360)
+                    Button("Connect Mobbin") { showMobbinSheet = true }
+                        .buttonStyle(.borderedProminent)
+                } else {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 360)
+                }
                 Button("Try Again") { runner.reset() }
                     .buttonStyle(.bordered)
-
-            case .mobbinAuthPending:
-                Image(systemName: "key.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.orange)
-                Text("Mobbin authentication required")
-                    .font(.title3.weight(.semibold))
-                Text("A browser window opened. Authorize on Mobbin, then copy the URL from the address bar — even if it shows a connection error — and paste it below.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 380)
-                TextField("Paste callback URL here…", text: $mobbinAuthUrl)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 380)
-                HStack(spacing: 12) {
-                    Button("Submit") {
-                        runner.submitMobbinAuthUrl(mobbinAuthUrl)
-                        mobbinAuthUrl = ""
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(mobbinAuthUrl.trimmingCharacters(in: .whitespaces).isEmpty)
-                    Button("Cancel") { runner.cancel() }
-                        .buttonStyle(.bordered)
-                }
 
             case .idle:
                 EmptyView()
@@ -140,6 +125,9 @@ struct RunningView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.4), value: runner.state)
+        .sheet(isPresented: $showMobbinSheet) {
+            MobbinConnectSheet(auth: runner.mobbinAuth)
+        }
     }
 }
 
