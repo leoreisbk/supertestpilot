@@ -55,7 +55,7 @@ struct RunView: View {
             set: { _ in }
         )) {
             VStack(spacing: 20) {
-                Text("Log in to \(config.mode == .research ? "mobbin.com" : config.url)")
+                Text("Log in to \(config.url)")
                     .font(.headline)
                 Text("A browser window has opened. Complete login, then tap Save Session.")
                     .font(.subheadline)
@@ -101,45 +101,8 @@ struct RunView: View {
             }
         }
         if config.mode == .research {
-            Picker("Source", selection: $config.mobbinSource) {
-                ForEach(MobbinSource.allCases) { s in
-                    Text(s.rawValue).tag(s)
-                }
-            }
-            .pickerStyle(.segmented)
-            if config.mobbinSource == .flowUrl {
-                TextField("Mobbin Flow URL", text: $config.mobbinFlowUrl)
-                    .textContentType(.URL)
-            } else {
-                TextField("App name", text: $config.mobbinAppName)
-                TextField("Flow name", text: $config.mobbinFlowName)
-            }
-            let mobbinSessionExists = FileManager.default.fileExists(
-                atPath: FileManager.default.homeDirectoryForCurrentUser
-                    .appendingPathComponent(".testpilot/sessions/mobbin.com.json").path
-            )
-            if mobbinSessionExists {
-                HStack(spacing: 8) {
-                    Label("Connected to Mobbin", systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                    Button("Reconnect") {
-                        runner.mobbinLogin(config: config, settings: settings)
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-                    .help("Re-authenticate with Mobbin if your session has expired")
-                }
-            } else {
-                Button("Connect Mobbin…") {
-                    runner.mobbinLogin(config: config, settings: settings)
-                }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
-                .font(.caption)
-                .help("Open a browser to log in to Mobbin — required before running research")
-            }
+            TextField("Search Mobbin…", text: $config.mobbinQuery)
+            Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...30)
         }
     }
 

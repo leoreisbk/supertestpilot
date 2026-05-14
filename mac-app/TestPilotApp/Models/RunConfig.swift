@@ -42,12 +42,6 @@ enum RunMode: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum MobbinSource: String, CaseIterable, Identifiable {
-    case flowUrl = "Flow URL"
-    case search  = "Search"
-    var id: String { rawValue }
-}
-
 @Observable
 final class RunConfig {
     var platform: Platform = .ios
@@ -63,10 +57,8 @@ final class RunConfig {
     // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
     var personaPath: String = ""
-    var mobbinSource: MobbinSource = .flowUrl
-    var mobbinFlowUrl: String = ""
-    var mobbinAppName: String = ""
-    var mobbinFlowName: String = ""
+    var mobbinQuery: String = ""
+    var mobbinLimit: Int = 20
 
     /// Returns the persona markdown content, or nil if no persona is set.
     var personaContent: String? {
@@ -91,16 +83,8 @@ final class RunConfig {
                     || !bundleId.trimmingCharacters(in: .whitespaces).isEmpty)
 
         case .research:
-            let sessionPath = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".testpilot/sessions/mobbin.com.json").path
-            guard FileManager.default.fileExists(atPath: sessionPath) else { return false }
-            switch mobbinSource {
-            case .flowUrl:
-                return !mobbinFlowUrl.trimmingCharacters(in: .whitespaces).isEmpty
-            case .search:
-                return !mobbinAppName.trimmingCharacters(in: .whitespaces).isEmpty
-                    && !mobbinFlowName.trimmingCharacters(in: .whitespaces).isEmpty
-            }
+            return !mobbinQuery.trimmingCharacters(in: .whitespaces).isEmpty
+                && !objective.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
 }

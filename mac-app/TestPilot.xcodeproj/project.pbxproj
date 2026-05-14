@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		03A046E1B16E637F7E09C451 /* ResearchRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80F4793ACC1FFA7F1A4EB018 /* ResearchRunner.swift */; };
+		A1B2C3D4E5F6A1B2C3D4E5F7 /* MobbinRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B2C3D4E5F6 /* MobbinRunner.swift */; };
 		05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2986E6861809CDB1FFBDF4B /* RunRecord.swift */; };
 		0F088773CF69ED1A9F5F70D8 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43B63E182D8347A577F249C /* ContentView.swift */; };
 		1F1FD0B2E2DE7D35938E06EA /* AnalysisRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF84FFA946ED06A9F78E6F40 /* AnalysisRunner.swift */; };
@@ -52,7 +52,6 @@
 		7A9ED385D81FBD72BCB24BA3 /* TestPilotApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TestPilotApp.entitlements; sourceTree = "<group>"; };
 		7FA16B4CE35A6482DFA6082F /* DeviceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetector.swift; sourceTree = "<group>"; };
 		80B2BD4387F0B5E6932567D0 /* RunningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningView.swift; sourceTree = "<group>"; };
-		80F4793ACC1FFA7F1A4EB018 /* ResearchRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResearchRunner.swift; sourceTree = "<group>"; };
 		87BF7C4F7825ECD4770F5F56 /* RunConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunConfigTests.swift; sourceTree = "<group>"; };
 		8DE38FE7EA61C01478A9C08E /* RunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunView.swift; sourceTree = "<group>"; };
 		9A73580C05206C20BCF6D6D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -60,6 +59,7 @@
 		A43B63E182D8347A577F249C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA1E78161672973DB2730F12 /* project.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = project.yml; sourceTree = "<group>"; };
 		AA48F4262A73E3B216D99142 /* ArtifactManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactManager.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A1B2C3D4E5F6 /* MobbinRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobbinRunner.swift; sourceTree = "<group>"; };
 		AF84FFA946ED06A9F78E6F40 /* AnalysisRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisRunner.swift; sourceTree = "<group>"; };
 		B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		B2394908B8A714FE44470FD9 /* SettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStoreTests.swift; sourceTree = "<group>"; };
@@ -151,7 +151,7 @@
 				7FA16B4CE35A6482DFA6082F /* DeviceDetector.swift */,
 				D69990ABFADC8F4F410613BF /* HistoryStore.swift */,
 				21CC533584C968DDFEAE9967 /* IOSRunner.swift */,
-				80F4793ACC1FFA7F1A4EB018 /* ResearchRunner.swift */,
+				A1B2C3D4E5F6A1B2C3D4E5F6 /* MobbinRunner.swift */,
 				B10D27744FD9FAE6FD0EE076 /* SettingsStore.swift */,
 				A24CB2E95064D99E089BDBCC /* WebRunner.swift */,
 			);
@@ -268,8 +268,8 @@
 				90D55D309C2BD8B48DB40010 /* HistoryStore.swift in Sources */,
 				231C2CC0B0B782F9FCF7C3E4 /* HistoryView.swift in Sources */,
 				477A4410CD78539F7A7880F9 /* IOSRunner.swift in Sources */,
+				A1B2C3D4E5F6A1B2C3D4E5F7 /* MobbinRunner.swift in Sources */,
 				95F542DCD4465FD627947C83 /* NeuralOrbView.swift in Sources */,
-				03A046E1B16E637F7E09C451 /* ResearchRunner.swift in Sources */,
 				CD0C57B26980DE05A0FD9EBD /* RunConfig.swift in Sources */,
 				05FF872CCFAA021965A88105 /* RunRecord.swift in Sources */,
 				D6679B8A133FA42A186AF3AB /* RunView.swift in Sources */,

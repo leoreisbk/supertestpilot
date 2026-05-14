@@ -43,7 +43,7 @@ struct ContentView: View {
         .onChange(of: runner.state) { _, newState in
             let displayName: String
             if config.mode == .research {
-                displayName = config.mobbinSource == .flowUrl ? config.mobbinFlowUrl : "\(config.mobbinAppName) — \(config.mobbinFlowName)"
+                displayName = config.mobbinQuery
             } else {
                 displayName = config.platform == .web ? config.url : config.appName
             }

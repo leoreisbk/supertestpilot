@@ -37,7 +37,7 @@ final class AnalysisRunner {
     func run(config: RunConfig, settings: SettingsStore) {
         guard case .idle = state else { return }
 
-        if settings.apiKey.isEmpty {
+        if settings.apiKey.isEmpty && config.mode != .research {
             state = .failed(error: "API key not set — open Settings and enter your API key")
             return
         }
@@ -52,7 +52,7 @@ final class AnalysisRunner {
         if config.mode == .research {
             Task {
                 do {
-                    let proc = try ResearchRunner(config: config, settings: settings).makeProcess()
+                    let proc = try MobbinRunner(config: config, settings: settings).makeProcess(outputPath: outputPath)
                     await MainActor.run { self.startProcess(proc, outputPath: outputPath) }
                 } catch {
                     await MainActor.run { state = .failed(error: error.localizedDescription) }
@@ -83,19 +83,6 @@ final class AnalysisRunner {
                     return
                 }
                 await MainActor.run { self.startProcess(proc, outputPath: outputPath) }
-            } catch {
-                await MainActor.run { state = .failed(error: error.localizedDescription) }
-            }
-        }
-    }
-
-    func mobbinLogin(config: RunConfig, settings: SettingsStore) {
-        guard case .idle = state else { return }
-
-        Task {
-            do {
-                let proc = try ResearchRunner(config: config, settings: settings).makeMobbinLoginProcess()
-                await MainActor.run { self.startWebLoginProcess(proc) }
             } catch {
                 await MainActor.run { state = .failed(error: error.localizedDescription) }
             }

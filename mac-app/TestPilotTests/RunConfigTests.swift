@@ -40,38 +40,28 @@ final class RunConfigTests: XCTestCase {
 
     // MARK: - Research mode isValid
 
-    func testResearchIsInvalidWithoutSession() {
+    func testResearchIsInvalidWithoutQuery() {
         let config = RunConfig()
         config.mode = .research
-        config.mobbinFlowUrl = "https://mobbin.com/flows/abc-123"
-        // No session file exists in test environment
+        config.mobbinQuery = ""
+        config.objective = "Analyze UX clarity"
         XCTAssertFalse(config.isValid)
     }
 
-    func testResearchFlowUrlIsInvalidWhenEmpty() {
+    func testResearchIsInvalidWithoutObjective() {
         let config = RunConfig()
         config.mode = .research
-        config.mobbinSource = .flowUrl
-        config.mobbinFlowUrl = ""
+        config.mobbinQuery = "onboarding flow"
+        config.objective = ""
         XCTAssertFalse(config.isValid)
     }
 
-    func testResearchSearchIsInvalidWhenAppNameMissing() {
+    func testResearchIsValidWithQueryAndObjective() {
         let config = RunConfig()
         config.mode = .research
-        config.mobbinSource = .search
-        config.mobbinAppName = ""
-        config.mobbinFlowName = "Onboarding"
-        XCTAssertFalse(config.isValid)
-    }
-
-    func testResearchSearchIsInvalidWhenFlowNameMissing() {
-        let config = RunConfig()
-        config.mode = .research
-        config.mobbinSource = .search
-        config.mobbinAppName = "Nike Run Club"
-        config.mobbinFlowName = ""
-        XCTAssertFalse(config.isValid)
+        config.mobbinQuery = "onboarding flow"
+        config.objective = "Analyze UX clarity"
+        XCTAssertTrue(config.isValid)
     }
 
     func testRunRecordDecodesLegacyJSON() throws {
