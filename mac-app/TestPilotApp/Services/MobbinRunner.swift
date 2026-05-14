@@ -115,7 +115,7 @@ HTML structure (substitute real values):
 <div class="header">
   <h1>\(lblTitle)</h1>
   <div class="objective">OBJECTIVE_TEXT</div>
-  <div class="meta">Query: &ldquo;QUERY_TEXT&rdquo; &middot; N screens</div>
+  <div class="meta">APP_NAME_TEXT<!-- if DESCRIPTION non-empty: &nbsp;&middot;&nbsp;DESCRIPTION_TEXT --> &middot; N screens</div>
   <!-- if PERSONA is non-empty, add a persona card:
   <div class="persona-card"><div class="persona-icon">👤</div><div><div class="persona-label">Persona</div><div class="persona-text">PERSONA_TEXT</div></div></div>
   -->
