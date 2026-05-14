@@ -29,7 +29,7 @@ struct MobbinRunner {
         switch provider {
         case .anthropic: return try await callAnthropic(screens: screens, apiKey: key)
         case .openai:    return try await callOpenAI(screens: screens, apiKey: key)
-        case .gemini:    throw MobbinRunnerError.apiError("research_needs_claude_or_openai")
+        case .gemini:    return try await callGemini(screens: screens, apiKey: key)
         }
     }
 
@@ -203,6 +203,44 @@ struct MobbinRunner {
               let msg     = choices.first?["message"] as? [String: Any],
               let text    = msg["content"] as? String
         else { throw MobbinRunnerError.apiError("Unexpected response shape") }
+
+        return extractHTML(text)
+    }
+
+    // MARK: - Gemini
+
+    @MainActor
+    private func callGemini(screens: [MobbinScreen], apiKey: String) async throws -> String {
+        var parts: [[String: Any]] = [
+            ["text": buildSystemPrompt() + "\n\n" + buildHTMLTemplate()]
+        ]
+        for (i, s) in screens.enumerated() {
+            parts.append(["text": "Screen \(i + 1)/\(screens.count) — \(s.appName)"])
+            parts.append(["inline_data": ["mime_type": s.mediaType, "data": s.imageBase64]])
+        }
+
+        let body: [String: Any] = [
+            "contents": [["parts": parts]],
+            "generationConfig": ["maxOutputTokens": 8192]
+        ]
+
+        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\(apiKey)")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        req.timeoutInterval = 300
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
+            throw MobbinRunnerError.apiError(String(data: data, encoding: .utf8) ?? "HTTP error")
+        }
+        guard let json      = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let candidates = json["candidates"] as? [[String: Any]],
+              let content    = candidates.first?["content"] as? [String: Any],
+              let parts2     = content["parts"] as? [[String: Any]],
+              let text       = parts2.first?["text"] as? String
+        else { throw MobbinRunnerError.apiError("Unexpected Gemini response shape") }
 
         return extractHTML(text)
     }
