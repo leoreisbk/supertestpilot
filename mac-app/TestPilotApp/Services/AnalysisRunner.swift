@@ -17,6 +17,7 @@ enum AnalysisState: Equatable {
     case testFailed(reason: String, steps: [TestStep])
     case failed(error: String)
     case webLoginPending
+    case mobbinAuthPending
 }
 
 @MainActor
@@ -25,6 +26,7 @@ final class AnalysisRunner {
     private(set) var state: AnalysisState = .idle
     private(set) var analyzeSteps: [TestStep] = []
     private var process: Process?
+    private var stdinPipe: Pipe?
     private var lastStdoutLine: String = ""
     private var lastReportPath: String = ""
     private var lastErrorMessage: String = ""
@@ -53,7 +55,7 @@ final class AnalysisRunner {
             Task {
                 do {
                     let proc = try MobbinRunner(config: config, settings: settings).makeProcess(outputPath: outputPath)
-                    await MainActor.run { self.startProcess(proc, outputPath: outputPath) }
+                    await MainActor.run { self.startProcess(proc, outputPath: outputPath, openStdin: true) }
                 } catch {
                     await MainActor.run { state = .failed(error: error.localizedDescription) }
                 }
@@ -89,9 +91,17 @@ final class AnalysisRunner {
         }
     }
 
+    func submitMobbinAuthUrl(_ url: String) {
+        guard case .mobbinAuthPending = state, let pipe = stdinPipe else { return }
+        let data = (url.trimmingCharacters(in: .whitespacesAndNewlines) + "\n").data(using: .utf8) ?? Data()
+        pipe.fileHandleForWriting.write(data)
+        state = .running(statusLine: "Completing authentication…")
+    }
+
     func cancel() {
         process?.terminate()
         process = nil
+        stdinPipe = nil
         analyzeSteps = []
         isCapturingReport = false
         reportLines = []
@@ -104,6 +114,7 @@ final class AnalysisRunner {
     func reset() {
         process?.terminate()
         process = nil
+        stdinPipe = nil
         analyzeSteps = []
         isCapturingReport = false
         reportLines = []
@@ -137,11 +148,16 @@ final class AnalysisRunner {
 
     // MARK: - Private
 
-    private func startProcess(_ p: Process, outputPath: String) {
+    private func startProcess(_ p: Process, outputPath: String, openStdin: Bool = false) {
         let stdout = Pipe()
         let stderr = Pipe()
         p.standardOutput = stdout
         p.standardError  = stderr
+        if openStdin {
+            let stdin = Pipe()
+            p.standardInput = stdin
+            stdinPipe = stdin
+        }
 
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -278,6 +294,8 @@ final class AnalysisRunner {
                 }
             } else if let r = line.range(of: "TESTPILOT_ERROR: ") {
                 lastErrorMessage = String(line[r.upperBound...])
+            } else if case .running = state, isMobbinAuthRequest(line) {
+                state = .mobbinAuthPending
             } else if lastErrorMessage.isEmpty && isMobbinAuthError(line) {
                 lastErrorMessage = "Mobbin session expired. Re-authenticate: claude mcp remove mobbin && claude mcp add --scope user --transport http mobbin https://api.mobbin.com/mcp"
             } else if let r = line.range(of: "TESTPILOT_REPORT_PATH=") {
@@ -343,6 +361,12 @@ final class AnalysisRunner {
     }
 
     // MARK: - Auth error detection
+
+    private func isMobbinAuthRequest(_ line: String) -> Bool {
+        let lower = line.lowercased()
+        return lower.contains("paste the full url") || lower.contains("paste.*url.*address bar")
+            || (lower.contains("address bar") && lower.contains("authentication"))
+    }
 
     private func isMobbinAuthError(_ line: String) -> Bool {
         let lower = line.lowercased()
