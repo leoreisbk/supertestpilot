@@ -129,14 +129,15 @@ final class MobbinAuthService {
 
             listener?.newConnectionHandler = { conn in
                 conn.start(queue: .global())
-                conn.receive(minimumIncompleteLength: 1, maximumLength: 8192) { data, _, _, _ in
-                    let html = "<html><body style='font-family:system-ui;text-align:center;padding:60px'><h2>✓ Connected to Mobbin</h2><p>Return to TestPilot.</p></body></html>"
-                    let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: \(html.utf8.count)\r\nConnection: close\r\n\r\n\(html)"
+                Self.readHTTPRequest(from: conn) { raw in
+                    let html = "<html><body style='font-family:system-ui;text-align:center;padding:60px'><h2>&#10003; Connected to Mobbin</h2><p>Return to TestPilot.</p></body></html>"
+                    let resp = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(html.utf8.count)\r\nConnection: close\r\n\r\n\(html)"
                     conn.send(content: resp.data(using: .utf8), completion: .contentProcessed { _ in conn.cancel() })
 
-                    guard let raw = data.flatMap({ String(data: $0, encoding: .utf8) }),
-                          let code = Self.extractParam("code", from: raw)
-                    else { finish(.failure(MobbinAuthError.callbackMissingCode)); return }
+                    guard let code = Self.extractQueryParam("code", from: raw), !code.isEmpty else {
+                        finish(.failure(MobbinAuthError.callbackMissingCode))
+                        return
+                    }
                     finish(.success(code))
                 }
             }
@@ -149,12 +150,31 @@ final class MobbinAuthService {
         }
     }
 
-    private static func extractParam(_ name: String, from httpRequest: String) -> String? {
-        guard let line = httpRequest.components(separatedBy: "\r\n").first,
-              let path = line.components(separatedBy: " ").dropFirst().first,
-              let comps = URLComponents(string: "http://localhost" + path)
-        else { return nil }
-        return comps.queryItems?.first { $0.name == name }?.value
+    // Accumulates TCP data until we have at least the HTTP request line.
+    private nonisolated static func readHTTPRequest(from conn: NWConnection, accumulated: Data = Data(), completion: @escaping (String) -> Void) {
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 16384) { data, _, isComplete, _ in
+            var buffer = accumulated
+            if let d = data { buffer.append(d) }
+
+            // Have a complete request line once we see the first \r\n or \n
+            let hasNewline = buffer.range(of: Data("\r\n".utf8)) != nil
+                          || buffer.range(of: Data("\n".utf8)) != nil
+
+            if hasNewline || isComplete {
+                completion(String(data: buffer, encoding: .utf8) ?? "")
+            } else {
+                readHTTPRequest(from: conn, accumulated: buffer, completion: completion)
+            }
+        }
+    }
+
+    // Extracts a query parameter by scanning for "name=" anywhere in the raw HTTP request.
+    private nonisolated static func extractQueryParam(_ name: String, from raw: String) -> String? {
+        let needle = "\(name)="
+        guard let range = raw.range(of: needle) else { return nil }
+        let tail = String(raw[range.upperBound...])
+        let value = tail.components(separatedBy: CharacterSet(charactersIn: "& \r\n#")).first ?? ""
+        return value.isEmpty ? nil : value.removingPercentEncoding ?? value
     }
 
     // MARK: - Token exchange
