@@ -29,7 +29,12 @@ final class MobbinClient {
     // platform: "ios" or "web"
     func searchScreens(appName: String, description: String, limit: Int, platform: String, token: String) async throws -> [MobbinScreen] {
         let sessionId = try await initSession(token: token)
-        let query = description.isEmpty ? appName : "\(appName) \(description)"
+
+        // Always fetch max (30) to maximize pool for app-name filtering
+        let fetchLimit = 30
+        // Include platform in query so deep-mode AI understands "Tesla iOS app", not just "Tesla"
+        let appContext = "\(appName) iOS app"
+        let query = description.isEmpty ? appContext : "\(appContext) \(description)"
 
         let (data, http) = try await mcpPost([
             "jsonrpc": "2.0", "id": 2, "method": "tools/call",
@@ -37,19 +42,25 @@ final class MobbinClient {
                        "arguments": [
                            "query": query,
                            "platform": platform,
-                           "limit": limit,
-                           "mode": "fast",
+                           "limit": fetchLimit,
+                           "mode": "deep",
                            "image_format": "jpg"
                        ] as [String: Any]]
         ], token: token, sessionId: sessionId.isEmpty ? nil : sessionId)
 
         if http.statusCode == 401 { throw MobbinClientError.tokenExpired }
 
-        // Server always responds with SSE; try plain JSON first as a fallback
+        let all: [MobbinScreen]
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            return try parseRPCResult(json, appName: appName)
+            all = try parseRPCResult(json, appName: appName)
+        } else {
+            all = try parseSSE(data, appName: appName)
         }
-        return try parseSSE(data, appName: appName)
+
+        // Prefer screens from the requested app; fall back to unfiltered if none match
+        let key = appName.lowercased()
+        let filtered = all.filter { $0.appName.lowercased().contains(key) }
+        return Array((filtered.isEmpty ? all : filtered).prefix(limit))
     }
 
     // MARK: - MCP session init

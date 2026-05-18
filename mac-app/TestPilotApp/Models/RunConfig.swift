@@ -57,9 +57,38 @@ final class RunConfig {
     // Note: tilde is expanded by AnalysisRunner via NSString.expandingTildeInPath
     var outputPath: String = "~/Desktop/report.html"
     var personaPath: String = ""
-    var mobbinAppName: String = ""
+    var mobbinURL: String = ""          // Mobbin URL or plain app name
     var mobbinDescription: String = ""
     var mobbinLimit: Int = 5
+
+    /// App name resolved from Mobbin URL slug, or the raw mobbinURL value if not a URL.
+    var mobbinAppName: String { parsedMobbinApp?.appName ?? mobbinURL }
+
+    /// Platform resolved from Mobbin URL slug ("ios"/"android"/"web"), or derived from config.platform.
+    var resolvedMobbinPlatform: String { parsedMobbinApp?.platform ?? (platform == .web ? "web" : "ios") }
+
+    struct MobbinAppInfo { let appName: String; let platform: String }
+
+    var parsedMobbinApp: MobbinAppInfo? { Self.parseMobbinURL(mobbinURL) }
+
+    private static func parseMobbinURL(_ raw: String) -> MobbinAppInfo? {
+        guard let url = URL(string: raw), url.host?.contains("mobbin.com") == true else { return nil }
+        let parts = url.pathComponents
+        guard let idx = parts.firstIndex(of: "apps"), idx + 1 < parts.count else { return nil }
+        let slug = parts[idx + 1]
+        // Slug format: {app-name}-{platform}-{uuid4}
+        // Strip UUID4 suffix: -{8}-{4}-{4}-{4}-{12} hex chars
+        let uuidPattern = "-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        guard let uuidRange = slug.range(of: uuidPattern, options: [.regularExpression, .caseInsensitive]) else { return nil }
+        let withoutUUID = String(slug[..<uuidRange.lowerBound])
+        for platform in ["ios", "android", "web"] {
+            guard withoutUUID.hasSuffix("-\(platform)") else { continue }
+            let namePart = String(withoutUUID.dropLast(platform.count + 1))
+            let appName = namePart.split(separator: "-").map { $0.capitalized }.joined(separator: " ")
+            return MobbinAppInfo(appName: appName, platform: platform)
+        }
+        return nil
+    }
 
     /// Returns the persona markdown content, or nil if no persona is set.
     var personaContent: String? {
@@ -84,7 +113,7 @@ final class RunConfig {
                     || !bundleId.trimmingCharacters(in: .whitespaces).isEmpty)
 
         case .research:
-            return !mobbinAppName.trimmingCharacters(in: .whitespaces).isEmpty
+            return !mobbinURL.trimmingCharacters(in: .whitespaces).isEmpty
                 && !objective.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }

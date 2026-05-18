@@ -106,7 +106,12 @@ struct RunView: View {
             }
         }
         if config.mode == .research {
-            TextField("App name", text: $config.mobbinAppName)
+            TextField("Mobbin URL or app name", text: $config.mobbinURL)
+            if let parsed = config.parsedMobbinApp {
+                Text("→ \(parsed.appName) · \(parsed.platform.uppercased())")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             TextField("Flow or screen (optional, e.g. onboarding, checkout)", text: $config.mobbinDescription)
         }
     }
@@ -245,7 +250,7 @@ struct RunView: View {
                         value: $config.maxSteps, in: 1...60)
             }
             if config.mode == .research {
-                Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...15)
+                Stepper("Screens: \(config.mobbinLimit)", value: $config.mobbinLimit, in: 1...30)
             }
             if config.mode == .analyze {
                 HStack {

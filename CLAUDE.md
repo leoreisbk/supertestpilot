@@ -91,3 +91,13 @@ scripts/build_ios_sdk.sh testpilot:assembleTestPilotSharedReleaseXCFramework
 - Config requires at minimum an `apiKey`; all other fields have defaults (maxTokens=200, maxSteps=40, temperature=0.0)
 - Test mode stdout markers: `TESTPILOT_STEP: <message>`, `TESTPILOT_STEP: (cached) <message>`, `TESTPILOT_RESULT: PASS <reason>`, `TESTPILOT_RESULT: FAIL <reason>`
 - `CachingAIClient` cache path: `NSCachesDirectory/testpilot-cache/` — scoped to the XCTest runner container, persists across separate runs of the same test target
+
+## Mobbin Research Mode (mac-app)
+
+- **Mobbin MCP endpoint**: `https://api.mobbin.com/mcp` — JSON-RPC 2.0, auth via Bearer token (OAuth PKCE against Supabase)
+- **API hard limit**: `search_screens` accepts max `limit: 30`; passing 50+ returns a validation error
+- **Always use `mode: "deep"`**: `mode: "fast"` returns semantically unrelated apps. Deep mode uses an AI pipeline that understands intent — critical for app-specific results
+- **Query must include platform context**: `"Tesla iOS app onboarding"` returns 30x Tesla; `"Tesla onboarding"` returns 0 Tesla screens. The phrase "iOS app" is what anchors the deep-mode search to the right app
+- **URL input**: `RunConfig.mobbinURL` accepts either a Mobbin URL or a plain app name. URL slug format: `{app-name}-{platform}-{uuid4}` — parsed to extract app name and platform automatically. Example: `https://mobbin.com/apps/tesla-ios-368d439c-.../...` → appName="Tesla", platform="ios"
+- **Post-fetch filtering**: always fetches 30, filters by `app_name.contains(appName)`, returns up to `mobbinLimit`. Falls back to unfiltered if no match (e.g. unknown app name)
+- **Parallel batching**: >10 screens → split into batches of 5, analyzed concurrently via `withThrowingTaskGroup`, then a text-only calibration call normalizes CRITICAL/ISSUE/POSITIVE severity across batches and generates the summary. ≤10 screens → single call (unchanged behavior)
