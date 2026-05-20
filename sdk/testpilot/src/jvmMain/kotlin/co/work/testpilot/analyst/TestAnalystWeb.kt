@@ -66,6 +66,9 @@ class TestAnalystWeb(private val config: Config) {
             try {
                 val page = withContext(Dispatchers.IO) { context.newPage() }
                 withContext(Dispatchers.IO) { page.navigate(url) }
+                // Buffer for JS-heavy pages (e.g. ProtoPie prototypes) that render
+                // content into iframes after the load event fires.
+                withContext(Dispatchers.IO) { Thread.sleep(2500) }
 
                 val cacheDir = "${System.getProperty("user.home")}/.testpilot/cache"
                 val lastResponseCached = java.util.concurrent.atomic.AtomicBoolean(false)

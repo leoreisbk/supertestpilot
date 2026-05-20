@@ -56,6 +56,9 @@ class AnalystWeb(private val config: Config) {
             val context = WebSession.loadContext(browser, url)
             val page = withContext(Dispatchers.IO) { context.newPage() }
             withContext(Dispatchers.IO) { page.navigate(url) }
+            // Buffer for JS-heavy pages (e.g. ProtoPie prototypes) that render
+            // content into iframes after the load event fires.
+            withContext(Dispatchers.IO) { Thread.sleep(2500) }
 
             val report = Analyst(AnalystDriverWeb(page), buildWebAIClient(config, httpClient), config)
                 .run(objective) { observation ->
