@@ -58,7 +58,13 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
+        // Shared between Android and the standalone JVM target — anything that
+        // relies on java.io.* / java.nio.* but is not iOS-compatible lives here.
+        val jvmAndAndroidMain by creating {
+            dependsOn(commonMain)
+        }
         val androidMain by getting {
+            dependsOn(jvmAndAndroidMain)
             dependencies {
                 implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
                 implementation("androidx.test.uiautomator:uiautomator:2.2.0")
@@ -78,6 +84,7 @@ kotlin {
             }
         }
         val jvmMain by getting {
+            dependsOn(jvmAndAndroidMain)
             dependencies {
                 implementation("com.microsoft.playwright:playwright:1.44.0")
                 implementation("org.json:json:20240303")
