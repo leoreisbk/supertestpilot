@@ -33,9 +33,6 @@ final class AnalysisRunner {
     private var lastErrorMessage: String = ""
     private var isCapturingReport = false
     private var reportLines: [String] = []
-    private var isCapturingScreenshot = false
-    private var currentScreenshotName = ""
-    private var screenshotLines: [String] = []
 
     func run(config: RunConfig, settings: SettingsStore) {
         guard case .idle = state else { return }
@@ -145,8 +142,6 @@ final class AnalysisRunner {
         isCapturingReport = false
         reportLines = []
         lastErrorMessage = ""
-        isCapturingScreenshot = false
-        screenshotLines = []
         state = .idle
     }
 
@@ -157,8 +152,6 @@ final class AnalysisRunner {
         isCapturingReport = false
         reportLines = []
         lastErrorMessage = ""
-        isCapturingScreenshot = false
-        screenshotLines = []
         state = .idle
     }
 
@@ -270,30 +263,6 @@ final class AnalysisRunner {
             }
             if isCapturingReport {
                 reportLines.append(rawLine)
-                continue
-            }
-
-            // ── Inline screenshot capture ──
-            if let r = line.range(of: "TESTPILOT_SCREENSHOT_START:") {
-                isCapturingScreenshot = true
-                currentScreenshotName = String(line[r.upperBound...])
-                screenshotLines = []
-                continue
-            }
-            if line.contains("TESTPILOT_SCREENSHOT_END") {
-                isCapturingScreenshot = false
-                let b64 = screenshotLines.joined()
-                if !b64.isEmpty, let data = Data(base64Encoded: b64, options: .ignoreUnknownCharacters) {
-                    let dir = (outputPath as NSString).deletingLastPathComponent
-                        .appending("/screenshots")
-                    try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-                    try? data.write(to: URL(fileURLWithPath: "\(dir)/\(currentScreenshotName)"))
-                }
-                screenshotLines = []
-                continue
-            }
-            if isCapturingScreenshot {
-                screenshotLines.append(rawLine)
                 continue
             }
 
